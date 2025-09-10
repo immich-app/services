@@ -6,6 +6,7 @@ on:
 env:
   TF_VAR_dist_dir: ${{ github.workspace }}/dist
   TF_VAR_stage: pr-${{ github.event.number }}
+  TG_NON_INTERACTIVE: 'true'
 
 jobs:
   destroy:
