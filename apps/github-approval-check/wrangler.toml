@@ -1,0 +1,17 @@
+name = "github-approval-check-immich-app"
+main = "src/index.ts"
+compatibility_date = "2025-09-16"
+compatibility_flags = ["nodejs_compat"]
+
+# GitHub App webhook endpoint
+# This worker will receive webhooks from GitHub
+
+# Environment variables for GitHub App
+# These will be set as secrets in production
+[vars]
+GITHUB_APP_ID = "" # Will be set when GitHub App is created
+ALLOWED_USERS_URL = "https://raw.githubusercontent.com/immich-app/devtools/main/tf/deployment/data/users.json"
+
+# Secrets (set via wrangler secret put or Terraform)
+# GITHUB_APP_PRIVATE_KEY - RSA private key for the GitHub App
+# GITHUB_WEBHOOK_SECRET - Webhook secret for verifying payloads
