@@ -5,12 +5,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "pnpm -r build",
     "lint": "eslint . --max-warnings 0",
     "lint:fix": "pnpm run lint -- --fix",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "test": "pnpm -r test",
-    "typecheck": "tsc --noEmit && pnpm -r typecheck"
+    "check": "tsc --noEmit && pnpm -r typecheck"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.8.71",
@@ -30,5 +31,9 @@
     "typescript-eslint": "^8.43.0",
     "vitest": "^3.0.0",
     "wrangler": "^4.35.0"
+  },
+  "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748",
+  "engines": {
+    "pnpm": ">=10.0.0"
   }
 }

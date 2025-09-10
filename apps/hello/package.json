@@ -8,6 +8,6 @@
     "build": "wrangler deploy --dry-run --outdir ../../dist/hello",
     "tail": "wrangler tail",
     "test": "vitest",
-    "typecheck": "tsc --noEmit"
+    "check": "tsc --noEmit"
   }
 }

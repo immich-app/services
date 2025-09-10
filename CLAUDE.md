@@ -9,6 +9,7 @@ This is the Immich Workers repository - a monorepo for Cloudflare Workers that p
 ## Common Commands
 
 ### Root Level
+
 ```bash
 pnpm install       # Install all dependencies
 pnpm run lint      # Lint all workers
@@ -18,6 +19,7 @@ pnpm run typecheck # Type-check all workers
 ```
 
 ### Worker Development
+
 ```bash
 cd apps/<worker-name>
 pnpm install       # Install worker dependencies
@@ -30,6 +32,7 @@ pnpm run test      # Run worker tests
 ## Architecture
 
 ### Repository Structure
+
 ```
 apps/
 ├── hello/         # Example hello world worker
@@ -51,7 +54,9 @@ src/
 ```
 
 ### Worker Structure
+
 Each worker in `apps/<worker-name>/` contains:
+
 - `src/index.ts` - Main worker entry point
 - `wrangler.toml` - Cloudflare Worker configuration
 - `package.json` - Dependencies and scripts
@@ -60,6 +65,7 @@ Each worker in `apps/<worker-name>/` contains:
 - `worker-configuration.d.ts` - Environment type definitions
 
 ### Technology Stack
+
 - **Runtime**: Cloudflare Workers
 - **Language**: TypeScript
 - **Build Tool**: Wrangler CLI
@@ -70,6 +76,7 @@ Each worker in `apps/<worker-name>/` contains:
 ## Deployment
 
 ### Direct Deployment (Wrangler)
+
 ```bash
 cd apps/<worker-name>
 pnpm run deploy              # Deploy to default environment
@@ -78,6 +85,7 @@ pnpm run deploy:production   # Deploy to production
 ```
 
 ### Infrastructure as Code (Terraform/Terragrunt)
+
 ```bash
 # Set up required environment variables
 export TF_VAR_tf_state_postgres_conn_str="postgresql://user:pass@host/dbname"
@@ -94,6 +102,7 @@ terragrunt apply
 ```
 
 The deployment uses the same Terragrunt pattern as other Immich infrastructure:
+
 - PostgreSQL backend for state storage
 - Remote state references for API keys and account info
 - Schema naming: `cloudflare_workers_immich_app_${app_name}_${env}${stage}`
@@ -101,14 +110,18 @@ The deployment uses the same Terragrunt pattern as other Immich infrastructure:
 ## Environment Configuration
 
 ### Local Development
+
 Create `.dev.vars` in the worker directory:
+
 ```
 SECRET_KEY=local_secret
 API_ENDPOINT=https://api.example.com
 ```
 
 ### Production Secrets
+
 Use Wrangler or Terraform to set production secrets:
+
 ```bash
 wrangler secret put SECRET_KEY
 ```
@@ -124,6 +137,7 @@ wrangler secret put SECRET_KEY
 ## Testing
 
 Workers use Vitest with Miniflare for testing:
+
 ```bash
 cd apps/<worker-name>
 pnpm run test        # Run tests once
@@ -133,15 +147,17 @@ pnpm run test:watch  # Run tests in watch mode
 ## Common Patterns
 
 ### Request Handling
+
 ```typescript
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     // Handle request
-  }
-}
+  },
+};
 ```
 
 ### CORS Headers
+
 ```typescript
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -151,13 +167,14 @@ const corsHeaders = {
 ```
 
 ### Error Handling
+
 ```typescript
 try {
   // Worker logic
 } catch (error) {
   return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
     status: 500,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
   });
 }
 ```

@@ -13,9 +13,5 @@
     "*.config.ts",
     "apps/*/*.config.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "**/dist",
-    "**/.wrangler"
-  ]
+  "exclude": ["node_modules", "**/dist", "**/.wrangler"]
 }

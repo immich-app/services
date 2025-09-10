@@ -35,5 +35,10 @@ dir = "{{cwd}}"
 run = "mise run tf apply"
 dir = "{{cwd}}"
 
+[tasks."tf:destroy"]
+run = "mise run tf destroy"
+dir = "{{cwd}}"
+
 [settings]
 experimental = true
+idiomatic_version_file_enable_tools = []

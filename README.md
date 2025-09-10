@@ -76,6 +76,7 @@ terragrunt apply
 Workers use `.dev.vars` for local development and Cloudflare secrets for production.
 
 Example `.dev.vars`:
+
 ```
 MY_SECRET=secret_value
 API_KEY=test_key
