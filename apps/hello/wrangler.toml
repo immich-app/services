@@ -1,0 +1,13 @@
+name = "hello-immich-app"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Uncomment to add KV namespaces, Durable Objects, etc.
+# [[kv_namespaces]]
+# binding = "MY_KV_NAMESPACE"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# [[durable_objects.bindings]]
+# name = "MY_DURABLE_OBJECT"
+# class_name = "MyDurableObject"
+# script_name = "my-durable-object"

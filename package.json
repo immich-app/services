@@ -1,0 +1,39 @@
+{
+  "name": "immich-services",
+  "version": "1.0.0",
+  "description": "Immich Cloudflare Workers monorepo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "pnpm run lint -- --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "test": "pnpm -r test",
+    "check": "tsc --noEmit && pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.71",
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "@eslint/js": "^9.35.0",
+    "@types/node": "^22.10.5",
+    "@typescript-eslint/eslint-plugin": "^8.19.0",
+    "@typescript-eslint/parser": "^8.19.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-unicorn": "^61.0.2",
+    "globals": "^16.3.0",
+    "prettier": "^3.4.2",
+    "prettier-plugin-organize-imports": "^4.2.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.43.0",
+    "vitest": "^3.0.0",
+    "wrangler": "^4.35.0"
+  },
+  "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748",
+  "engines": {
+    "pnpm": ">=10.0.0"
+  }
+}

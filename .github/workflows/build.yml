@@ -1,0 +1,83 @@
+name: Build
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+  TG_NON_INTERACTIVE: 'true'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: '.nvmrc'
+      - name: Run pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Upload build output
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: build-output
+          path: 'dist'
+          retention-days: 7
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [build]
+    env:
+      TF_VAR_stage: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || '' }}
+      TF_VAR_dist_dir: ${{github.workspace}}/dist
+      OP_SERVICE_ACCOUNT_TOKEN: ${{ github.ref == 'refs/heads/main' && secrets.OP_TF_PROD_ENV || secrets.OP_TF_DEV_ENV }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Get build artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: 'build-output'
+          path: '${{ github.workspace }}/dist'
+
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@707af61a6c8b4fa7f9476328c035208fba6b54d7 # v2
+
+      - name: Setup Mise
+        uses: immich-app/devtools/actions/use-mise@697a75e2c3186d3c037c2c159855cf2d566542ba # use-mise-action-0.0.1
+
+      - name: Deploy All
+        working-directory: ${{ github.workspace }}/deployment
+        run: mise run tf:apply
+#      - name: Deploy Output
+#        id: deploy-output
+#        working-directory: ${{ github.workspace }}/deployment/modules/cloudflare/static-pages
+#        run: |
+#          echo "output=$(op run --no-masking --env-file='../../../.env' -- terragrunt output -json | jq -c .)" >> $GITHUB_OUTPUT
+#
+#      - name: Comment
+#        uses: actions-cool/maintain-one-comment@4b2dbf086015f892dcb5e8c1106f5fccd6c1476b # v3
+#        if: ${{ github.event_name == 'pull_request' }}
+#        with:
+#          number: ${{ github.event.number }}
+#          body: |
+#            📖 Preview of ${{ matrix.app_name }}.immich.app deployed to [${{ fromJson(steps.deploy-output.outputs.output).immich_subdomain.value }}](https://${{ fromJson(steps.deploy-output.outputs.output).immich_subdomain.value }})
+#          emojis: 'rocket'
+#          body-include: '<!-- ${{ matrix.app_name }} PR URL -->'

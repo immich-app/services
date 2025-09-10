@@ -1,0 +1,36 @@
+name: Docs destroy
+on:
+  pull_request_target:
+    types: [closed]
+
+env:
+  TF_VAR_dist_dir: ${{ github.workspace }}/dist
+  TF_VAR_stage: pr-${{ github.event.number }}
+  OP_SERVICE_ACCOUNT_TOKEN: ${{ matrix.environment == 'prod' && secrets.OP_TF_PROD_ENV || secrets.OP_TF_DEV_ENV }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ['dev', 'prod']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@707af61a6c8b4fa7f9476328c035208fba6b54d7 # v2
+
+      - name: Setup Mise
+        uses: immich-app/devtools/actions/use-mise@697a75e2c3186d3c037c2c159855cf2d566542ba # use-mise-action-0.0.1
+
+      - name: Destroy All
+        working-directory: ${{ github.workspace }}/deployment
+        run: mise run tf:destroy
+#      - name: Comment
+#        uses: actions-cool/maintain-one-comment@4b2dbf086015f892dcb5e8c1106f5fccd6c1476b # v3
+#        with:
+#          number: ${{ github.event.number }}
+#          delete: true
+#          body-include: '<!-- Docs PR URL -->'

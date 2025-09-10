@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types", "@cloudflare/vitest-pool-workers", "@types/node"],
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "apps/*/src/**/*.ts",
+    "apps/*/worker-configuration.d.ts",
+    "*.config.ts",
+    "apps/*/*.config.ts"
+  ],
+  "exclude": ["node_modules", "**/dist", "**/.wrangler"]
+}
