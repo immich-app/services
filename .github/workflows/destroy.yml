@@ -6,15 +6,16 @@ on:
 env:
   TF_VAR_dist_dir: ${{ github.workspace }}/dist
   TF_VAR_stage: pr-${{ github.event.number }}
-  OP_SERVICE_ACCOUNT_TOKEN: ${{ matrix.environment == 'prod' && secrets.OP_TF_PROD_ENV || secrets.OP_TF_DEV_ENV }}
 
 jobs:
-  deploy:
+  destroy:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         environment: ['dev', 'prod']
+    env:
+      OP_SERVICE_ACCOUNT_TOKEN: ${{ matrix.environment == 'prod' && secrets.OP_TF_PROD_ENV || secrets.OP_TF_DEV_ENV }}
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
