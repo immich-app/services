@@ -1,0 +1,10 @@
+name = "weblate-scrape"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+crons = [ "*/10 * * * *" ]
+
+[vars]
+WEBLATE_HOST = "https://hosted.weblate.org"
+WEBLATE_COMPONENT = "immich/immich"
+ENVIRONMENT = "production"
