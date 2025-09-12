@@ -1,0 +1,32 @@
+name = "fourthwall-integration-immich-app"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "fourthwall-integration"
+database_id = "" # Will be filled by Terraform
+
+# Queue bindings
+[[queues.producers]]
+queue = "webhook-processor"
+binding = "WEBHOOK_QUEUE"
+
+[[queues.producers]]
+queue = "fulfillment-processor"
+binding = "FULFILLMENT_QUEUE"
+
+[[queues.consumers]]
+queue = "webhook-processor"
+max_batch_size = 10
+max_batch_timeout = 30
+
+[[queues.consumers]]
+queue = "fulfillment-processor"
+max_batch_size = 5
+max_batch_timeout = 60
+
+# Cron triggers
+[triggers]
+crons = ["0 */15 * * * *"] # Every 15 minutes for Kunaki status polling
