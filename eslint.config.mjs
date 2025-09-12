@@ -56,18 +56,6 @@ export default typescriptEslint.config([
       'prettier/prettier': 0,
       'object-shorthand': ['error', 'always'],
 
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['.*'],
-              message: 'Relative imports are not allowed.',
-            },
-          ],
-        },
-      ],
-
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {
@@ -80,7 +68,6 @@ export default typescriptEslint.config([
   {
     files: ['**/*.config.ts', '**/*.config.js', '**/*.config.mjs'],
     rules: {
-      'no-restricted-imports': 'off',
       'unicorn/prefer-export-from': 'off',
     },
   },
