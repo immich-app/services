@@ -1,0 +1,13 @@
+{
+  "name": "@immich-services/fourthwall-integration",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir ../../dist/fourthwall-integration",
+    "tail": "wrangler tail",
+    "test": "vitest",
+    "check": "tsc --noEmit"
+  }
+}
