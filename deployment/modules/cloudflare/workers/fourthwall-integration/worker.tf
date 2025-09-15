@@ -94,6 +94,77 @@ resource "cloudflare_workers_deployment" "worker" {
 
 }
 
+# Queue Processor Worker
+resource "cloudflare_worker" "queue_processor" {
+  account_id = var.cloudflare_account_id
+  name       = "${var.app_name}-queue-processor${local.resource_suffix}"
+  logpush    = true
+}
+
+resource "cloudflare_worker_version" "queue_processor" {
+  account_id = var.cloudflare_account_id
+  worker_id  = cloudflare_worker.queue_processor.id
+  bindings = [
+    {
+      name        = "DB"
+      type        = "d1_database"
+      database_id = cloudflare_d1_database.db.id
+    },
+    {
+      name = "FOURTHWALL_API_KEY"
+      type = "secret_text"
+      text = var.fourthwall_api_key
+    },
+    {
+      name = "KUNAKI_API_USERNAME"
+      type = "secret_text"
+      text = var.kunaki_api_username
+    },
+    {
+      name = "KUNAKI_API_PASSWORD"
+      type = "secret_text"
+      text = var.kunaki_api_password
+    },
+    {
+      name = "CDCLICK_API_KEY"
+      type = "secret_text"
+      text = var.cdclick_api_key
+    }
+  ]
+  queue_consumers = [
+    {
+      queue_id = cloudflare_queue.webhook_processor.id
+      type     = "http_pull"
+    },
+    {
+      queue_id = cloudflare_queue.fulfillment_processor.id
+      type     = "http_pull"
+    }
+  ]
+  compatibility_date = "2025-09-09"
+  compatibility_flags = ["nodejs_compat"]
+  main_module        = "queue-processor.js"
+  modules = [
+    {
+      content_file = "${var.dist_dir}/${var.app_name}/queue-processor.js"
+      content_type = "application/javascript+module"
+      name         = "queue-processor.js"
+    }
+  ]
+}
+
+resource "cloudflare_workers_deployment" "queue_processor" {
+  account_id  = var.cloudflare_account_id
+  script_name = cloudflare_worker.queue_processor.name
+  strategy    = "percentage"
+  versions = [
+    {
+      percentage = 100
+      version_id = cloudflare_worker_version.queue_processor.id
+    }
+  ]
+}
+
 data "cloudflare_zone" "immich_app" {
   filter = {
     name = "immich.cloud"
