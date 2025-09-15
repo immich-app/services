@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "build": "wrangler deploy --dry-run --outdir ../../dist/fourthwall-integration",
+    "dev:queue": "wrangler dev --config wrangler.queue-processor.toml",
+    "build": "wrangler deploy --dry-run --outdir ../../dist/fourthwall-integration && wrangler deploy --dry-run --outdir ../../dist/fourthwall-integration --config wrangler.queue-processor.toml",
     "tail": "wrangler tail",
     "test": "vitest",
     "check": "tsc --noEmit"
