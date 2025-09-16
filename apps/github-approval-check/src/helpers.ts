@@ -4,7 +4,7 @@
 
 import { ApprovalValidator } from './approval.js';
 import { CheckRunManager } from './check-runs.js';
-import { CHECK_CONCLUSION, CHECK_NAME, CHECK_STATUS, MESSAGES } from './constants.js';
+import { CHECK_CONCLUSION, CHECK_STATUS, MESSAGES, getCheckName } from './constants.js';
 
 interface BaseEventPayload {
   installation?: { id: number };
@@ -74,11 +74,12 @@ export async function handleApprovalCheck(
     prNumber: number;
     headSha: string;
     eventType: string;
+    environment?: string;
   },
   checkRunManager: CheckRunManager,
   approvalValidator: ApprovalValidator,
 ): Promise<void> {
-  const { installationId, owner, repo, prNumber, headSha, eventType } = params;
+  const { installationId, owner, repo, prNumber, headSha, eventType, environment } = params;
 
   console.log(`[${eventType}] Processing PR #${prNumber} (SHA: ${headSha.slice(0, 7)})`);
 
@@ -93,8 +94,9 @@ export async function handleApprovalCheck(
   console.log(`[${eventType}] PR #${prNumber} approval status: ${validationResult.isApproved ? 'approved' : 'not approved'}`);
 
   // Get existing check runs
+  const checkName = getCheckName(environment);
   const checkRuns = await checkRunManager.listCheckRuns(installationId, owner, repo, headSha);
-  const existingCheck = checkRuns.find((cr: any) => cr.name === CHECK_NAME);
+  const existingCheck = checkRuns.find((cr: any) => cr.name === checkName);
 
   if (validationResult.isApproved) {
     // PR is approved - ensure check exists and shows success
@@ -116,7 +118,7 @@ export async function handleApprovalCheck(
         owner,
         repo,
         headSha,
-        CHECK_NAME,
+        checkName,
         CHECK_STATUS.IN_PROGRESS,
       );
 

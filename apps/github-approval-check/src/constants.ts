@@ -4,6 +4,13 @@
 
 export const CHECK_NAME = 'Approval Check';
 
+export function getCheckName(environment?: string): string {
+  if (environment && environment !== 'prod') {
+    return `${CHECK_NAME} (${environment})`;
+  }
+  return CHECK_NAME;
+}
+
 export const CHECK_STATUS = {
   QUEUED: 'queued',
   IN_PROGRESS: 'in_progress',

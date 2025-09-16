@@ -6,6 +6,7 @@ import {
   PR_ACTIONS,
   REVIEW_ACTIONS,
   WEBHOOK_EVENTS,
+  getCheckName,
 } from './constants.js';
 import { getDevModeConfig, shouldProcessInDevMode } from './dev-mode.js';
 import { handleApprovalCheck, validatePullRequest, validateWebhookPayload } from './helpers.js';
@@ -77,23 +78,23 @@ export default {
         // Route to appropriate handler
         switch (eventType) {
           case WEBHOOK_EVENTS.PULL_REQUEST: {
-            await handlePullRequestEvent(payload as PullRequestEvent, checkRunManager, approvalValidator);
+            await handlePullRequestEvent(payload as PullRequestEvent, checkRunManager, approvalValidator, env);
             break;
           }
 
           case WEBHOOK_EVENTS.PULL_REQUEST_REVIEW: {
-            await handlePullRequestReviewEvent(payload as PullRequestReviewEvent, checkRunManager, approvalValidator);
+            await handlePullRequestReviewEvent(payload as PullRequestReviewEvent, checkRunManager, approvalValidator, env);
             break;
           }
 
           case WEBHOOK_EVENTS.CHECK_SUITE: {
-            await handleCheckSuiteEvent(payload as CheckSuiteEvent, checkRunManager, approvalValidator);
+            await handleCheckSuiteEvent(payload as CheckSuiteEvent, checkRunManager, approvalValidator, env);
             break;
           }
 
           case WEBHOOK_EVENTS.CHECK_RUN: {
             if (payload.action === CHECK_RUN_ACTIONS.REREQUESTED) {
-              await handleCheckRunRerequest(payload as CheckRunEvent, checkRunManager, approvalValidator);
+              await handleCheckRunRerequest(payload as CheckRunEvent, checkRunManager, approvalValidator, env);
             }
             break;
           }
@@ -121,6 +122,7 @@ async function handlePullRequestEvent(
   event: PullRequestEvent,
   checkRunManager: CheckRunManager,
   approvalValidator: ApprovalValidator,
+  env: Env,
 ): Promise<void> {
   const { action, pull_request } = event;
 
@@ -141,6 +143,7 @@ async function handlePullRequestEvent(
       prNumber: pr.number,
       headSha: pr.head.sha,
       eventType: 'pull_request',
+      environment: env.ENVIRONMENT,
     },
     checkRunManager,
     approvalValidator,
@@ -154,6 +157,7 @@ async function handlePullRequestReviewEvent(
   event: PullRequestReviewEvent,
   checkRunManager: CheckRunManager,
   approvalValidator: ApprovalValidator,
+  env: Env,
 ): Promise<void> {
   const { action, pull_request } = event;
 
@@ -174,6 +178,7 @@ async function handlePullRequestReviewEvent(
       prNumber: pr.number,
       headSha: pr.head.sha,
       eventType: 'pull_request_review',
+      environment: env.ENVIRONMENT,
     },
     checkRunManager,
     approvalValidator,
@@ -187,6 +192,7 @@ async function handleCheckSuiteEvent(
   event: CheckSuiteEvent,
   checkRunManager: CheckRunManager,
   approvalValidator: ApprovalValidator,
+  env: Env,
 ): Promise<void> {
   const { action, check_suite } = event;
 
@@ -220,6 +226,7 @@ async function handleCheckSuiteEvent(
       prNumber: pr.number,
       headSha: check_suite.head_sha,
       eventType: 'check_suite',
+      environment: env.ENVIRONMENT,
     },
     checkRunManager,
     approvalValidator,
@@ -233,11 +240,13 @@ async function handleCheckRunRerequest(
   event: CheckRunEvent,
   checkRunManager: CheckRunManager,
   approvalValidator: ApprovalValidator,
+  env: Env,
 ): Promise<void> {
   const { check_run } = event;
 
   // Only handle our own check runs
-  if (check_run.name !== 'Approval Check') {
+  const expectedCheckName = getCheckName(env.ENVIRONMENT);
+  if (check_run.name !== expectedCheckName) {
     console.log(`[check_run] Ignoring check: ${check_run.name}`);
     return;
   }
@@ -266,6 +275,7 @@ async function handleCheckRunRerequest(
       prNumber: pr.number,
       headSha: check_run.head_sha,
       eventType: 'check_run',
+      environment: env.ENVIRONMENT,
     },
     checkRunManager,
     approvalValidator,

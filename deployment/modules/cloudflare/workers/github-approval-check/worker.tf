@@ -18,6 +18,11 @@ resource "cloudflare_worker_version" "worker" {
       text = var.allowed_users_url
     },
     {
+      name = "ENVIRONMENT"
+      type = "plain_text"
+      text = var.env
+    },
+    {
       name = "GITHUB_APP_ID"
       type = "plain_text"
       text = var.github_app_checks_id
@@ -31,11 +36,6 @@ resource "cloudflare_worker_version" "worker" {
       name = "GITHUB_WEBHOOK_SECRET"
       type = "secret_text"
       text = var.github_checks_webhook_secret
-    },
-    {
-      name = "ENVIRONMENT"
-      type = "plain_text"
-      text = var.env
     },
     {
       name = "STAGE"
