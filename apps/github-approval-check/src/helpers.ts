@@ -3,6 +3,7 @@
  */
 
 import { ApprovalValidator } from './approval.js';
+import { getInstallationId } from './auth.js';
 import { CheckRunManager } from './check-runs.js';
 import { CHECK_CONCLUSION, CHECK_STATUS, MESSAGES, getCheckName } from './constants.js';
 
@@ -21,25 +22,43 @@ interface PullRequestInfo {
 
 /**
  * Validates that required fields are present in the webhook payload
+ * For org webhooks, fetches the installation ID if not present
  */
-export function validateWebhookPayload(
+export async function validateWebhookPayload(
   event: BaseEventPayload,
   eventType: string,
-): { installationId: number; owner: string; repo: string } {
-  if (!event.installation?.id) {
-    console.log(`[${eventType}] Missing installation ID`);
-    throw new Error(`Invalid ${eventType} payload: missing installation.id`);
-  }
-
+  appId?: string,
+  privateKey?: string,
+): Promise<{ installationId: number; owner: string; repo: string }> {
   if (!event.repository?.owner?.login || !event.repository?.name) {
     console.log(`[${eventType}] Missing repository information`);
     throw new Error(`Invalid ${eventType} payload: missing repository information`);
   }
 
+  const owner = event.repository.owner.login;
+  const repo = event.repository.name;
+
+  // If installation ID is present (app webhook), use it
+  if (event.installation?.id) {
+    return {
+      installationId: event.installation.id,
+      owner,
+      repo,
+    };
+  }
+
+  // For org webhooks, fetch the installation ID
+  if (!appId || !privateKey) {
+    throw new Error('App credentials required to fetch installation ID for org webhook');
+  }
+
+  console.log(`[${eventType}] Fetching installation ID for ${owner}/${repo}`);
+  const installationId = await getInstallationId(appId, privateKey, owner, repo);
+  
   return {
-    installationId: event.installation.id,
-    owner: event.repository.owner.login,
-    repo: event.repository.name,
+    installationId,
+    owner,
+    repo,
   };
 }
 

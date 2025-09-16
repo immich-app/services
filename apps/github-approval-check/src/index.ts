@@ -78,23 +78,23 @@ export default {
         // Route to appropriate handler
         switch (eventType) {
           case WEBHOOK_EVENTS.PULL_REQUEST: {
-            await handlePullRequestEvent(payload as PullRequestEvent, checkRunManager, approvalValidator, env);
+            await handlePullRequestEvent(payload as PullRequestEvent, env, checkRunManager, approvalValidator);
             break;
           }
 
           case WEBHOOK_EVENTS.PULL_REQUEST_REVIEW: {
-            await handlePullRequestReviewEvent(payload as PullRequestReviewEvent, checkRunManager, approvalValidator, env);
+            await handlePullRequestReviewEvent(payload as PullRequestReviewEvent, env, checkRunManager, approvalValidator);
             break;
           }
 
           case WEBHOOK_EVENTS.CHECK_SUITE: {
-            await handleCheckSuiteEvent(payload as CheckSuiteEvent, checkRunManager, approvalValidator, env);
+            await handleCheckSuiteEvent(payload as CheckSuiteEvent, env, checkRunManager, approvalValidator);
             break;
           }
 
           case WEBHOOK_EVENTS.CHECK_RUN: {
             if (payload.action === CHECK_RUN_ACTIONS.REREQUESTED) {
-              await handleCheckRunRerequest(payload as CheckRunEvent, checkRunManager, approvalValidator, env);
+              await handleCheckRunRerequest(payload as CheckRunEvent, env, checkRunManager, approvalValidator);
             }
             break;
           }
@@ -120,9 +120,9 @@ export default {
  */
 async function handlePullRequestEvent(
   event: PullRequestEvent,
+  env: Env,
   checkRunManager: CheckRunManager,
   approvalValidator: ApprovalValidator,
-  env: Env,
 ): Promise<void> {
   const { action, pull_request } = event;
 
@@ -132,7 +132,7 @@ async function handlePullRequestEvent(
     return;
   }
 
-  const { installationId, owner, repo } = validateWebhookPayload(event, 'pull_request');
+  const { installationId, owner, repo } = await validateWebhookPayload(event, 'pull_request', env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY);
   const pr = validatePullRequest(pull_request, 'pull_request');
 
   await handleApprovalCheck(
@@ -155,9 +155,9 @@ async function handlePullRequestEvent(
  */
 async function handlePullRequestReviewEvent(
   event: PullRequestReviewEvent,
+  env: Env,
   checkRunManager: CheckRunManager,
   approvalValidator: ApprovalValidator,
-  env: Env,
 ): Promise<void> {
   const { action, pull_request } = event;
 
@@ -167,7 +167,7 @@ async function handlePullRequestReviewEvent(
     return;
   }
 
-  const { installationId, owner, repo } = validateWebhookPayload(event, 'pull_request_review');
+  const { installationId, owner, repo } = await validateWebhookPayload(event, 'pull_request_review', env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY);
   const pr = validatePullRequest(pull_request, 'pull_request_review');
 
   await handleApprovalCheck(
@@ -190,9 +190,9 @@ async function handlePullRequestReviewEvent(
  */
 async function handleCheckSuiteEvent(
   event: CheckSuiteEvent,
+  env: Env,
   checkRunManager: CheckRunManager,
   approvalValidator: ApprovalValidator,
-  env: Env,
 ): Promise<void> {
   const { action, check_suite } = event;
 
@@ -208,7 +208,7 @@ async function handleCheckSuiteEvent(
     return;
   }
 
-  const { installationId, owner, repo } = validateWebhookPayload(event, 'check_suite');
+  const { installationId, owner, repo } = await validateWebhookPayload(event, 'check_suite', env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY);
 
   if (!check_suite.head_sha) {
     console.log('[check_suite] Missing head SHA');
@@ -238,9 +238,9 @@ async function handleCheckSuiteEvent(
  */
 async function handleCheckRunRerequest(
   event: CheckRunEvent,
+  env: Env,
   checkRunManager: CheckRunManager,
   approvalValidator: ApprovalValidator,
-  env: Env,
 ): Promise<void> {
   const { check_run } = event;
 
@@ -258,7 +258,7 @@ async function handleCheckRunRerequest(
     return;
   }
 
-  const { installationId, owner, repo } = validateWebhookPayload(event, 'check_run');
+  const { installationId, owner, repo } = await validateWebhookPayload(event, 'check_run', env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY);
 
   if (!check_run.id) {
     console.log('[check_run] Missing check run ID');
