@@ -8,7 +8,7 @@ export default {
       case '/': {
         return new Response(
           JSON.stringify({
-            message: 'Hello from Immich Worker!',
+            message: 'Hello from Immich Worker API!',
             timestamp: new Date().toISOString(),
             path: url.pathname,
           }),
