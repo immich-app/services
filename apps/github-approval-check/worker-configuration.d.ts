@@ -8,6 +8,11 @@ interface Env {
   
   // Approval configuration  
   ALLOWED_USERS_URL: string;
+  
+  // Deployment configuration
+  ENVIRONMENT?: string; // 'dev', 'staging', 'prod'
+  STAGE?: string; // e.g., '-pr-123' for PR deployments
+  DEV_PR_NUMBER?: string; // PR number that created this deployment (extracted from STAGE)
 }
 
 // Type declaration for cloudflare:test module

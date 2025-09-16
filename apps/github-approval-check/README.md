@@ -14,6 +14,7 @@ This worker listens for GitHub organization webhook events and creates/updates c
 - ✅ Provides detailed feedback about approval requirements
 - ✅ Secure webhook signature verification
 - ✅ JWT-based GitHub App authentication
+- ✅ Dev mode for PR-specific deployments
 
 ## Setup
 
@@ -140,6 +141,29 @@ The check behavior:
 - **Clean PR view**: No check appears until someone approves
 - **Blocks merge**: Missing required check prevents merging
 - **Clear feedback**: Shows approval status without exposing approver list
+
+## Dev Mode
+
+When deployed as part of a pull request (with `TF_VAR_stage` containing `-pr-XXX`), the worker automatically enters dev mode:
+
+- **Limited scope**: Only processes webhooks for the `services` repository (hardcoded)
+- **PR-specific**: Only responds to events for the PR that created the deployment
+- **Automatic detection**: Extracts PR number from the stage variable
+
+### Environment Variables in Dev Mode
+
+```env
+ENVIRONMENT=dev              # Or automatically detected from stage
+STAGE=-pr-123               # Set by Terraform from TF_VAR_stage
+```
+
+The worker automatically:
+- Detects dev mode from the `-pr-` prefix in the stage
+- Extracts the PR number (e.g., 123 from `-pr-123`)
+- Limits processing to only the `services` repository
+- Ignores webhooks from other repositories or PRs
+
+This ensures PR deployments don't interfere with production checks and only test against their own changes.
 
 ## Development
 

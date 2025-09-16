@@ -7,6 +7,7 @@ import {
   REVIEW_ACTIONS,
   WEBHOOK_EVENTS,
 } from './constants.js';
+import { getDevModeConfig, shouldProcessInDevMode } from './dev-mode.js';
 import { handleApprovalCheck, validatePullRequest, validateWebhookPayload } from './helpers.js';
 import type { CheckRunEvent, CheckSuiteEvent, PullRequestEvent, PullRequestReviewEvent } from './types.js';
 import { verifyWebhookSignature } from './webhook.js';
@@ -51,8 +52,19 @@ export default {
         const payload = JSON.parse(body);
         const eventType = request.headers.get('X-GitHub-Event');
         const repoName = payload.repository?.name;
+        const prNumber = payload.pull_request?.number || payload.number;
 
-        console.log(`[webhook] Received ${eventType} event for repo: ${repoName}`);
+        console.log(`[webhook] Received ${eventType} event for repo: ${repoName}, PR: ${prNumber}`);
+
+        // Check dev mode filtering
+        const devModeConfig = getDevModeConfig(env);
+        if (devModeConfig.isDevMode) {
+          console.log(`[webhook] Dev mode enabled - PR: ${devModeConfig.prNumber}, Repo: ${devModeConfig.repoName}`);
+        }
+        
+        if (!shouldProcessInDevMode(devModeConfig, repoName, prNumber)) {
+          return new Response('OK', { status: 200 });
+        }
 
         // Initialize services
         const checkRunManager = new CheckRunManager(env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY);

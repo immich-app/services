@@ -31,6 +31,16 @@ resource "cloudflare_worker_version" "worker" {
       name = "GITHUB_WEBHOOK_SECRET"
       type = "secret_text"
       text = var.github_checks_webhook_secret
+    },
+    {
+      name = "ENVIRONMENT"
+      type = "plain_text"
+      text = var.env
+    },
+    {
+      name = "STAGE"
+      type = "plain_text"
+      text = var.stage
     }
   ]
   compatibility_date = "2025-09-16"
