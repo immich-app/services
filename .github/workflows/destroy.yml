@@ -17,6 +17,7 @@ jobs:
         environment: ['dev', 'prod']
     env:
       OP_SERVICE_ACCOUNT_TOKEN: ${{ matrix.environment == 'prod' && secrets.OP_TF_PROD_ENV || secrets.OP_TF_DEV_ENV }}
+      ENVIRONMENT: ${{ matrix.environment }}
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
