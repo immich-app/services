@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types", "vitest/globals"],
+    "baseUrl": ".",
+    "paths": {
+      "@immich-services/github-approval-check/*": ["*"]
+    }
+  },
+  "include": ["src/**/*", "worker-configuration.d.ts"]
+}

@@ -13,12 +13,37 @@ resource "cloudflare_worker_version" "worker" {
   worker_id  = cloudflare_worker.worker.id
   bindings = [
     {
-      name = "EXAMPLE_BINDING"
+      name = "ALLOWED_USERS_URL"
       type = "plain_text"
-      text = "example_value"
+      text = var.allowed_users_url
+    },
+    {
+      name = "ENVIRONMENT"
+      type = "plain_text"
+      text = var.env
+    },
+    {
+      name = "GITHUB_APP_ID"
+      type = "plain_text"
+      text = var.github_app_checks_id
+    },
+    {
+      name = "GITHUB_APP_PRIVATE_KEY"
+      type = "secret_text"
+      text = var.github_app_checks_pem_file
+    },
+    {
+      name = "GITHUB_WEBHOOK_SECRET"
+      type = "secret_text"
+      text = var.github_checks_webhook_secret
+    },
+    {
+      name = "STAGE"
+      type = "plain_text"
+      text = var.stage
     }
   ]
-  compatibility_date = "2025-09-09"
+  compatibility_date = "2025-09-16"
   compatibility_flags = ["nodejs_compat"]
   main_module        = "index.js"
   modules = [
@@ -45,12 +70,11 @@ resource "cloudflare_workers_deployment" "worker" {
       version_id = cloudflare_worker_version.worker.id
     }
   ]
-
 }
 
 data "cloudflare_zone" "immich_app" {
   filter = {
-    name = "immich.cloud"
+    name = "immich.app"
   }
 }
 
@@ -68,5 +92,9 @@ module "domain" {
   app_name = var.app_name
   stage    = var.stage
   env      = var.env
-  domain   = "immich.cloud"
+  domain   = "immich.app"
+}
+
+output "webhook_url" {
+  value = "https://${module.domain.fqdn}/webhook"
 }

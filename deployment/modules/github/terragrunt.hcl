@@ -6,18 +6,22 @@ terraform {
   }
 }
 
-include {
+include "root" {
   path = find_in_parent_folders("state.hcl")
+}
+
+dependencies {
+  paths = ["../cloudflare/workers/github-approval-check"]
 }
 
 locals {
   env = get_env("TF_VAR_env")
-  stage = get_env("TF_VAR_stage")
-  app_name = "hello"
+  stage = get_env("TF_VAR_stage", "")
 }
 
 inputs = {
-  app_name = local.app_name
+  env = local.env
+  stage = local.stage
 }
 
 remote_state {
@@ -25,6 +29,6 @@ remote_state {
 
   config = {
     conn_str = get_env("TF_VAR_tf_state_postgres_conn_str")
-    schema_name = "services_cf_workers_${local.app_name}_${local.env}${local.stage}"
+    schema_name = "services_github_${local.env}${local.stage}"
   }
 }

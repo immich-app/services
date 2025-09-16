@@ -13,7 +13,7 @@ include {
 locals {
   env = get_env("TF_VAR_env")
   stage = get_env("TF_VAR_stage")
-  app_name = "hello"
+  app_name = "github-approval-check"
 }
 
 inputs = {
