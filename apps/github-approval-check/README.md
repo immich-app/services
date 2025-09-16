@@ -1,10 +1,10 @@
-# GitHub Approval Check App
+# GitHub Approval Check
 
-A GitHub App implemented as a Cloudflare Worker that enforces pull request approval requirements from authorized team members.
+A Cloudflare Worker that creates GitHub check runs to enforce approval requirements on pull requests using organization-level webhooks.
 
 ## Overview
 
-This worker creates a GitHub Check that validates whether a pull request has been approved by an authorized team member (admin or team role). It solves the problem of GitHub's native approval workflows creating separate check marks for different event triggers.
+This worker listens for GitHub organization webhook events and creates/updates check runs based on pull request approval status. It ensures that only authorized team members can approve PRs for merging.
 
 ## Features
 
@@ -24,22 +24,29 @@ This worker creates a GitHub Check that validates whether a pull request has bee
 3. Configure the app:
    - **Name**: `Immich Approval Check` (or your preferred name)
    - **Homepage URL**: Your organization URL
-   - **Webhook URL**: `https://your-worker-domain.workers.dev/webhook`
-   - **Webhook secret**: Generate a secure random string
    - **Permissions**:
      - **Checks**: Read & Write
      - **Pull requests**: Read
      - **Contents**: Read (for accessing repository)
-   - **Subscribe to events**:
-     - Check run
-     - Check suite
-     - Pull request
-     - Pull request review
+   - **Events**: Leave all unchecked (using org webhooks instead)
 4. After creation, note down:
    - App ID
    - Generate and download a private key
 
-### 2. Configure the Worker
+### 2. Configure Organization Webhook
+
+1. Go to Organization Settings → Webhooks
+2. Add webhook with:
+   - **Payload URL**: `https://your-worker-domain.workers.dev/webhook`
+   - **Content type**: `application/json`
+   - **Secret**: Generate a secure random string
+   - **Events to trigger**:
+     - Check runs
+     - Check suites
+     - Pull requests
+     - Pull request reviews
+
+### 3. Configure the Worker
 
 #### Local Development
 
@@ -72,7 +79,7 @@ Update `wrangler.toml` with your App ID:
 GITHUB_APP_ID = "your_app_id"
 ```
 
-### 3. Deploy the Worker
+### 4. Deploy the Worker
 
 ```bash
 # Development
@@ -82,7 +89,7 @@ pnpm run dev
 wrangler deploy
 ```
 
-### 4. Install the GitHub App
+### 5. Install the GitHub App
 
 1. Go to your GitHub App settings
 2. Click "Install App"
@@ -121,15 +128,18 @@ Users with `role` of "admin" or "team" are authorized to approve pull requests.
 
 ## How It Works
 
-1. **PR Opened/Updated**: Creates a check run and validates current approvals
-2. **Review Submitted**: Updates the check based on the new review
-3. **Check Suite Requested**: Runs the approval check for the PR
-4. **Check Re-requested**: Re-validates the current approval status
+1. **Organization webhook received**: GitHub sends webhook for PR events across all repos
+2. **Validation**: Worker validates webhook signature using org secret
+3. **Check approval**: Fetches allowed users and PR reviews
+4. **Update check**: 
+   - ✅ **Approved**: Creates/updates check with success status
+   - ⚠️ **Not approved + previously approved**: Updates to action_required
+   - **Not approved + never approved**: No check created (keeps PR clean)
 
-The check will show:
-- ✅ **Success**: When approved by an authorized team member
-- ❌ **Failure**: When approval is still required
-- 📝 **Detailed feedback**: Shows who has reviewed and who can approve
+The check behavior:
+- **Clean PR view**: No check appears until someone approves
+- **Blocks merge**: Missing required check prevents merging
+- **Clear feedback**: Shows approval status without exposing approver list
 
 ## Development
 

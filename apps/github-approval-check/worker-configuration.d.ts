@@ -1,11 +1,13 @@
 interface Env {
-  // Environment variables
+  // GitHub App configuration
   GITHUB_APP_ID: string;
-  ALLOWED_USERS_URL: string;
-
-  // Secrets
   GITHUB_APP_PRIVATE_KEY: string;
+  
+  // Organization webhook secret
   GITHUB_WEBHOOK_SECRET: string;
+  
+  // Approval configuration  
+  ALLOWED_USERS_URL: string;
 }
 
 // Type declaration for cloudflare:test module

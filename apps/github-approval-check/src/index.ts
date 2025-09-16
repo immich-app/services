@@ -33,9 +33,8 @@ export default {
         }
 
         // Validate environment variables
-        const missingVars = validateEnvironment(env);
-        if (missingVars.length > 0) {
-          console.error(`[webhook] Missing environment variables: ${missingVars.join(', ')}`);
+        if (!env.GITHUB_APP_ID || !env.GITHUB_APP_PRIVATE_KEY || !env.GITHUB_WEBHOOK_SECRET || !env.ALLOWED_USERS_URL) {
+          console.error('[webhook] Missing required environment variables');
           return new Response('Server configuration error', { status: 500 });
         }
 
@@ -51,8 +50,9 @@ export default {
         // Parse webhook payload
         const payload = JSON.parse(body);
         const eventType = request.headers.get('X-GitHub-Event');
+        const repoName = payload.repository?.name;
 
-        console.log(`[webhook] Received ${eventType} event`);
+        console.log(`[webhook] Received ${eventType} event for repo: ${repoName}`);
 
         // Initialize services
         const checkRunManager = new CheckRunManager(env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY);
@@ -101,22 +101,6 @@ export default {
     return new Response('Not Found', { status: 404 });
   },
 };
-
-/**
- * Validates that all required environment variables are present
- */
-function validateEnvironment(env: Env): string[] {
-  const required = ['GITHUB_APP_ID', 'GITHUB_APP_PRIVATE_KEY', 'GITHUB_WEBHOOK_SECRET', 'ALLOWED_USERS_URL'];
-  const missing: string[] = [];
-
-  for (const key of required) {
-    if (!env[key as keyof Env] || typeof env[key as keyof Env] !== 'string') {
-      missing.push(key);
-    }
-  }
-
-  return missing;
-}
 
 /**
  * Handles pull_request events (opened, reopened, synchronize)
