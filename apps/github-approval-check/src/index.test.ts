@@ -5,7 +5,7 @@ describe('GitHub Approval Check Worker', () => {
   describe('Health Check', () => {
     it('should return healthy status', async () => {
       const response = await SELF.fetch('https://example.com/health');
-      const data = await response.json() as any;
+      const data = (await response.json()) as any;
 
       expect(response.status).toBe(200);
       expect(data).toHaveProperty('status', 'healthy');
@@ -36,7 +36,7 @@ describe('GitHub Approval Check Worker', () => {
     it('should verify valid signatures', async () => {
       const body = '{"test":"data"}';
       const secret = 'test-secret';
-      
+
       // Generate a valid signature
       const encoder = new TextEncoder();
       const key = await crypto.subtle.importKey(
@@ -44,19 +44,14 @@ describe('GitHub Approval Check Worker', () => {
         encoder.encode(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign']
+        ['sign'],
       );
-      
-      const signature = await crypto.subtle.sign(
-        'HMAC',
-        key,
-        encoder.encode(body)
-      );
-      
-      const hexSignature = 'sha256=' + [...new Uint8Array(signature)]
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-      
+
+      const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+
+      const hexSignature =
+        'sha256=' + [...new Uint8Array(signature)].map((b) => b.toString(16).padStart(2, '0')).join('');
+
       // We need to export the function to test it directly
       // For now, we just verify the test passes
       expect(hexSignature).toMatch(/^sha256=[a-f0-9]{64}$/);

@@ -117,7 +117,7 @@ The JSON structure should be:
   },
   {
     "github": {
-      "username": "user2", 
+      "username": "user2",
       "id": 67890
     },
     "role": "team"
@@ -132,12 +132,13 @@ Users with `role` of "admin" or "team" are authorized to approve pull requests.
 1. **Organization webhook received**: GitHub sends webhook for PR events across all repos
 2. **Validation**: Worker validates webhook signature using org secret
 3. **Check approval**: Fetches allowed users and PR reviews
-4. **Update check**: 
+4. **Update check**:
    - ✅ **Approved**: Creates/updates check with success status
    - ⚠️ **Not approved + previously approved**: Updates to action_required
    - **Not approved + never approved**: No check created (keeps PR clean)
 
 The check behavior:
+
 - **Clean PR view**: No check appears until someone approves
 - **Blocks merge**: Missing required check prevents merging
 - **Clear feedback**: Shows approval status without exposing approver list
@@ -158,6 +159,7 @@ STAGE=-pr-123               # Set by Terraform from TF_VAR_stage
 ```
 
 The worker automatically:
+
 - Detects dev mode from the `-pr-` prefix in the stage
 - Extracts the PR number (e.g., 123 from `-pr-123`)
 - Limits processing to only the `services` repository

@@ -6,11 +6,7 @@
 /**
  * Verify the webhook signature using HMAC-SHA256
  */
-export async function verifyWebhookSignature(
-  body: string,
-  signature: string,
-  secret: string
-): Promise<boolean> {
+export async function verifyWebhookSignature(body: string, signature: string, secret: string): Promise<boolean> {
   // The signature format is "sha256=<hex digest>"
   if (!signature.startsWith('sha256=')) {
     return false;
@@ -24,20 +20,14 @@ export async function verifyWebhookSignature(
     new TextEncoder().encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
     false,
-    ['sign']
+    ['sign'],
   );
 
   // Generate the HMAC
-  const mac = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    new TextEncoder().encode(body)
-  );
+  const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
 
   // Convert to hex string
-  const computedSignature = [...new Uint8Array(mac)]
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+  const computedSignature = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('');
 
   // Constant-time comparison to prevent timing attacks
   return safeCompare(computedSignature, providedSignature);

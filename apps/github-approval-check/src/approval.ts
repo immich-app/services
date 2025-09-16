@@ -113,11 +113,7 @@ export class ApprovalValidator {
     const hasReviews = allReviews.length > 0;
 
     // Create output message
-    const { summary, details } = CheckRunManager.createCheckOutput(
-      isApproved,
-      validApprovals,
-      allReviews,
-    );
+    const { summary, details } = CheckRunManager.createCheckOutput(isApproved, validApprovals, allReviews);
 
     return {
       isApproved,

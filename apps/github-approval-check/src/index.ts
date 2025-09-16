@@ -62,7 +62,7 @@ export default {
         if (devModeConfig.isDevMode) {
           console.log(`[webhook] Dev mode enabled - PR: ${devModeConfig.prNumber}, Repo: ${devModeConfig.repoName}`);
         }
-        
+
         if (!shouldProcessInDevMode(devModeConfig, repoName, prNumber)) {
           return new Response('OK', { status: 200 });
         }
@@ -83,7 +83,12 @@ export default {
           }
 
           case WEBHOOK_EVENTS.PULL_REQUEST_REVIEW: {
-            await handlePullRequestReviewEvent(payload as PullRequestReviewEvent, env, checkRunManager, approvalValidator);
+            await handlePullRequestReviewEvent(
+              payload as PullRequestReviewEvent,
+              env,
+              checkRunManager,
+              approvalValidator,
+            );
             break;
           }
 
@@ -132,7 +137,12 @@ async function handlePullRequestEvent(
     return;
   }
 
-  const { installationId, owner, repo } = await validateWebhookPayload(event, 'pull_request', env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY);
+  const { installationId, owner, repo } = await validateWebhookPayload(
+    event,
+    'pull_request',
+    env.GITHUB_APP_ID,
+    env.GITHUB_APP_PRIVATE_KEY,
+  );
   const pr = validatePullRequest(pull_request, 'pull_request');
 
   await handleApprovalCheck(
@@ -167,7 +177,12 @@ async function handlePullRequestReviewEvent(
     return;
   }
 
-  const { installationId, owner, repo } = await validateWebhookPayload(event, 'pull_request_review', env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY);
+  const { installationId, owner, repo } = await validateWebhookPayload(
+    event,
+    'pull_request_review',
+    env.GITHUB_APP_ID,
+    env.GITHUB_APP_PRIVATE_KEY,
+  );
   const pr = validatePullRequest(pull_request, 'pull_request_review');
 
   await handleApprovalCheck(
@@ -208,7 +223,12 @@ async function handleCheckSuiteEvent(
     return;
   }
 
-  const { installationId, owner, repo } = await validateWebhookPayload(event, 'check_suite', env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY);
+  const { installationId, owner, repo } = await validateWebhookPayload(
+    event,
+    'check_suite',
+    env.GITHUB_APP_ID,
+    env.GITHUB_APP_PRIVATE_KEY,
+  );
 
   if (!check_suite.head_sha) {
     console.log('[check_suite] Missing head SHA');
@@ -258,7 +278,12 @@ async function handleCheckRunRerequest(
     return;
   }
 
-  const { installationId, owner, repo } = await validateWebhookPayload(event, 'check_run', env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY);
+  const { installationId, owner, repo } = await validateWebhookPayload(
+    event,
+    'check_run',
+    env.GITHUB_APP_ID,
+    env.GITHUB_APP_PRIVATE_KEY,
+  );
 
   if (!check_run.id) {
     console.log('[check_run] Missing check run ID');

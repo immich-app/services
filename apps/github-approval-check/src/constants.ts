@@ -38,7 +38,8 @@ export const MESSAGES = {
   },
   APPROVAL_REVOKED: {
     SUMMARY: '⚠️ Approval revoked - action required',
-    DETAILS: 'This pull request was previously approved but the approval is no longer valid. It requires re-approval from an authorized team member before it can be merged.',
+    DETAILS:
+      'This pull request was previously approved but the approval is no longer valid. It requires re-approval from an authorized team member before it can be merged.',
   },
 } as const;
 

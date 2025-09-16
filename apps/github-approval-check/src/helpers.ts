@@ -54,7 +54,7 @@ export async function validateWebhookPayload(
 
   console.log(`[${eventType}] Fetching installation ID for ${owner}/${repo}`);
   const installationId = await getInstallationId(appId, privateKey, owner, repo);
-  
+
   return {
     installationId,
     owner,
@@ -79,10 +79,10 @@ export function validatePullRequest(pullRequest: any, eventType: string): PullRe
 
 /**
  * Handles approval check logic for all event types
- * 
+ *
  * Behavior:
  * - If approved: Creates/updates check with success status
- * - If not approved + check exists: Updates to action_required 
+ * - If not approved + check exists: Updates to action_required
  * - If not approved + no check: Does nothing (keeps PR clean)
  */
 export async function handleApprovalCheck(
@@ -103,14 +103,11 @@ export async function handleApprovalCheck(
   console.log(`[${eventType}] Processing PR #${prNumber} (SHA: ${headSha.slice(0, 7)})`);
 
   // Validate current approvals
-  const validationResult = await approvalValidator.validatePullRequest(
-    installationId,
-    owner,
-    repo,
-    prNumber,
-  );
+  const validationResult = await approvalValidator.validatePullRequest(installationId, owner, repo, prNumber);
 
-  console.log(`[${eventType}] PR #${prNumber} approval status: ${validationResult.isApproved ? 'approved' : 'not approved'}`);
+  console.log(
+    `[${eventType}] PR #${prNumber} approval status: ${validationResult.isApproved ? 'approved' : 'not approved'}`,
+  );
 
   // Get existing check runs
   const checkName = getCheckName(environment);
@@ -154,7 +151,7 @@ export async function handleApprovalCheck(
   } else if (existingCheck) {
     // PR is not approved but check exists - update to action_required
     console.log(`[${eventType}] Updating check to action_required for PR #${prNumber}`);
-    
+
     await checkRunManager.updateCheckRun(
       installationId,
       owner,

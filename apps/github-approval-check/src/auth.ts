@@ -13,7 +13,7 @@ export async function getInstallationId(
   appId: string,
   privateKey: string,
   owner: string,
-  repo: string
+  repo: string,
 ): Promise<number> {
   // Create app-authenticated Octokit
   const appOctokit = new Octokit({
@@ -31,7 +31,7 @@ export async function getInstallationId(
       owner,
       repo,
     });
-    
+
     return data.id;
   } catch (error: any) {
     if (error.status === 404) {
@@ -47,7 +47,7 @@ export async function getInstallationId(
  */
 function formatPrivateKey(privateKey: string): string {
   let formattedPrivateKey = privateKey.trim();
-  
+
   // If the private key doesn't have proper line breaks, it might have been improperly stored
   // This can happen when the key is stored in environment variables without proper escaping
   if (!formattedPrivateKey.includes('\n') && formattedPrivateKey.includes('-----BEGIN')) {
@@ -57,28 +57,24 @@ function formatPrivateKey(privateKey: string): string {
       .replace(/-----END RSA PRIVATE KEY-----/, '\n-----END RSA PRIVATE KEY-----')
       .replace(/([^-\n])-----END/, '$1\n-----END');
   }
-  
+
   return formattedPrivateKey;
 }
 
 /**
  * Create an authenticated Octokit instance for a GitHub App installation
  */
-export function createOctokitForInstallation(
-  appId: string,
-  privateKey: string,
-  installationId: number
-): Octokit {
+export function createOctokitForInstallation(appId: string, privateKey: string, installationId: number): Octokit {
   // Validate inputs
   if (!appId || typeof appId !== 'string') {
     throw new Error('Invalid GitHub App ID provided to createOctokitForInstallation');
   }
 
   if (!privateKey || typeof privateKey !== 'string') {
-    console.error('Invalid privateKey:', { 
-      hasPrivateKey: !!privateKey, 
+    console.error('Invalid privateKey:', {
+      hasPrivateKey: !!privateKey,
       type: typeof privateKey,
-      length: privateKey ? String(privateKey).length : 0
+      length: privateKey ? String(privateKey).length : 0,
     });
     throw new Error('Invalid GitHub App Private Key provided to createOctokitForInstallation');
   }
@@ -100,7 +96,7 @@ export function createOctokitForInstallation(
       },
       userAgent: 'Immich-Approval-Check-App',
     });
-    
+
     // Verify the structure
     if (!octokit.rest || !octokit.rest.checks) {
       console.error('Octokit structure issue:', {
@@ -110,7 +106,7 @@ export function createOctokitForInstallation(
       });
       throw new Error('Octokit instance is missing expected methods');
     }
-    
+
     return octokit;
   } catch (error) {
     console.error('Failed to create Octokit instance:', error);

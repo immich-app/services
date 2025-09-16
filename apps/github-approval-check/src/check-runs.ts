@@ -32,7 +32,7 @@ export class CheckRunManager {
     repo: string,
     headSha: string,
     name: string,
-    status: 'queued' | 'in_progress' | 'completed'
+    status: 'queued' | 'in_progress' | 'completed',
   ): Promise<CheckRun> {
     const octokit = createOctokitForInstallation(this.appId, this.privateKey, installationId);
 
@@ -64,9 +64,17 @@ export class CheckRunManager {
     owner: string,
     repo: string,
     checkRunId: number,
-    conclusion: 'success' | 'failure' | 'neutral' | 'cancelled' | 'skipped' | 'timed_out' | 'action_required' | 'in_progress',
+    conclusion:
+      | 'success'
+      | 'failure'
+      | 'neutral'
+      | 'cancelled'
+      | 'skipped'
+      | 'timed_out'
+      | 'action_required'
+      | 'in_progress',
     summary: string,
-    text: string
+    text: string,
   ): Promise<void> {
     const octokit = createOctokitForInstallation(this.appId, this.privateKey, installationId);
 
@@ -95,12 +103,7 @@ export class CheckRunManager {
   /**
    * List check runs for a specific commit
    */
-  async listCheckRuns(
-    installationId: number,
-    owner: string,
-    repo: string,
-    ref: string
-  ): Promise<CheckRun[]> {
+  async listCheckRuns(installationId: number, owner: string, repo: string, ref: string): Promise<CheckRun[]> {
     const octokit = createOctokitForInstallation(this.appId, this.privateKey, installationId);
 
     const response = await octokit.rest.checks.listForRef({
@@ -118,7 +121,7 @@ export class CheckRunManager {
   static createCheckOutput(
     isApproved: boolean,
     approvers: string[],
-    reviews: Array<{ user: string; state: string; submittedAt: string }>
+    reviews: Array<{ user: string; state: string; submittedAt: string }>,
   ): { summary: string; details: string } {
     const summary = isApproved
       ? `✅ Pull request has been approved by authorized team members.`
@@ -140,15 +143,14 @@ export class CheckRunManager {
     if (reviews.length > 0) {
       details += '\n### 📝 Review History:\n';
       for (const review of reviews) {
-        const emoji = review.state === 'APPROVED' ? '✅' :
-                      review.state === 'CHANGES_REQUESTED' ? '❌' : '💬';
+        const emoji = review.state === 'APPROVED' ? '✅' : review.state === 'CHANGES_REQUESTED' ? '❌' : '💬';
         details += `- ${emoji} @${review.user} - ${review.state} (${review.submittedAt})\n`;
       }
     }
 
     details += '\n---\n';
     details += '*This check ensures that pull requests are approved by authorized team members before merging.*\n';
-    
+
     if (!isApproved) {
       details += '*If you believe you should have approval permissions, please contact the repository administrators.*';
     }

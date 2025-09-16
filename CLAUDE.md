@@ -11,7 +11,7 @@ This is the Immich Workers repository - a monorepo for Cloudflare Workers that p
 ### Root Level
 
 ```bash
-pnpm install       # Install all dependencies  
+pnpm install       # Install all dependencies
 pnpm run lint      # Lint all workers (eslint . --max-warnings 0)
 pnpm run lint:fix  # Auto-fix linting issues
 pnpm run format    # Check formatting with Prettier
@@ -21,7 +21,7 @@ pnpm run check     # Type-check all workers (tsc --noEmit && pnpm -r typecheck)
 pnpm run build     # Build all workers (pnpm -r build)
 ```
 
-### Worker Development  
+### Worker Development
 
 ```bash
 cd apps/<worker-name>
@@ -124,6 +124,7 @@ terragrunt apply
 ```
 
 Key Terragrunt/Terraform patterns:
+
 - State stored in PostgreSQL with schema: `services_cloudflare_workers_${app_name}_immich_app_${env}${stage}`
 - Remote state references used for shared resources
 - Each worker module includes: `terragrunt.hcl`, `variables.tf`, `config.tf`, `worker.tf`, `providers.tf`, `remote-state.tf`
@@ -170,7 +171,7 @@ Or configure via Terraform in the worker module.
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    
+
     switch (url.pathname) {
       case '/':
         return new Response(JSON.stringify({ message: 'Hello' }), {
@@ -198,16 +199,16 @@ headers: {
 
 ```typescript
 return new Response(
-  JSON.stringify({ 
+  JSON.stringify({
     error: 'Not Found',
-    path: url.pathname 
-  }), 
+    path: url.pathname,
+  }),
   {
     status: 404,
-    headers: { 
+    headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
-    }
-  }
+      'Access-Control-Allow-Origin': '*',
+    },
+  },
 );
 ```
