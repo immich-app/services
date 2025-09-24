@@ -8,7 +8,7 @@ binding = "DB"
 database_name = "fourthwall-integration"
 database_id = "" # Will be filled by Terraform
 
-# Queue bindings
+# Queue bindings - Producer bindings
 [[queues.producers]]
 queue = "webhook-processor"
 binding = "WEBHOOK_QUEUE"
@@ -16,6 +16,12 @@ binding = "WEBHOOK_QUEUE"
 [[queues.producers]]
 queue = "fulfillment-processor"
 binding = "FULFILLMENT_QUEUE"
+
+# Queue bindings - Consumer binding (this worker consumes from webhook-processor)
+[[queues.consumers]]
+queue = "webhook-processor"
+max_batch_size = 10
+max_batch_timeout = 30
 
 
 # Cron triggers

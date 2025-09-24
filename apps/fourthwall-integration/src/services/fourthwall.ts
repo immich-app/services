@@ -1,5 +1,5 @@
 import { OrderRepository } from '../repositories/index.js';
-import { FourthwallOrderAttributes, FourthwallWebhook, Order } from '../types/index.js';
+import { FourthwallOrderAttributes, FourthwallOrderData, FourthwallWebhook, Order } from '../types/index.js';
 
 export class FourthwallService {
   private authHeader: string;
@@ -20,18 +20,26 @@ export class FourthwallService {
 
   async processWebhook(payload: FourthwallWebhook): Promise<void> {
     console.log('[FW-SERVICE] Processing webhook with type:', payload.type);
-    console.log('[FW-SERVICE] Webhook ID:', payload.data?.attributes?.id);
+    console.log('[FW-SERVICE] Webhook ID:', payload.id);
     
-    if (payload.type !== 'order.paid') {
-      console.log(`[FW-SERVICE] Ignoring non-order.paid webhook type: ${payload.type}`);
+    // Only process ORDER_PLACED events
+    if (payload.type !== 'ORDER_PLACED') {
+      console.log(`[FW-SERVICE] Ignoring webhook type: ${payload.type}`);
       return;
     }
 
-    const orderData = payload.data.attributes;
+    if (!payload.data) {
+      console.log('[FW-SERVICE] No data in webhook payload');
+      return;
+    }
+
+    const orderData = payload.data;
     console.log('[FW-SERVICE] Order data extracted from webhook');
     console.log('[FW-SERVICE] Order ID:', orderData.id);
-    console.log('[FW-SERVICE] Customer:', orderData.customer?.email);
-    console.log('[FW-SERVICE] Line items count:', orderData.line_items?.length);
+    console.log('[FW-SERVICE] Friendly ID:', orderData.friendlyId);
+    console.log('[FW-SERVICE] Customer email:', orderData.email);
+    console.log('[FW-SERVICE] Order status:', orderData.status);
+    console.log('[FW-SERVICE] Offers count:', orderData.offers?.length);
 
     console.log('[FW-SERVICE] Checking for existing order with Fourthwall ID:', orderData.id);
     const existingOrder = await this.orderRepository.getOrderByFourthwallId(orderData.id);
@@ -41,27 +49,35 @@ export class FourthwallService {
     }
     console.log('[FW-SERVICE] No existing order found, creating new order');
 
-    const order = await this.createOrderFromWebhook(orderData);
+    const order = await this.createOrderFromWebhookV2(orderData);
     console.log('[FW-SERVICE] Order created with internal ID:', order.id);
 
-    console.log('[FW-SERVICE] Creating line items for order');
-    for (const [index, lineItem] of orderData.line_items.entries()) {
-      console.log(`[FW-SERVICE] Creating line item ${index + 1}/${orderData.line_items.length}:`, lineItem.name);
-      await this.orderRepository.createOrderItem({
-        order_id: order.id,
-        fourthwall_product_id: lineItem.product_id,
-        fourthwall_variant_id: lineItem.variant_id,
-        product_name: lineItem.name,
-        quantity: lineItem.quantity,
-        unit_price_cents: lineItem.price.amount,
-      });
+    console.log('[FW-SERVICE] Creating offer items for order');
+    if (orderData.offers && orderData.offers.length > 0) {
+      for (const [index, offer] of orderData.offers.entries()) {
+        console.log(`[FW-SERVICE] Creating offer item ${index + 1}/${orderData.offers.length}:`, offer.name);
+        // Quantity is in the variant object for Fourthwall webhooks
+        const quantity = offer.variant?.quantity || offer.quantity || 1;
+        const unitPrice = offer.variant?.unitPrice?.value || offer.price?.value || 0;
+        
+        console.log(`[FW-SERVICE] Item details - Quantity: ${quantity}, Unit Price: ${unitPrice}`);
+        
+        await this.orderRepository.createOrderItem({
+          order_id: order.id,
+          fourthwall_product_id: offer.id,
+          fourthwall_variant_id: offer.variant?.id || null,
+          product_name: offer.variant?.name || offer.name,
+          quantity: quantity,
+          unit_price_cents: Math.round(unitPrice * 100), // Convert to cents
+        });
+      }
     }
 
-    console.log(`[FW-SERVICE] Successfully created order ${order.id} from Fourthwall order ${orderData.id} with ${orderData.line_items.length} line items`);
+    console.log(`[FW-SERVICE] Successfully created order ${order.id} from Fourthwall order ${orderData.id} with ${orderData.offers?.length || 0} items`);
   }
 
   private async createOrderFromWebhook(orderData: FourthwallOrderAttributes): Promise<Order> {
-    console.log('[FW-SERVICE] Creating order from webhook data');
+    console.log('[FW-SERVICE] Creating order from legacy webhook data');
     console.log('[FW-SERVICE] Shipping country:', orderData.shipping_address?.country);
     console.log('[FW-SERVICE] Order total:', orderData.total?.amount, orderData.total?.currency);
     
@@ -78,6 +94,28 @@ export class FourthwallService {
       order_total_cents: orderData.total.amount,
       order_currency: orderData.total.currency,
       status: 'received',
+    });
+  }
+
+  private async createOrderFromWebhookV2(orderData: FourthwallOrderData): Promise<Order> {
+    console.log('[FW-SERVICE] Creating order from webhook data V2');
+    console.log('[FW-SERVICE] Shipping country:', orderData.shipping?.address?.country);
+    console.log('[FW-SERVICE] Order total:', orderData.amounts?.total?.value, orderData.amounts?.total?.currency);
+    
+    return await this.orderRepository.createOrder({
+      fourthwall_order_id: orderData.id,
+      customer_email: orderData.email,
+      customer_name: orderData.shipping?.address?.name || orderData.billing?.address?.name || orderData.username || 'Unknown',
+      shipping_address_line1: orderData.shipping?.address?.address1 || '',
+      shipping_address_line2: orderData.shipping?.address?.address2 || null, // Ensure null not undefined
+      shipping_city: orderData.shipping?.address?.city || '',
+      shipping_state: orderData.shipping?.address?.state || null, // Ensure null not undefined
+      shipping_postal_code: orderData.shipping?.address?.zip || '',
+      shipping_country: orderData.shipping?.address?.country || '',
+      order_total_cents: Math.round((orderData.amounts?.total?.value || 0) * 100), // Convert to cents
+      order_currency: orderData.amounts?.total?.currency || 'USD',
+      status: 'received',
+      fulfillment_provider: null, // Explicitly set to null initially
     });
   }
 

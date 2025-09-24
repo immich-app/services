@@ -184,6 +184,16 @@ resource "cloudflare_worker_version" "queue_processor" {
       id = cloudflare_d1_database.db.id
     },
     {
+      name     = "WEBHOOK_QUEUE"
+      type     = "queue"
+      queue_name = cloudflare_queue.webhook_processor.queue_name
+    },
+    {
+      name     = "FULFILLMENT_QUEUE"
+      type     = "queue"
+      queue_name = cloudflare_queue.fulfillment_processor.queue_name
+    },
+    {
       name = "FOURTHWALL_USERNAME"
       type = "secret_text"
       text = var.fourthwall_username
@@ -207,6 +217,11 @@ resource "cloudflare_worker_version" "queue_processor" {
       name = "CDCLICK_API_KEY"
       type = "secret_text"
       text = var.cdclick_api_key
+    },
+    {
+      name = "WEBHOOK_SECRET"
+      type = "secret_text"
+      text = var.webhook_secret
     }
   ]
   compatibility_date = "2025-09-09"

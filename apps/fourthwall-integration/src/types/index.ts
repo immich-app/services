@@ -67,17 +67,116 @@ export type FulfillmentStatus =
 export type FulfillmentProvider = 'kunaki' | 'cdclick-europe';
 export type WebhookSource = 'fourthwall' | 'cdclick-europe';
 
+// Actual webhook event structure from Fourthwall
 export interface FourthwallWebhook {
-  id: string;
-  type: string;
-  data: {
-    id: string;
-    type: string;
-    attributes: FourthwallOrderAttributes;
-  };
-  created_at: string;
+  id: string; // webhook event ID (e.g., "weve_...")
+  webhookId: string; // webhook configuration ID (e.g., "wcon_...")
+  shopId: string; // shop ID
+  type: string; // e.g., "ORDER_PLACED", "ORDER_UPDATED", etc.
+  apiVersion: string; // e.g., "V1"
+  createdAt: string; // timestamp
+  data?: FourthwallOrderData; // The actual order data for ORDER_PLACED/ORDER_UPDATED
 }
 
+// Fourthwall ORDER_PLACED webhook data structure
+export interface FourthwallOrderData {
+  id: string;
+  shopId: string;
+  friendlyId: string;
+  checkoutId: string;
+  promotionId?: string;
+  status: string;
+  email: string;
+  emailMarketingOptIn: boolean;
+  username?: string;
+  message?: string;
+  amounts: {
+    subtotal: { value: number; currency: string };
+    shipping: { value: number; currency: string };
+    tax: { value: number; currency: string };
+    donation: { value: number; currency: string };
+    discount: { value: number; currency: string };
+    total: { value: number; currency: string };
+  };
+  billing: {
+    address: FourthwallAddress;
+  };
+  shipping: {
+    address: FourthwallAddress;
+  };
+  offers: FourthwallOffer[];
+  source?: {
+    type: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FourthwallAddress {
+  name?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zip?: string;
+  phone?: string;
+}
+
+export interface FourthwallOffer {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  primaryImage?: {
+    id: string;
+    url: string;
+    width: number;
+    height: number;
+    transformedUrl?: string;
+  };
+  variant?: {
+    id: string;
+    name?: string;
+    sku?: string;
+    cost?: {
+      value: number;
+      currency: string;
+    };
+    price?: {
+      value: number;
+      currency: string;
+    };
+    unitCost?: {
+      value: number;
+      currency: string;
+    };
+    unitPrice?: {
+      value: number;
+      currency: string;
+    };
+    quantity?: number;
+    weight?: {
+      unit: string;
+      value: number;
+    };
+    dimensions?: {
+      unit: string;
+      width: number;
+      height: number;
+      length: number;
+    };
+    attributes?: any;
+    compareAtPrice?: any;
+  };
+  quantity?: number; // Optional at offer level
+  price?: {
+    value: number;
+    currency: string;
+  };
+}
+
+// Legacy structure (keeping for backward compatibility if needed)
 export interface FourthwallOrderAttributes {
   id: string;
   status: string;
