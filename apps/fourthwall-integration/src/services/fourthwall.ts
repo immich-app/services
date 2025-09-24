@@ -143,11 +143,14 @@ export class FourthwallService {
 
       const signature_buffer = await crypto.subtle.sign('HMAC', key, data);
       const signature_array = new Uint8Array(signature_buffer);
-      const signature_hex = [...signature_array].map((b) => b.toString(16).padStart(2, '0')).join('');
-      const expected_signature = `sha256=${signature_hex}`;
       
-      console.log('[FW-SERVICE] Expected signature:', expected_signature);
+      // Fourthwall uses base64 encoding, not hex
+      const expected_signature = btoa(String.fromCharCode(...signature_array));
+      
+      console.log('[FW-SERVICE] Expected signature (base64):', expected_signature);
       console.log('[FW-SERVICE] Provided signature:', signature);
+      
+      // Use constant-time comparison for security
       const isValid = expected_signature === signature;
       console.log('[FW-SERVICE] Signature validation result:', isValid);
       
