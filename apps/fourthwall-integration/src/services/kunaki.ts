@@ -24,12 +24,12 @@ export class KunakiService {
     console.log('[KUNAKI] Customer:', order.customer_name);
     console.log('[KUNAKI] Shipping to:', order.shipping_country);
     console.log('[KUNAKI] Number of items:', orderItems.length);
-    
+
     try {
       // Filter items that have SKU mappings
       const fulfillableItems: OrderItem[] = [];
       const skippedItems: OrderItem[] = [];
-      
+
       for (const item of orderItems) {
         const mappedSku = this.mapProductToKunakiSku(item.fourthwall_product_id);
         if (mappedSku) {
@@ -38,45 +38,53 @@ export class KunakiService {
           skippedItems.push(item);
         }
       }
-      
+
       console.log('[KUNAKI] Fulfillable items:', fulfillableItems.length);
       console.log('[KUNAKI] Skipped items (no SKU mapping):', skippedItems.length);
-      
+
       if (skippedItems.length > 0) {
         console.log('[KUNAKI] Skipped items details:');
         for (const item of skippedItems) {
           console.log(`[KUNAKI]   - ${item.product_name} (ID: ${item.fourthwall_product_id})`);
         }
       }
-      
+
       if (fulfillableItems.length === 0) {
-        console.log('[KUNAKI] No items have SKU mappings for Kunaki fulfillment - order will be fulfilled directly by Fourthwall');
+        console.log(
+          '[KUNAKI] No items have SKU mappings for Kunaki fulfillment - order will be fulfilled directly by Fourthwall',
+        );
         return { success: true, provider_order_id: undefined };
       }
-      
+
       // Process only items with SKU mappings
       for (const [index, item] of fulfillableItems.entries()) {
         console.log(`[KUNAKI] Processing item ${index + 1}/${fulfillableItems.length}:`, item.product_name);
         const mappedSku = this.mapProductToKunakiSku(item.fourthwall_product_id);
         console.log('[KUNAKI] Using SKU:', mappedSku);
-        
+
         const kunakiOrder: KunakiOrderRequest = {
           Product_Id: mappedSku!,
           Quantity: item.quantity,
           Ship_Name: order.customer_name,
           Ship_Address: order.shipping_address_line1,
-          Ship_Address_2: order.shipping_address_line2,
           Ship_City: order.shipping_city,
-          Ship_State: order.shipping_state,
           Ship_Postal_Code: order.shipping_postal_code,
           Ship_Country: order.shipping_country,
           Order_Id: `${order.id}-${item.id}`,
         };
+        
+        // Only add optional fields if they have values
+        if (order.shipping_address_line2) {
+          kunakiOrder.Ship_Address_2 = order.shipping_address_line2;
+        }
+        if (order.shipping_state) {
+          kunakiOrder.Ship_State = order.shipping_state;
+        }
         console.log('[KUNAKI] Kunaki order ID:', kunakiOrder.Order_Id);
 
         const result = await this.submitSingleOrder(kunakiOrder);
         console.log('[KUNAKI] Submission result:', result.success ? 'success' : 'failed');
-        
+
         if (!result.success) {
           console.error('[KUNAKI] Order submission failed:', result.error);
           return result;
@@ -104,14 +112,16 @@ export class KunakiService {
   private async submitSingleOrder(orderData: KunakiOrderRequest): Promise<FulfillmentResult> {
     console.log('[KUNAKI] Submitting single order to Kunaki API');
     console.log('[KUNAKI] Order data:', JSON.stringify(orderData));
-    
+
+    const kunakiParams = this.objectToKunakiParams(orderData);
     const params = new URLSearchParams({
       userid: this.username,
       password: this.password,
       command: 'SubmitOrder',
-      ...this.objectToKunakiParams(orderData),
+      ...kunakiParams,
     });
     console.log('[KUNAKI] API URL:', this.baseUrl);
+    console.log('[KUNAKI] Request params (excluding credentials):', JSON.stringify(kunakiParams));
 
     try {
       console.log('[KUNAKI] Making request to Kunaki API');
@@ -122,7 +132,7 @@ export class KunakiService {
         },
         body: params.toString(),
       });
-      
+
       console.log('[KUNAKI] Response status:', response.status);
 
       if (!response.ok) {
@@ -132,7 +142,13 @@ export class KunakiService {
 
       const responseText = await response.text();
       console.log('[KUNAKI] Order submit response text:', responseText);
+      console.log('[KUNAKI] Response length:', responseText.length);
       
+      // Log the raw response for debugging
+      if (responseText.length === 0) {
+        console.error('[KUNAKI] Empty response from Kunaki API');
+      }
+
       const result = this.parseKunakiResponse(responseText);
       console.log('[KUNAKI] Parsed submit response:', JSON.stringify(result));
 
@@ -143,7 +159,7 @@ export class KunakiService {
           }
         : {
             success: false,
-            error: result.Error || 'Unknown Kunaki error',
+            error: result.Error || (responseText.length === 0 ? 'Empty response from Kunaki' : 'Unknown Kunaki error'),
           };
     } catch (error) {
       console.error('[KUNAKI] Error calling API:', error);
@@ -157,7 +173,7 @@ export class KunakiService {
 
   async checkOrderStatus(kunakiOrderId: string): Promise<KunakiStatusResponse> {
     console.log('[KUNAKI] Checking order status for:', kunakiOrderId);
-    
+
     const params = new URLSearchParams({
       userid: this.username,
       password: this.password,
@@ -174,7 +190,7 @@ export class KunakiService {
         },
         body: params.toString(),
       });
-      
+
       console.log('[KUNAKI] Response status:', response.status);
 
       if (!response.ok) {
@@ -184,7 +200,7 @@ export class KunakiService {
 
       const responseText = await response.text();
       console.log('[KUNAKI] Status response text:', responseText);
-      
+
       const statusResult = this.parseKunakiStatusResponse(responseText);
       console.log('[KUNAKI] Parsed status response:', JSON.stringify(statusResult));
       return statusResult;
@@ -203,7 +219,8 @@ export class KunakiService {
     const params: Record<string, string> = {};
 
     for (const [key, value] of Object.entries(obj)) {
-      if (value !== undefined && value !== null) {
+      // Skip null and undefined values - Kunaki doesn't accept them
+      if (value !== undefined && value !== null && value !== '') {
         params[key] = String(value);
       }
     }
@@ -251,7 +268,10 @@ export class KunakiService {
 
   private mapProductToKunakiSku(fourthwallProductId: string): string | null {
     console.log('[KUNAKI] Mapping product ID:', fourthwallProductId);
-    const productMapping: Record<string, string> = {};
+    const productMapping: Record<string, string> = {
+      'b2c201d3-8104-4b2a-b2c9-1f6b335b650a': 'PX00ZTZFZH', //Fourthwall test webhook product
+      'a53316f3-3b7e-493c-b585-e0d3d23d44b9': 'PX00ZTZFZH', //Immich Retro
+    };
 
     const mappedSku = productMapping[fourthwallProductId];
     if (!mappedSku) {
@@ -265,20 +285,16 @@ export class KunakiService {
   canFulfillOrder(order: Order): boolean {
     const country = order.shipping_country.toUpperCase();
     console.log('[KUNAKI] Checking if can fulfill order to country:', country);
-    
-    const canFulfill = (
-      country === 'US' ||
-      country === 'USA' ||
-      country === 'UNITED STATES'
-    );
-    
+
+    const canFulfill = country === 'US' || country === 'USA' || country === 'UNITED STATES';
+
     console.log('[KUNAKI] Can fulfill:', canFulfill);
     return canFulfill;
   }
 
   mapKunakiStatusToFulfillmentStatus(kunakiStatus: string): string {
     console.log('[KUNAKI] Mapping status:', kunakiStatus);
-    
+
     switch (kunakiStatus.toLowerCase()) {
       case 'success':
       case 'processing': {
