@@ -55,7 +55,7 @@ export interface WebhookEvent {
   created_at: string;
 }
 
-export type OrderStatus = 'received' | 'processing' | 'fulfilled' | 'cancelled';
+export type OrderStatus = 'received' | 'processing' | 'fulfilled' | 'cancelled' | 'skipped';
 export type FulfillmentStatus =
   | 'pending'
   | 'submitted'
@@ -63,7 +63,8 @@ export type FulfillmentStatus =
   | 'shipped'
   | 'delivered'
   | 'cancelled'
-  | 'failed';
+  | 'failed'
+  | 'skipped';
 export type FulfillmentProvider = 'kunaki' | 'cdclick-europe';
 export type WebhookSource = 'fourthwall' | 'cdclick-europe';
 
