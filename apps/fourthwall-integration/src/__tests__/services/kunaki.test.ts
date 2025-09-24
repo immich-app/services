@@ -106,7 +106,7 @@ describe('KunakiService', () => {
     it('should parse status response correctly', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
-        text: () => Promise.resolve('Order_Id=KUNAKI123\nStatus=Shipped\nTracking_Number=1Z999AA1234567890'),
+        text: () => Promise.resolve('<Response><ErrorCode>0</ErrorCode><ErrorText>success</ErrorText><OrderId>KUNAKI123</OrderId><OrderStatus>Shipped</OrderStatus><TrackingNumber>1Z999AA1234567890</TrackingNumber></Response>'),
       });
 
       const result = await kunakiService.checkOrderStatus('KUNAKI123');
