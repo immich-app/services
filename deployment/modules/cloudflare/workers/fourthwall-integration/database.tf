@@ -1,21 +1,21 @@
 # Initialize the D1 database with schema
-resource "null_resource" "db_init" {
-  depends_on = [cloudflare_d1_database.db]
-
-  triggers = {
-    database_id = cloudflare_d1_database.db.id
-  }
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      # Wait for database to be ready
-      sleep 10
-      
-      # Execute SQL schema
-      wrangler d1 execute ${cloudflare_d1_database.db.name} --file=${path.root}/../../../../apps/fourthwall-integration/schema.sql --env=production
-    EOT
-  }
-}
+# resource "null_resource" "db_init" {
+#   depends_on = [cloudflare_d1_database.db]
+#
+#   triggers = {
+#     database_id = cloudflare_d1_database.db.id
+#   }
+#
+#   provisioner "local-exec" {
+#     command = <<-EOT
+#       # Wait for database to be ready
+#       sleep 10
+#
+#       # Execute SQL schema
+#       wrangler d1 execute ${cloudflare_d1_database.db.name} --file=${path.root}/../../../../apps/fourthwall-integration/schema.sql --env=production
+#     EOT
+#   }
+# }
 
 # Output the database ID for use in wrangler.toml
 output "database_id" {

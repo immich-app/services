@@ -2,10 +2,17 @@ import { OrderRepository } from '../repositories/index.js';
 import { FourthwallOrderAttributes, FourthwallWebhook, Order } from '../types/index.js';
 
 export class FourthwallService {
+  private authHeader: string;
+
   constructor(
-    private apiKey: string,
+    username: string,
+    password: string,
     private orderRepository: OrderRepository,
-  ) {}
+  ) {
+    // Create basic auth header
+    const credentials = btoa(`${username}:${password}`);
+    this.authHeader = `Basic ${credentials}`;
+  }
 
   async processWebhook(payload: FourthwallWebhook): Promise<void> {
     if (payload.type !== 'order.paid') {
@@ -64,7 +71,7 @@ export class FourthwallService {
       const response = await fetch(`https://api.fourthwall.com/v1/orders/${fourthwallOrderId}/fulfillment`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          Authorization: this.authHeader,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -110,7 +117,7 @@ export class FourthwallService {
     try {
       const response = await fetch(`https://api.fourthwall.com/v1/orders/${orderId}`, {
         headers: {
-          Authorization: `Bearer ${this.apiKey}`,
+          Authorization: this.authHeader,
           'Content-Type': 'application/json',
         },
       });

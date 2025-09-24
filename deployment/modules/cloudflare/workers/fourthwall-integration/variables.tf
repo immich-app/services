@@ -6,8 +6,14 @@ variable "cloudflare_account_id" {}
 variable "dist_dir" {}
 
 # API Keys and Secrets
-variable "fourthwall_api_key" {
-  description = "API key for Fourthwall integration"
+variable "fourthwall_username" {
+  description = "Username for Fourthwall API"
+  type        = string
+  sensitive   = true
+}
+
+variable "fourthwall_password" {
+  description = "Password for Fourthwall API"
   type        = string
   sensitive   = true
 }
