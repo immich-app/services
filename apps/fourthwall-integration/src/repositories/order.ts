@@ -3,8 +3,14 @@ import { BaseRepository } from './base.js';
 
 export class OrderRepository extends BaseRepository {
   async createOrder(order: Omit<Order, 'id' | 'created_at' | 'updated_at'>): Promise<Order> {
+    console.log('[ORDER-REPO] Creating new order');
+    console.log('[ORDER-REPO] Fourthwall ID:', order.fourthwall_order_id);
+    console.log('[ORDER-REPO] Customer:', order.customer_email);
+    
     const id = this.generateId();
     const timestamp = this.getCurrentTimestamp();
+    
+    console.log('[ORDER-REPO] Generated order ID:', id);
 
     const newOrder: Order = {
       ...order,
@@ -41,20 +47,28 @@ export class OrderRepository extends BaseRepository {
       ],
     );
 
+    console.log('[ORDER-REPO] Order created successfully with ID:', newOrder.id);
     return newOrder;
   }
 
   async getOrderByFourthwallId(fourthwallOrderId: string): Promise<Order | null> {
-    return await this.executeSingleQuery<Order>('SELECT * FROM orders WHERE fourthwall_order_id = ?', [
+    console.log('[ORDER-REPO] Looking up order by Fourthwall ID:', fourthwallOrderId);
+    const order = await this.executeSingleQuery<Order>('SELECT * FROM orders WHERE fourthwall_order_id = ?', [
       fourthwallOrderId,
     ]);
+    console.log('[ORDER-REPO] Order found:', order ? `ID ${order.id}` : 'none');
+    return order;
   }
 
   async getOrderById(id: string): Promise<Order | null> {
-    return await this.executeSingleQuery<Order>('SELECT * FROM orders WHERE id = ?', [id]);
+    console.log('[ORDER-REPO] Getting order by ID:', id);
+    const order = await this.executeSingleQuery<Order>('SELECT * FROM orders WHERE id = ?', [id]);
+    console.log('[ORDER-REPO] Order found:', order ? 'yes' : 'no');
+    return order;
   }
 
   async updateOrderStatus(id: string, status: OrderStatus): Promise<void> {
+    console.log('[ORDER-REPO] Updating order status:', id, '->', status);
     await this.executeUpdate('UPDATE orders SET status = ?, updated_at = ? WHERE id = ?', [
       status,
       this.getCurrentTimestamp(),
@@ -63,6 +77,7 @@ export class OrderRepository extends BaseRepository {
   }
 
   async updateOrderFulfillmentProvider(id: string, provider: FulfillmentProvider): Promise<void> {
+    console.log('[ORDER-REPO] Setting fulfillment provider for order:', id, '->', provider);
     await this.executeUpdate('UPDATE orders SET fulfillment_provider = ?, updated_at = ? WHERE id = ?', [
       provider,
       this.getCurrentTimestamp(),
@@ -79,6 +94,9 @@ export class OrderRepository extends BaseRepository {
   }
 
   async createOrderItem(orderItem: Omit<OrderItem, 'id'>): Promise<OrderItem> {
+    console.log('[ORDER-REPO] Creating order item for order:', orderItem.order_id);
+    console.log('[ORDER-REPO] Product:', orderItem.product_name, 'Qty:', orderItem.quantity);
+    
     const id = this.generateId();
 
     const newOrderItem: OrderItem = {
@@ -102,21 +120,28 @@ export class OrderRepository extends BaseRepository {
       ],
     );
 
+    console.log('[ORDER-REPO] Order item created with ID:', newOrderItem.id);
     return newOrderItem;
   }
 
   async getOrderItems(orderId: string): Promise<OrderItem[]> {
+    console.log('[ORDER-REPO] Getting items for order:', orderId);
     const result = await this.executeQuery<OrderItem>('SELECT * FROM order_items WHERE order_id = ?', [orderId]);
-    return result.results || [];
+    const items = result.results || [];
+    console.log('[ORDER-REPO] Found', items.length, 'items for order');
+    return items;
   }
 
   async getOrderWithItems(orderId: string): Promise<{ order: Order; items: OrderItem[] } | null> {
+    console.log('[ORDER-REPO] Getting order with items:', orderId);
     const order = await this.getOrderById(orderId);
     if (!order) {
+      console.log('[ORDER-REPO] Order not found');
       return null;
     }
 
     const items = await this.getOrderItems(orderId);
+    console.log('[ORDER-REPO] Returning order with', items.length, 'items');
     return { order, items };
   }
 }

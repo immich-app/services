@@ -5,6 +5,11 @@ export class FulfillmentRepository extends BaseRepository {
   async createFulfillmentOrder(
     fulfillmentOrder: Omit<FulfillmentOrder, 'id' | 'created_at' | 'updated_at'>,
   ): Promise<FulfillmentOrder> {
+    console.log('[FULFILLMENT-REPO] Creating fulfillment order');
+    console.log('[FULFILLMENT-REPO] Order ID:', fulfillmentOrder.order_id);
+    console.log('[FULFILLMENT-REPO] Provider:', fulfillmentOrder.provider);
+    console.log('[FULFILLMENT-REPO] Status:', fulfillmentOrder.status);
+
     const id = this.generateId();
     const timestamp = this.getCurrentTimestamp();
 
@@ -40,10 +45,12 @@ export class FulfillmentRepository extends BaseRepository {
       ],
     );
 
+    console.log('[FULFILLMENT-REPO] Fulfillment order created with ID:', newFulfillmentOrder.id);
     return newFulfillmentOrder;
   }
 
   async getFulfillmentOrderById(id: string): Promise<FulfillmentOrder | null> {
+    console.log('[FULFILLMENT-REPO] Getting fulfillment order by ID:', id);
     return await this.executeSingleQuery<FulfillmentOrder>('SELECT * FROM fulfillment_orders WHERE id = ?', [id]);
   }
 
@@ -51,10 +58,13 @@ export class FulfillmentRepository extends BaseRepository {
     providerOrderId: string,
     provider: FulfillmentProvider,
   ): Promise<FulfillmentOrder | null> {
-    return await this.executeSingleQuery<FulfillmentOrder>(
+    console.log('[FULFILLMENT-REPO] Looking up by provider order ID:', providerOrderId, 'Provider:', provider);
+    const order = await this.executeSingleQuery<FulfillmentOrder>(
       'SELECT * FROM fulfillment_orders WHERE provider_order_id = ? AND provider = ?',
       [providerOrderId, provider],
     );
+    console.log('[FULFILLMENT-REPO] Fulfillment order found:', order ? `ID ${order.id}` : 'none');
+    return order;
   }
 
   async getFulfillmentOrdersByOrderId(orderId: string): Promise<FulfillmentOrder[]> {
@@ -76,6 +86,15 @@ export class FulfillmentRepository extends BaseRepository {
       shippedAt?: string;
     } = {},
   ): Promise<void> {
+    console.log('[FULFILLMENT-REPO] Updating fulfillment order status');
+    console.log('[FULFILLMENT-REPO] ID:', id, 'New status:', status);
+    if (options.trackingNumber) {
+      console.log('[FULFILLMENT-REPO] Tracking:', options.trackingNumber);
+    }
+    if (options.errorMessage) {
+      console.log('[FULFILLMENT-REPO] Error:', options.errorMessage);
+    }
+
     const updates: string[] = ['status = ?', 'updated_at = ?'];
     const params: any[] = [status, this.getCurrentTimestamp()];
 
@@ -120,6 +139,7 @@ export class FulfillmentRepository extends BaseRepository {
   }
 
   async incrementRetryCount(id: string): Promise<void> {
+    console.log('[FULFILLMENT-REPO] Incrementing retry count for:', id);
     await this.executeUpdate(
       'UPDATE fulfillment_orders SET retry_count = retry_count + 1, updated_at = ? WHERE id = ?',
       [this.getCurrentTimestamp(), id],
@@ -127,25 +147,31 @@ export class FulfillmentRepository extends BaseRepository {
   }
 
   async getPendingKunakiOrders(): Promise<FulfillmentOrder[]> {
+    console.log('[FULFILLMENT-REPO] Getting pending Kunaki orders');
     const result = await this.executeQuery<FulfillmentOrder>(
-      `SELECT * FROM fulfillment_orders 
-       WHERE provider = 'kunaki' 
-       AND status IN ('submitted', 'processing') 
+      `SELECT * FROM fulfillment_orders
+       WHERE provider = 'kunaki'
+       AND status IN ('submitted', 'processing')
        AND provider_order_id IS NOT NULL
        ORDER BY created_at ASC`,
       [],
     );
-    return result.results || [];
+    const orders = result.results || [];
+    console.log('[FULFILLMENT-REPO] Found', orders.length, 'pending Kunaki orders');
+    return orders;
   }
 
   async getRetryableFulfillmentOrders(maxRetries = 3): Promise<FulfillmentOrder[]> {
+    console.log('[FULFILLMENT-REPO] Getting retryable orders (max retries:', maxRetries, ')');
     const result = await this.executeQuery<FulfillmentOrder>(
-      `SELECT * FROM fulfillment_orders 
-       WHERE status = 'failed' 
-       AND retry_count < ? 
+      `SELECT * FROM fulfillment_orders
+       WHERE status = 'failed'
+       AND retry_count < ?
        ORDER BY created_at ASC`,
       [maxRetries],
     );
-    return result.results || [];
+    const orders = result.results || [];
+    console.log('[FULFILLMENT-REPO] Found', orders.length, 'retryable orders');
+    return orders;
   }
 }

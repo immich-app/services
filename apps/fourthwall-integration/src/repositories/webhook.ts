@@ -3,6 +3,10 @@ import { BaseRepository } from './base.js';
 
 export class WebhookRepository extends BaseRepository {
   async createWebhookEvent(webhookEvent: Omit<WebhookEvent, 'id' | 'created_at'>): Promise<WebhookEvent> {
+    console.log('[WEBHOOK-REPO] Creating webhook event');
+    console.log('[WEBHOOK-REPO] Source:', webhookEvent.source);
+    console.log('[WEBHOOK-REPO] Event type:', webhookEvent.event_type);
+    
     const id = this.generateId();
     const timestamp = this.getCurrentTimestamp();
 
@@ -29,14 +33,17 @@ export class WebhookRepository extends BaseRepository {
       ],
     );
 
+    console.log('[WEBHOOK-REPO] Webhook event created with ID:', newWebhookEvent.id);
     return newWebhookEvent;
   }
 
   async getWebhookEventById(id: string): Promise<WebhookEvent | null> {
+    console.log('[WEBHOOK-REPO] Getting webhook event by ID:', id);
     return await this.executeSingleQuery<WebhookEvent>('SELECT * FROM webhook_events WHERE id = ?', [id]);
   }
 
   async markWebhookProcessed(id: string): Promise<void> {
+    console.log('[WEBHOOK-REPO] Marking webhook as processed:', id);
     await this.executeUpdate('UPDATE webhook_events SET processed_at = ? WHERE id = ?', [
       this.getCurrentTimestamp(),
       id,
@@ -44,6 +51,8 @@ export class WebhookRepository extends BaseRepository {
   }
 
   async markWebhookError(id: string, errorMessage: string): Promise<void> {
+    console.log('[WEBHOOK-REPO] Marking webhook as error:', id);
+    console.log('[WEBHOOK-REPO] Error message:', errorMessage);
     await this.executeUpdate(
       'UPDATE webhook_events SET error_message = ?, retry_count = retry_count + 1 WHERE id = ?',
       [errorMessage, id],
@@ -51,6 +60,8 @@ export class WebhookRepository extends BaseRepository {
   }
 
   async getUnprocessedWebhooks(source?: WebhookSource): Promise<WebhookEvent[]> {
+    console.log('[WEBHOOK-REPO] Getting unprocessed webhooks', source ? `for source: ${source}` : '(all sources)');
+    
     let query = 'SELECT * FROM webhook_events WHERE processed_at IS NULL ORDER BY created_at ASC';
     const params: any[] = [];
 
@@ -60,7 +71,9 @@ export class WebhookRepository extends BaseRepository {
     }
 
     const result = await this.executeQuery<WebhookEvent>(query, params);
-    return result.results || [];
+    const webhooks = result.results || [];
+    console.log('[WEBHOOK-REPO] Found', webhooks.length, 'unprocessed webhooks');
+    return webhooks;
   }
 
   async getRetryableWebhooks(maxRetries = 3): Promise<WebhookEvent[]> {

@@ -12,30 +12,47 @@ export class FulfillmentService {
     private orderRepository: OrderRepository,
     private fulfillmentRepository: FulfillmentRepository,
   ) {
+    console.log('[FULFILLMENT] Initializing FulfillmentService');
+    console.log('[FULFILLMENT] Kunaki credentials:', env.KUNAKI_API_USERNAME ? 'provided' : 'missing');
+    console.log('[FULFILLMENT] CDClick API key:', env.CDCLICK_API_KEY ? 'provided' : 'missing');
     this.kunakiService = new KunakiService(env.KUNAKI_API_USERNAME, env.KUNAKI_API_PASSWORD);
     this.cdclickService = new CDClickService(env.CDCLICK_API_KEY);
     this.fourthwallService = new FourthwallService(env.FOURTHWALL_USERNAME, env.FOURTHWALL_PASSWORD, orderRepository);
+    console.log('[FULFILLMENT] All services initialized');
   }
 
   async processOrder(orderId: string): Promise<void> {
+    console.log('[FULFILLMENT] Processing order:', orderId);
+    
     try {
+      console.log('[FULFILLMENT] Fetching order with items');
       const orderWithItems = await this.orderRepository.getOrderWithItems(orderId);
       if (!orderWithItems) {
+        console.error('[FULFILLMENT] Order not found:', orderId);
         throw new Error(`Order not found: ${orderId}`);
       }
 
       const { order, items } = orderWithItems;
+      console.log('[FULFILLMENT] Order status:', order.status);
+      console.log('[FULFILLMENT] Number of items:', items.length);
+      console.log('[FULFILLMENT] Shipping country:', order.shipping_country);
 
       if (order.status !== 'received') {
-        console.log(`Order ${orderId} is not in 'received' status, skipping`);
+        console.log(`[FULFILLMENT] Order ${orderId} is not in 'received' status (current: ${order.status}), skipping`);
         return;
       }
 
+      console.log('[FULFILLMENT] Determining fulfillment provider');
       const provider = this.determineFulfillmentProvider(order);
+      console.log('[FULFILLMENT] Selected provider:', provider);
 
+      console.log('[FULFILLMENT] Updating order with provider:', provider);
       await this.orderRepository.updateOrderFulfillmentProvider(orderId, provider);
+      
+      console.log('[FULFILLMENT] Updating order status to processing');
       await this.orderRepository.updateOrderStatus(orderId, 'processing');
 
+      console.log('[FULFILLMENT] Creating fulfillment order record');
       const fulfillmentOrder = await this.fulfillmentRepository.createFulfillmentOrder({
         order_id: orderId,
         provider,
@@ -43,9 +60,15 @@ export class FulfillmentService {
         retry_count: 0,
       });
 
+      console.log('[FULFILLMENT] Submitting order to provider:', provider);
       const result = await this.submitToProvider(provider, order, items);
+      console.log('[FULFILLMENT] Submission result:', result.success ? 'success' : 'failed');
+      if (result.provider_order_id) {
+        console.log('[FULFILLMENT] Provider order ID:', result.provider_order_id);
+      }
 
       if (result.success) {
+        console.log('[FULFILLMENT] Updating fulfillment order status to submitted');
         await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'submitted', {
           providerOrderId: result.provider_order_id,
           trackingNumber: result.tracking_number,
@@ -53,30 +76,45 @@ export class FulfillmentService {
           shippingCarrier: result.carrier,
         });
 
-        console.log(`Successfully submitted order ${orderId} to ${provider}`);
+        console.log(`[FULFILLMENT] Successfully submitted order ${orderId} to ${provider}`);
       } else {
+        console.error('[FULFILLMENT] Submission failed, updating status to failed');
         await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'failed', {
           errorMessage: result.error,
         });
 
-        console.error(`Failed to submit order ${orderId} to ${provider}: ${result.error}`);
+        console.error(`[FULFILLMENT] Failed to submit order ${orderId} to ${provider}: ${result.error}`);
 
+        console.log('[FULFILLMENT] Enqueueing order for retry');
         await this.enqueueForRetry(orderId);
       }
     } catch (error) {
-      console.error(`Error processing order ${orderId}:`, error);
+      console.error(`[FULFILLMENT] Error processing order ${orderId}:`, error);
+      console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
+      console.log('[FULFILLMENT] Reverting order status to received');
       await this.orderRepository.updateOrderStatus(orderId, 'received');
     }
   }
 
   private determineFulfillmentProvider(order: Order): FulfillmentProvider {
-    if (this.kunakiService.canFulfillOrder(order)) {
+    console.log('[FULFILLMENT] Checking providers for country:', order.shipping_country);
+    
+    const kunakiCanFulfill = this.kunakiService.canFulfillOrder(order);
+    console.log('[FULFILLMENT] Kunaki can fulfill:', kunakiCanFulfill);
+    
+    if (kunakiCanFulfill) {
       return 'kunaki';
-    } else if (this.cdclickService.canFulfillOrder(order)) {
-      return 'cdclick-europe';
-    } else {
-      throw new Error(`No fulfillment provider available for country: ${order.shipping_country}`);
     }
+    
+    const cdclickCanFulfill = this.cdclickService.canFulfillOrder(order);
+    console.log('[FULFILLMENT] CDClick can fulfill:', cdclickCanFulfill);
+    
+    if (cdclickCanFulfill) {
+      return 'cdclick-europe';
+    }
+    
+    console.error('[FULFILLMENT] No provider available for country:', order.shipping_country);
+    throw new Error(`No fulfillment provider available for country: ${order.shipping_country}`);
   }
 
   private async submitToProvider(
@@ -84,72 +122,98 @@ export class FulfillmentService {
     order: Order,
     items: OrderItem[],
   ): Promise<FulfillmentResult> {
+    console.log('[FULFILLMENT] Submitting to provider:', provider);
+    console.log('[FULFILLMENT] Order ID:', order.id);
+    console.log('[FULFILLMENT] Item count:', items.length);
+    
     switch (provider) {
       case 'kunaki': {
+        console.log('[FULFILLMENT] Calling Kunaki submitOrder');
         return await this.kunakiService.submitOrder(order, items);
       }
       case 'cdclick-europe': {
+        console.log('[FULFILLMENT] Calling CDClick submitOrder');
         return await this.cdclickService.submitOrder(order, items);
       }
       default: {
+        console.error('[FULFILLMENT] Unknown provider:', provider);
         throw new Error(`Unknown provider: ${provider}`);
       }
     }
   }
 
   async processKunakiStatusUpdates(): Promise<void> {
+    console.log('[FULFILLMENT] Processing Kunaki status updates');
     const pendingOrders = await this.fulfillmentRepository.getPendingKunakiOrders();
+    console.log('[FULFILLMENT] Found', pendingOrders.length, 'pending Kunaki orders');
 
     for (const fulfillmentOrder of pendingOrders) {
       try {
+        console.log('[FULFILLMENT] Checking status for fulfillment order:', fulfillmentOrder.id);
+        
         if (!fulfillmentOrder.provider_order_id) {
-          console.log(`Kunaki order ${fulfillmentOrder.id} has no provider order ID, skipping`);
+          console.log(`[FULFILLMENT] Kunaki order ${fulfillmentOrder.id} has no provider order ID, skipping`);
           continue;
         }
+        
+        console.log('[FULFILLMENT] Checking Kunaki order:', fulfillmentOrder.provider_order_id);
 
         const statusResponse = await this.kunakiService.checkOrderStatus(fulfillmentOrder.provider_order_id);
+        console.log('[FULFILLMENT] Kunaki status response:', JSON.stringify(statusResponse));
 
         if (statusResponse.Error) {
-          console.error(`Error checking Kunaki order ${fulfillmentOrder.provider_order_id}: ${statusResponse.Error}`);
+          console.error(`[FULFILLMENT] Error checking Kunaki order ${fulfillmentOrder.provider_order_id}: ${statusResponse.Error}`);
           continue;
         }
 
         const newStatus = this.kunakiService.mapKunakiStatusToFulfillmentStatus(statusResponse.Status);
+        console.log('[FULFILLMENT] Mapped status:', statusResponse.Status, '->', newStatus);
+        console.log('[FULFILLMENT] Current status:', fulfillmentOrder.status);
 
         if (newStatus !== fulfillmentOrder.status) {
+          console.log('[FULFILLMENT] Status changed, updating fulfillment order');
           await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, newStatus as any, {
             trackingNumber: statusResponse.Tracking_Number,
             shippedAt: statusResponse.Shipping_Date,
           });
 
           if (newStatus === 'shipped' && statusResponse.Tracking_Number) {
+            console.log('[FULFILLMENT] Order shipped, updating Fourthwall with tracking:', statusResponse.Tracking_Number);
             await this.updateFourthwallWithTracking(fulfillmentOrder.order_id, statusResponse.Tracking_Number);
 
+            console.log('[FULFILLMENT] Updating order status to fulfilled');
             await this.orderRepository.updateOrderStatus(fulfillmentOrder.order_id, 'fulfilled');
           }
 
-          console.log(`Updated Kunaki order ${fulfillmentOrder.provider_order_id} status to ${newStatus}`);
+          console.log(`[FULFILLMENT] Updated Kunaki order ${fulfillmentOrder.provider_order_id} status to ${newStatus}`);
         }
       } catch (error) {
-        console.error(`Error processing Kunaki status update for order ${fulfillmentOrder.id}:`, error);
+        console.error(`[FULFILLMENT] Error processing Kunaki status update for order ${fulfillmentOrder.id}:`, error);
+        console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
       }
     }
   }
 
   async processCDClickWebhook(webhook: any): Promise<void> {
+    console.log('[FULFILLMENT] Processing CDClick webhook');
+    console.log('[FULFILLMENT] Webhook data:', JSON.stringify(webhook));
+    
     try {
       const processedWebhook = this.cdclickService.processWebhook(webhook);
+      console.log('[FULFILLMENT] Processed webhook:', JSON.stringify(processedWebhook));
 
+      console.log('[FULFILLMENT] Looking up fulfillment order by provider ID:', processedWebhook.orderId);
       const fulfillmentOrder = await this.fulfillmentRepository.getFulfillmentOrderByProviderOrderId(
         processedWebhook.orderId,
         'cdclick-europe',
       );
 
       if (!fulfillmentOrder) {
-        console.log(`No fulfillment order found for CDClick order ${processedWebhook.orderId}`);
+        console.log(`[FULFILLMENT] No fulfillment order found for CDClick order ${processedWebhook.orderId}`);
         return;
       }
 
+      console.log('[FULFILLMENT] Updating fulfillment order status to:', processedWebhook.status);
       await this.fulfillmentRepository.updateFulfillmentOrderStatus(
         fulfillmentOrder.id,
         processedWebhook.status as any,
@@ -162,6 +226,7 @@ export class FulfillmentService {
       );
 
       if (processedWebhook.status === 'shipped' && processedWebhook.trackingNumber) {
+        console.log('[FULFILLMENT] Order shipped, updating Fourthwall with tracking');
         await this.updateFourthwallWithTracking(
           fulfillmentOrder.order_id,
           processedWebhook.trackingNumber,
@@ -169,33 +234,44 @@ export class FulfillmentService {
           processedWebhook.carrier,
         );
 
+        console.log('[FULFILLMENT] Updating order status to fulfilled');
         await this.orderRepository.updateOrderStatus(fulfillmentOrder.order_id, 'fulfilled');
       }
 
-      console.log(`Processed CDClick webhook for order ${processedWebhook.orderId}`);
+      console.log(`[FULFILLMENT] Processed CDClick webhook for order ${processedWebhook.orderId}`);
     } catch (error) {
-      console.error('Error processing CDClick webhook:', error);
+      console.error('[FULFILLMENT] Error processing CDClick webhook:', error);
+      console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
       throw error;
     }
   }
 
   async retryFailedOrders(): Promise<void> {
+    console.log('[FULFILLMENT] Retrying failed orders');
     const retryableOrders = await this.fulfillmentRepository.getRetryableFulfillmentOrders();
+    console.log('[FULFILLMENT] Found', retryableOrders.length, 'retryable orders');
 
     for (const fulfillmentOrder of retryableOrders) {
       try {
+        console.log('[FULFILLMENT] Retrying order:', fulfillmentOrder.order_id);
+        console.log('[FULFILLMENT] Retry count:', fulfillmentOrder.retry_count);
+        
         await this.fulfillmentRepository.incrementRetryCount(fulfillmentOrder.id);
 
         const orderWithItems = await this.orderRepository.getOrderWithItems(fulfillmentOrder.order_id);
         if (!orderWithItems) {
-          console.error(`Order not found for retry: ${fulfillmentOrder.order_id}`);
+          console.error(`[FULFILLMENT] Order not found for retry: ${fulfillmentOrder.order_id}`);
           continue;
         }
+        console.log('[FULFILLMENT] Order found, attempting retry');
 
         const { order, items } = orderWithItems;
+        console.log('[FULFILLMENT] Retrying with provider:', fulfillmentOrder.provider);
         const result = await this.submitToProvider(fulfillmentOrder.provider, order, items);
+        console.log('[FULFILLMENT] Retry result:', result.success ? 'success' : 'failed');
 
         if (result.success) {
+          console.log('[FULFILLMENT] Retry successful, updating status to submitted');
           await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'submitted', {
             providerOrderId: result.provider_order_id,
             trackingNumber: result.tracking_number,
@@ -204,16 +280,18 @@ export class FulfillmentService {
             errorMessage: undefined,
           });
 
-          console.log(`Successfully retried order ${fulfillmentOrder.order_id}`);
+          console.log(`[FULFILLMENT] Successfully retried order ${fulfillmentOrder.order_id}`);
         } else {
+          console.error('[FULFILLMENT] Retry failed, updating status to failed');
           await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'failed', {
             errorMessage: result.error,
           });
 
-          console.error(`Retry failed for order ${fulfillmentOrder.order_id}: ${result.error}`);
+          console.error(`[FULFILLMENT] Retry failed for order ${fulfillmentOrder.order_id}: ${result.error}`);
         }
       } catch (error) {
-        console.error(`Error retrying order ${fulfillmentOrder.order_id}:`, error);
+        console.error(`[FULFILLMENT] Error retrying order ${fulfillmentOrder.order_id}:`, error);
+        console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
       }
     }
   }
@@ -224,12 +302,17 @@ export class FulfillmentService {
     trackingUrl?: string,
     carrier?: string,
   ): Promise<void> {
+    console.log('[FULFILLMENT] Updating Fourthwall with tracking');
+    console.log('[FULFILLMENT] Order ID:', orderId);
+    console.log('[FULFILLMENT] Tracking:', trackingNumber);
+    
     try {
       const order = await this.orderRepository.getOrderById(orderId);
       if (!order) {
-        console.error(`Order not found for tracking update: ${orderId}`);
+        console.error(`[FULFILLMENT] Order not found for tracking update: ${orderId}`);
         return;
       }
+      console.log('[FULFILLMENT] Found order, Fourthwall ID:', order.fourthwall_order_id);
 
       await this.fourthwallService.updateOrderWithTracking(
         order.fourthwall_order_id,
@@ -237,20 +320,26 @@ export class FulfillmentService {
         trackingUrl,
         carrier,
       );
+      console.log('[FULFILLMENT] Successfully updated Fourthwall with tracking');
     } catch (error) {
-      console.error(`Error updating Fourthwall with tracking for order ${orderId}:`, error);
+      console.error(`[FULFILLMENT] Error updating Fourthwall with tracking for order ${orderId}:`, error);
+      console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
     }
   }
 
   private async enqueueForRetry(orderId: string): Promise<void> {
+    console.log('[FULFILLMENT] Enqueueing order for retry:', orderId);
+    
     try {
       await this.env.FULFILLMENT_QUEUE.send({
         type: 'fulfillment',
         data: { orderId },
         retry_count: 0,
       });
+      console.log('[FULFILLMENT] Order enqueued successfully');
     } catch (error) {
-      console.error(`Error enqueueing order ${orderId} for retry:`, error);
+      console.error(`[FULFILLMENT] Error enqueueing order ${orderId} for retry:`, error);
+      console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
     }
   }
 }
