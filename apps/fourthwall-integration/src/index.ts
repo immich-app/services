@@ -98,7 +98,6 @@ export default {
             return new Response('Method not allowed', { status: 405 });
           }
 
-          const migrationService = new MigrationService(env.DB);
           
           try {
             // Get list of applied migrations
@@ -110,7 +109,7 @@ export default {
               JSON.stringify({
                 initialized: migrationsInitialized,
                 applied_migrations: result.results || [],
-                total_migrations: (await import('./migrations/index.js')).migrations.length,
+                total_migrations: await import('./migrations/index.js').then((m) => m.migrations.length),
                 timestamp: new Date().toISOString(),
               }),
               {
@@ -364,23 +363,66 @@ async function processQueueMessage(message: QueueMessage, env: Env): Promise<voi
           // const fulfillmentService = new FulfillmentService(env, orderRepository, fulfillmentRepository);
 
           if (payload.type === 'ORDER_PLACED') {
-            console.log('[PROCESS-QUEUE] ORDER_PLACED event detected, checking for order');
+            console.log('[PROCESS-QUEUE] ORDER_PLACED event detected');
+            
+            // Check if order status is CONFIRMED before processing
+            const orderStatus = payload.data?.status;
+            console.log('[PROCESS-QUEUE] Order status:', orderStatus);
+            
+            // Handle different order statuses
+            switch (orderStatus) {
+              case 'CONFIRMED': {
+                console.log('[PROCESS-QUEUE] Order CONFIRMED, proceeding with fulfillment');
+                break;
+              }
+              
+              case 'PARTIALLY_IN_PRODUCTION':
+              case 'IN_PRODUCTION': {
+                console.log(`[PROCESS-QUEUE] Order already in production (${orderStatus}), skipping fulfillment`);
+                return;
+              }
+              
+              case 'PARTIALLY_SHIPPED':
+              case 'SHIPPED': {
+                console.log(`[PROCESS-QUEUE] Order already shipped (${orderStatus}), skipping fulfillment`);
+                return;
+              }
+              
+              case 'PARTIALLY_DELIVERED':
+              case 'DELIVERED':
+              case 'COMPLETED': {
+                console.log(`[PROCESS-QUEUE] Order already delivered/completed (${orderStatus}), skipping fulfillment`);
+                return;
+              }
+              
+              case 'CANCELLED': {
+                console.log('[PROCESS-QUEUE] Order CANCELLED, skipping fulfillment');
+                return;
+              }
+              
+              default: {
+                console.log(`[PROCESS-QUEUE] Unknown or pending order status: ${orderStatus}, skipping fulfillment`);
+                return;
+              }
+            }
+            
             // Get order ID from the data field
             const orderId = payload.data?.id;
             if (!orderId) {
               console.log('[PROCESS-QUEUE] No order ID found in webhook data');
               return;
             }
+            
             const order = await orderRepository.getOrderByFourthwallId(orderId);
             if (order) {
-              console.log(`[PROCESS-QUEUE] Found order ${order.id}, queueing for fulfillment`);
+              console.log(`[PROCESS-QUEUE] Found CONFIRMED order ${order.id}, queueing for fulfillment`);
               await env.FULFILLMENT_QUEUE.send({
                 type: 'fulfillment',
                 data: { orderId: order.id },
               });
               console.log(`[PROCESS-QUEUE] Fulfillment queued for order ${order.id}`);
             } else {
-              console.log('[PROCESS-QUEUE] No order found for Fourthwall ID:', payload.data.attributes.id);
+              console.log('[PROCESS-QUEUE] No order found for Fourthwall ID:', orderId);
             }
           }
         } else if (source === 'cdclick-europe') {

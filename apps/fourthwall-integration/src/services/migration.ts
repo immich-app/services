@@ -79,7 +79,7 @@ export class MigrationService {
       }
       
       return appliedSet;
-    } catch (error) {
+    } catch {
       // If the table doesn't exist yet, return empty set
       console.log('[MIGRATION] Could not fetch applied migrations, assuming none applied');
       return new Set<string>();
@@ -121,7 +121,7 @@ export class MigrationService {
     try {
       const appliedMigrations = await this.getAppliedMigrations();
       return migrations.some(m => !appliedMigrations.has(m.id));
-    } catch (error) {
+    } catch {
       // If we can't check, assume migrations are needed
       return true;
     }

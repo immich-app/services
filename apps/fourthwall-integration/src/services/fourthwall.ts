@@ -67,7 +67,7 @@ export class FourthwallService {
           fourthwall_product_id: offer.id,
           fourthwall_variant_id: offer.variant?.id || null,
           product_name: offer.variant?.name || offer.name,
-          quantity: quantity,
+          quantity,
           unit_price_cents: Math.round(unitPrice * 100), // Convert to cents
         });
       }
@@ -183,7 +183,7 @@ export class FourthwallService {
       const signature_array = new Uint8Array(signature_buffer);
       
       // Fourthwall uses base64 encoding, not hex
-      const expected_signature = btoa(String.fromCharCode(...signature_array));
+      const expected_signature = btoa(String.fromCodePoint(...signature_array));
       
       console.log('[FW-SERVICE] Expected signature (base64):', expected_signature);
       console.log('[FW-SERVICE] Provided signature:', signature);
