@@ -18,16 +18,15 @@ describe('FourthwallService', () => {
   });
 
   describe('processWebhook', () => {
-    it('should ignore non-order.paid webhooks', async () => {
+    it('should ignore non-ORDER_PLACED webhooks', async () => {
       const webhook: FourthwallWebhook = {
-        id: 'test-id',
-        type: 'order.cancelled',
-        data: {
-          id: 'order-123',
-          type: 'order',
-          attributes: {} as any,
-        },
-        created_at: '2024-01-01T00:00:00Z',
+        id: 'test-webhook-id',
+        webhookId: 'webhook-config-id',
+        shopId: 'shop-123',
+        type: 'ORDER_CANCELLED',
+        apiVersion: 'v1',
+        createdAt: '2024-01-01T00:00:00Z',
+        data: undefined,
       };
 
       await fourthwallService.processWebhook(webhook);
@@ -37,26 +36,51 @@ describe('FourthwallService', () => {
 
     it('should skip processing if order already exists', async () => {
       const webhook: FourthwallWebhook = {
-        id: 'test-id',
-        type: 'order.paid',
+        id: 'test-webhook-id',
+        webhookId: 'webhook-config-id',
+        shopId: 'shop-123',
+        type: 'ORDER_PLACED',
+        apiVersion: 'v1',
+        createdAt: '2024-01-01T00:00:00Z',
         data: {
           id: 'order-123',
-          type: 'order',
-          attributes: {
-            id: 'order-123',
-            status: 'paid',
-            total: { amount: 2999, currency: 'USD' },
-            customer: { email: 'test@example.com', name: 'Test User' },
-            shipping_address: {
-              line1: '123 Main St',
+          status: 'CONFIRMED',
+          friendlyId: 'ORD-123',
+          shopId: 'shop-123',
+          checkoutId: 'checkout-123',
+          email: 'test@example.com',
+          emailMarketingOptIn: false,
+          username: 'testuser',
+          billing: {
+            address: {
+              name: 'Test User',
+              address1: '123 Main St',
               city: 'Test City',
-              postal_code: '12345',
+              zip: '12345',
               country: 'US',
             },
-            line_items: [],
           },
+          amounts: {
+            subtotal: { value: 29.99, currency: 'USD' },
+            shipping: { value: 0, currency: 'USD' },
+            tax: { value: 0, currency: 'USD' },
+            donation: { value: 0, currency: 'USD' },
+            discount: { value: 0, currency: 'USD' },
+            total: { value: 29.99, currency: 'USD' },
+          },
+          shipping: {
+            address: {
+              name: 'Test User',
+              address1: '123 Main St',
+              city: 'Test City',
+              zip: '12345',
+              country: 'US',
+            },
+          },
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z',
+          offers: [],
         },
-        created_at: '2024-01-01T00:00:00Z',
       };
 
       vi.mocked(mockOrderRepository.getOrderByFourthwallId).mockResolvedValue({
@@ -69,37 +93,65 @@ describe('FourthwallService', () => {
       expect(mockOrderRepository.createOrder).not.toHaveBeenCalled();
     });
 
-    it('should create order and items for new paid order', async () => {
+    it('should create order and items for new CONFIRMED order', async () => {
       const webhook: FourthwallWebhook = {
-        id: 'test-id',
-        type: 'order.paid',
+        id: 'test-webhook-id',
+        webhookId: 'webhook-config-id',
+        shopId: 'shop-123',
+        type: 'ORDER_PLACED',
+        apiVersion: 'v1',
+        createdAt: '2024-01-01T00:00:00Z',
         data: {
           id: 'order-123',
-          type: 'order',
-          attributes: {
-            id: 'order-123',
-            status: 'paid',
-            total: { amount: 2999, currency: 'USD' },
-            customer: { email: 'test@example.com', name: 'Test User' },
-            shipping_address: {
-              line1: '123 Main St',
+          status: 'CONFIRMED',
+          friendlyId: 'ORD-123',
+          shopId: 'shop-123',
+          checkoutId: 'checkout-123',
+          email: 'test@example.com',
+          emailMarketingOptIn: false,
+          username: 'testuser',
+          billing: {
+            address: {
+              name: 'Test User',
+              address1: '123 Main St',
               city: 'Test City',
-              postal_code: '12345',
+              zip: '12345',
               country: 'US',
             },
-            line_items: [
-              {
-                id: 'item-1',
-                product_id: 'product-1',
-                variant_id: 'variant-1',
+          },
+          amounts: {
+            subtotal: { value: 29.99, currency: 'USD' },
+            shipping: { value: 0, currency: 'USD' },
+            tax: { value: 0, currency: 'USD' },
+            donation: { value: 0, currency: 'USD' },
+            discount: { value: 0, currency: 'USD' },
+            total: { value: 29.99, currency: 'USD' },
+          },
+          shipping: {
+            address: {
+              name: 'Test User',
+              address1: '123 Main St',
+              city: 'Test City',
+              zip: '12345',
+              country: 'US',
+            },
+          },
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z',
+          offers: [
+            {
+              id: 'product-1',
+              name: 'Test Product',
+              slug: 'test-product',
+              variant: {
+                id: 'variant-1',
                 name: 'Test Product',
                 quantity: 2,
-                price: { amount: 1499, currency: 'USD' },
+                unitPrice: { value: 14.99, currency: 'USD' },
               },
-            ],
-          },
+            },
+          ],
         },
-        created_at: '2024-01-01T00:00:00Z',
       };
 
       const createdOrder = { id: 'new-order-id' };
@@ -122,6 +174,7 @@ describe('FourthwallService', () => {
         order_total_cents: 2999,
         order_currency: 'USD',
         status: 'received',
+        fulfillment_provider: undefined,
       });
 
       expect(mockOrderRepository.createOrderItem).toHaveBeenCalledWith({

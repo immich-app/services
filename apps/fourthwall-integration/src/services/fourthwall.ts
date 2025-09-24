@@ -65,7 +65,7 @@ export class FourthwallService {
         await this.orderRepository.createOrderItem({
           order_id: order.id,
           fourthwall_product_id: offer.id,
-          fourthwall_variant_id: offer.variant?.id || null,
+          fourthwall_variant_id: offer.variant?.id || undefined,
           product_name: offer.variant?.name || offer.name,
           quantity,
           unit_price_cents: Math.round(unitPrice * 100), // Convert to cents
@@ -107,15 +107,15 @@ export class FourthwallService {
       customer_email: orderData.email,
       customer_name: orderData.shipping?.address?.name || orderData.billing?.address?.name || orderData.username || 'Unknown',
       shipping_address_line1: orderData.shipping?.address?.address1 || '',
-      shipping_address_line2: orderData.shipping?.address?.address2 || null, // Ensure null not undefined
+      shipping_address_line2: orderData.shipping?.address?.address2 || undefined,
       shipping_city: orderData.shipping?.address?.city || '',
-      shipping_state: orderData.shipping?.address?.state || null, // Ensure null not undefined
+      shipping_state: orderData.shipping?.address?.state || undefined,
       shipping_postal_code: orderData.shipping?.address?.zip || '',
       shipping_country: orderData.shipping?.address?.country || '',
       order_total_cents: Math.round((orderData.amounts?.total?.value || 0) * 100), // Convert to cents
       order_currency: orderData.amounts?.total?.currency || 'USD',
       status: 'received',
-      fulfillment_provider: null, // Explicitly set to null initially
+      fulfillment_provider: undefined, // Explicitly set to undefined initially
     });
   }
 

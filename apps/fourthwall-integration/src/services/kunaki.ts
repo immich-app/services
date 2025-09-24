@@ -26,13 +26,42 @@ export class KunakiService {
     console.log('[KUNAKI] Number of items:', orderItems.length);
     
     try {
-      for (const [index, item] of orderItems.entries()) {
-        console.log(`[KUNAKI] Processing item ${index + 1}/${orderItems.length}:`, item.product_name);
+      // Filter items that have SKU mappings
+      const fulfillableItems: OrderItem[] = [];
+      const skippedItems: OrderItem[] = [];
+      
+      for (const item of orderItems) {
         const mappedSku = this.mapProductToKunakiSku(item.fourthwall_product_id);
-        console.log('[KUNAKI] Mapped product ID:', item.fourthwall_product_id, '->', mappedSku);
+        if (mappedSku) {
+          fulfillableItems.push(item);
+        } else {
+          skippedItems.push(item);
+        }
+      }
+      
+      console.log('[KUNAKI] Fulfillable items:', fulfillableItems.length);
+      console.log('[KUNAKI] Skipped items (no SKU mapping):', skippedItems.length);
+      
+      if (skippedItems.length > 0) {
+        console.log('[KUNAKI] Skipped items details:');
+        for (const item of skippedItems) {
+          console.log(`[KUNAKI]   - ${item.product_name} (ID: ${item.fourthwall_product_id})`);
+        }
+      }
+      
+      if (fulfillableItems.length === 0) {
+        console.log('[KUNAKI] No items have SKU mappings for Kunaki fulfillment');
+        return { success: false, error: 'No items have SKU mappings for Kunaki fulfillment' };
+      }
+      
+      // Process only items with SKU mappings
+      for (const [index, item] of fulfillableItems.entries()) {
+        console.log(`[KUNAKI] Processing item ${index + 1}/${fulfillableItems.length}:`, item.product_name);
+        const mappedSku = this.mapProductToKunakiSku(item.fourthwall_product_id);
+        console.log('[KUNAKI] Using SKU:', mappedSku);
         
         const kunakiOrder: KunakiOrderRequest = {
-          Product_Id: mappedSku,
+          Product_Id: mappedSku!,
           Quantity: item.quantity,
           Ship_Name: order.customer_name,
           Ship_Address: order.shipping_address_line1,
@@ -220,11 +249,15 @@ export class KunakiService {
     };
   }
 
-  private mapProductToKunakiSku(fourthwallProductId: string): string {
+  private mapProductToKunakiSku(fourthwallProductId: string): string | null {
     console.log('[KUNAKI] Mapping product ID:', fourthwallProductId);
     const productMapping: Record<string, string> = {};
 
-    const mappedSku = productMapping[fourthwallProductId] || fourthwallProductId;
+    const mappedSku = productMapping[fourthwallProductId];
+    if (!mappedSku) {
+      console.log('[KUNAKI] No SKU mapping found for product:', fourthwallProductId);
+      return null;
+    }
     console.log('[KUNAKI] Mapped SKU:', mappedSku);
     return mappedSku;
   }

@@ -22,6 +22,37 @@ export class CDClickService {
     console.log('[CDCLICK] Number of items:', orderItems.length);
     
     try {
+      // Filter items that have SKU mappings
+      const fulfillableItems: { sku: string; quantity: number }[] = [];
+      const skippedItems: OrderItem[] = [];
+      
+      for (const item of orderItems) {
+        const mappedSku = this.mapProductToCDClickSku(item.fourthwall_product_id);
+        if (mappedSku) {
+          fulfillableItems.push({
+            sku: mappedSku,
+            quantity: item.quantity,
+          });
+        } else {
+          skippedItems.push(item);
+        }
+      }
+      
+      console.log('[CDCLICK] Fulfillable items:', fulfillableItems.length);
+      console.log('[CDCLICK] Skipped items (no SKU mapping):', skippedItems.length);
+      
+      if (skippedItems.length > 0) {
+        console.log('[CDCLICK] Skipped items details:');
+        for (const item of skippedItems) {
+          console.log(`[CDCLICK]   - ${item.product_name} (ID: ${item.fourthwall_product_id})`);
+        }
+      }
+      
+      if (fulfillableItems.length === 0) {
+        console.log('[CDCLICK] No items have SKU mappings for CDClick fulfillment');
+        return { success: false, error: 'No items have SKU mappings for CDClick fulfillment' };
+      }
+      
       const cdclickOrder: CDClickOrderRequest = {
         reference: order.id,
         recipient: {
@@ -35,14 +66,7 @@ export class CDClickService {
             country: order.shipping_country,
           },
         },
-        items: orderItems.map((item) => {
-          const mappedSku = this.mapProductToCDClickSku(item.fourthwall_product_id);
-          console.log('[CDCLICK] Mapped item:', item.fourthwall_product_id, '->', mappedSku);
-          return {
-            sku: mappedSku,
-            quantity: item.quantity,
-          };
-        }),
+        items: fulfillableItems,
       };
 
       console.log('[CDCLICK] Request payload:', JSON.stringify(cdclickOrder));
@@ -117,7 +141,7 @@ export class CDClickService {
 
       const data = await response.json();
       console.log('[CDCLICK] Order status data:', JSON.stringify(data));
-      return data;
+      return data as CDClickOrderResponse;
     } catch (error) {
       console.error(`[CDCLICK] Error fetching order ${cdclickOrderId}:`, error);
       console.error('[CDCLICK] Error stack:', error instanceof Error ? error.stack : 'No stack');
@@ -181,11 +205,15 @@ export class CDClickService {
     }
   }
 
-  private mapProductToCDClickSku(fourthwallProductId: string): string {
+  private mapProductToCDClickSku(fourthwallProductId: string): string | null {
     console.log('[CDCLICK] Mapping product ID:', fourthwallProductId);
     const productMapping: Record<string, string> = {};
 
-    const mappedSku = productMapping[fourthwallProductId] || fourthwallProductId;
+    const mappedSku = productMapping[fourthwallProductId];
+    if (!mappedSku) {
+      console.log('[CDCLICK] No SKU mapping found for product:', fourthwallProductId);
+      return null;
+    }
     console.log('[CDCLICK] Mapped SKU:', mappedSku);
     return mappedSku;
   }
@@ -284,7 +312,7 @@ export class CDClickService {
 
       const products = await response.json();
       console.log('[CDCLICK] Found', Array.isArray(products) ? products.length : 0, 'products');
-      return products;
+      return products as any[];
     } catch (error) {
       console.error('[CDCLICK] Error fetching products:', error);
       console.error('[CDCLICK] Error stack:', error instanceof Error ? error.stack : 'No stack');
