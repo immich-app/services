@@ -14,7 +14,7 @@ describe('FourthwallService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    fourthwallService = new FourthwallService('test-api-key', mockOrderRepository);
+    fourthwallService = new FourthwallService('test-username', 'test-password', mockOrderRepository);
   });
 
   describe('processWebhook', () => {

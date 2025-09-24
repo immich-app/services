@@ -126,7 +126,7 @@ async function handleFourthwallWebhook(request: Request, env: Env): Promise<Resp
 
   const orderRepository = new OrderRepository(env.DB);
   const webhookRepository = new WebhookRepository(env.DB);
-  const fourthwallService = new FourthwallService(env.FOURTHWALL_API_KEY, orderRepository);
+  const fourthwallService = new FourthwallService(env.FOURTHWALL_USERNAME, env.FOURTHWALL_PASSWORD, orderRepository);
 
   if (!(await fourthwallService.validateWebhookSignature(body, signature, env.WEBHOOK_SECRET))) {
     return new Response('Invalid signature', { status: 401 });
@@ -214,7 +214,7 @@ async function processQueueMessage(message: QueueMessage, env: Env): Promise<voi
 
       try {
         if (source === 'fourthwall') {
-          const fourthwallService = new FourthwallService(env.FOURTHWALL_API_KEY, orderRepository);
+          const fourthwallService = new FourthwallService(env.FOURTHWALL_USERNAME, env.FOURTHWALL_PASSWORD, orderRepository);
           await fourthwallService.processWebhook(payload);
 
           // FulfillmentService is used elsewhere but not directly here

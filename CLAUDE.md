@@ -38,8 +38,11 @@ pnpm run check  # Type-check worker (tsc --noEmit)
 
 ```
 apps/
-├── hello/          # Example hello world worker
-└── .../           # Other worker applications
+├── hello/                   # Example hello world worker
+├── fourthwall-integration/  # E-commerce fulfillment integration worker
+├── github-approval-check/   # GitHub PR approval checker
+└── .../                    # Other worker applications
+
 
 deployment/
 ├── modules/       # Terraform modules
@@ -116,6 +119,14 @@ export TF_VAR_env="dev"        # Environment (dev/staging/prod)
 export TF_VAR_stage=""          # Stage suffix (optional)
 export TF_VAR_app_name="hello"  # Worker app name
 export TF_VAR_cloudflare_account_id="your-account-id"
+
+# For Fourthwall integration, also set:
+export TF_VAR_fourthwall_username="your_username"
+export TF_VAR_fourthwall_password="your_password"
+export TF_VAR_webhook_secret="your_webhook_secret"
+export TF_VAR_kunaki_api_username="kunaki_username"
+export TF_VAR_kunaki_api_password="kunaki_password"
+export TF_VAR_cdclick_api_key="cdclick_key"
 
 cd deployment/modules/cloudflare/workers/<worker-name>
 terragrunt init
@@ -212,3 +223,94 @@ return new Response(
   },
 );
 ```
+
+## Fourthwall Integration Worker
+
+The Fourthwall integration worker (`apps/fourthwall-integration/`) handles e-commerce order fulfillment through multiple providers.
+
+### Architecture Overview
+
+- **Purpose**: Processes e-commerce orders from Fourthwall, routes to appropriate fulfillment providers
+- **Providers**: Kunaki (US), CDClick Europe (EU)
+- **Queue System**: Uses Cloudflare Queues for webhook and fulfillment processing
+- **Database**: D1 for order tracking and webhook event storage
+- **Scheduled Tasks**: Cron job every 15 minutes for status updates
+
+### Key Components
+
+```
+fourthwall-integration/
+├── src/
+│   ├── index.ts              # Main worker entry with fetch, queue, and scheduled handlers
+│   ├── types/                # TypeScript interfaces for all data structures
+│   ├── services/             # Business logic for external APIs
+│   │   ├── fourthwall.ts     # Fourthwall API and webhook handling
+│   │   ├── kunaki.ts         # Kunaki fulfillment (US)
+│   │   ├── cdclick.ts        # CDClick fulfillment (Europe)
+│   │   └── fulfillment.ts    # Fulfillment orchestration
+│   └── repositories/         # Database access layer
+│       ├── order.ts          # Order management
+│       ├── fulfillment.ts    # Fulfillment tracking
+│       └── webhook.ts        # Webhook event storage
+```
+
+### Development Commands
+
+```bash
+cd apps/fourthwall-integration
+pnpm run dev          # Start development server
+pnpm run test         # Run tests
+pnpm run check        # TypeScript type checking
+pnpm run build        # Build for production
+pnpm run tail         # View live logs from deployed worker
+```
+
+### Environment Variables
+
+Required secrets for `apps/fourthwall-integration/.dev.vars`:
+
+```
+FOURTHWALL_USERNAME=your_username
+FOURTHWALL_PASSWORD=your_password
+WEBHOOK_SECRET=your_webhook_secret
+KUNAKI_API_USERNAME=username
+KUNAKI_API_PASSWORD=password
+CDCLICK_API_KEY=your_cdclick_key
+```
+
+### API Endpoints
+
+- `GET /` - API info endpoint
+- `GET /health` - Health check
+- `POST /webhook/fourthwall` - Fourthwall webhook receiver
+- `POST /webhook/cdclick` - CDClick webhook receiver
+
+### Queue Messages
+
+The worker processes three types of queue messages:
+- `webhook` - Process incoming webhooks
+- `fulfillment` - Process order fulfillment
+- `status_check` - Check fulfillment status updates
+
+### Database Schema
+
+Key tables managed by the worker:
+- `orders` - Fourthwall order data
+- `order_items` - Line items for each order
+- `fulfillment_orders` - Fulfillment provider tracking
+- `webhook_events` - Webhook event log and processing status
+
+### Testing
+
+```bash
+cd apps/fourthwall-integration
+pnpm run test                    # Run all tests
+pnpm run test src/services       # Test specific directory
+```
+
+### Deployment Notes
+
+- Database migrations should be run before deploying new versions
+- Queue bindings must match between `wrangler.toml` and Terraform configs
+- Webhook URLs need to be configured in Fourthwall and CDClick dashboards
+- Monitor scheduled task execution for status update reliability

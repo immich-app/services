@@ -14,7 +14,7 @@ export class FulfillmentService {
   ) {
     this.kunakiService = new KunakiService(env.KUNAKI_API_USERNAME, env.KUNAKI_API_PASSWORD);
     this.cdclickService = new CDClickService(env.CDCLICK_API_KEY);
-    this.fourthwallService = new FourthwallService(env.FOURTHWALL_API_KEY, orderRepository);
+    this.fourthwallService = new FourthwallService(env.FOURTHWALL_USERNAME, env.FOURTHWALL_PASSWORD, orderRepository);
   }
 
   async processOrder(orderId: string): Promise<void> {
