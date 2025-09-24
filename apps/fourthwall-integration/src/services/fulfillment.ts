@@ -68,15 +68,23 @@ export class FulfillmentService {
       }
 
       if (result.success) {
-        console.log('[FULFILLMENT] Updating fulfillment order status to submitted');
-        await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'submitted', {
-          providerOrderId: result.provider_order_id,
-          trackingNumber: result.tracking_number,
-          trackingUrl: result.tracking_url,
-          shippingCarrier: result.carrier,
-        });
-
-        console.log(`[FULFILLMENT] Successfully submitted order ${orderId} to ${provider}`);
+        if (result.provider_order_id) {
+          console.log('[FULFILLMENT] Updating fulfillment order status to submitted');
+          await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'submitted', {
+            providerOrderId: result.provider_order_id,
+            trackingNumber: result.tracking_number,
+            trackingUrl: result.tracking_url,
+            shippingCarrier: result.carrier,
+          });
+          console.log(`[FULFILLMENT] Successfully submitted order ${orderId} to ${provider}`);
+        } else {
+          console.log('[FULFILLMENT] Order has no items with SKU mappings - marking as skipped');
+          await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'skipped', {
+            errorMessage: 'No items have SKU mappings - fulfilled directly by Fourthwall',
+          });
+          await this.orderRepository.updateOrderStatus(orderId, 'skipped');
+          console.log(`[FULFILLMENT] Order ${orderId} will be fulfilled directly by Fourthwall`);
+        }
       } else {
         console.error('[FULFILLMENT] Submission failed, updating status to failed');
         await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'failed', {

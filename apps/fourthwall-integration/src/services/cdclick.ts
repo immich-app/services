@@ -49,8 +49,8 @@ export class CDClickService {
       }
       
       if (fulfillableItems.length === 0) {
-        console.log('[CDCLICK] No items have SKU mappings for CDClick fulfillment');
-        return { success: false, error: 'No items have SKU mappings for CDClick fulfillment' };
+        console.log('[CDCLICK] No items have SKU mappings for CDClick fulfillment - order will be fulfilled directly by Fourthwall');
+        return { success: true, provider_order_id: undefined };
       }
       
       const cdclickOrder: CDClickOrderRequest = {
