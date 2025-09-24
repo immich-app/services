@@ -20,12 +20,12 @@ export class CDClickService {
     console.log('[CDCLICK] Customer:', order.customer_name);
     console.log('[CDCLICK] Shipping to:', order.shipping_country);
     console.log('[CDCLICK] Number of items:', orderItems.length);
-    
+
     try {
       // Filter items that have SKU mappings
       const fulfillableItems: { sku: string; quantity: number }[] = [];
       const skippedItems: OrderItem[] = [];
-      
+
       for (const item of orderItems) {
         const mappedSku = this.mapProductToCDClickSku(item.fourthwall_product_id);
         if (mappedSku) {
@@ -37,22 +37,24 @@ export class CDClickService {
           skippedItems.push(item);
         }
       }
-      
+
       console.log('[CDCLICK] Fulfillable items:', fulfillableItems.length);
       console.log('[CDCLICK] Skipped items (no SKU mapping):', skippedItems.length);
-      
+
       if (skippedItems.length > 0) {
         console.log('[CDCLICK] Skipped items details:');
         for (const item of skippedItems) {
           console.log(`[CDCLICK]   - ${item.product_name} (ID: ${item.fourthwall_product_id})`);
         }
       }
-      
+
       if (fulfillableItems.length === 0) {
-        console.log('[CDCLICK] No items have SKU mappings for CDClick fulfillment - order will be fulfilled directly by Fourthwall');
+        console.log(
+          '[CDCLICK] No items have SKU mappings for CDClick fulfillment - order will be fulfilled directly by Fourthwall',
+        );
         return { success: true, provider_order_id: undefined };
       }
-      
+
       const cdclickOrder: CDClickOrderRequest = {
         reference: order.id,
         recipient: {
@@ -72,7 +74,7 @@ export class CDClickService {
       console.log('[CDCLICK] Request payload:', JSON.stringify(cdclickOrder));
       const url = `${this.baseUrl}/orders`;
       console.log('[CDCLICK] Making POST request to:', url);
-      
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -81,7 +83,7 @@ export class CDClickService {
         },
         body: JSON.stringify(cdclickOrder),
       });
-      
+
       console.log('[CDCLICK] Response status:', response.status);
 
       if (!response.ok) {
@@ -96,7 +98,7 @@ export class CDClickService {
       console.log('[CDCLICK] Order submitted successfully');
       console.log('[CDCLICK] Provider order ID:', result.id);
       console.log('[CDCLICK] Tracking:', result.tracking?.number || 'not yet available');
-      
+
       return {
         success: true,
         provider_order_id: result.id,
@@ -116,18 +118,18 @@ export class CDClickService {
 
   async getOrderStatus(cdclickOrderId: string): Promise<CDClickOrderResponse | null> {
     console.log('[CDCLICK] Getting order status for:', cdclickOrderId);
-    
+
     try {
       const url = `${this.baseUrl}/orders/${cdclickOrderId}`;
       console.log('[CDCLICK] Making GET request to:', url);
-      
+
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
       });
-      
+
       console.log('[CDCLICK] Response status:', response.status);
 
       if (!response.ok) {
@@ -161,10 +163,10 @@ export class CDClickService {
     console.log('[CDCLICK] Order ID:', payload.order_id);
     console.log('[CDCLICK] Event type:', payload.event_type);
     console.log('[CDCLICK] Status:', payload.status);
-    
+
     const mappedStatus = this.mapCDClickStatusToFulfillmentStatus(payload.status);
     console.log('[CDCLICK] Mapped status:', payload.status, '->', mappedStatus);
-    
+
     return {
       orderId: payload.order_id,
       status: mappedStatus,
@@ -180,7 +182,7 @@ export class CDClickService {
     console.log('[CDCLICK] Signature provided:', signature ? 'yes' : 'no');
     console.log('[CDCLICK] Secret provided:', secret ? 'yes' : 'no');
     console.log('[CDCLICK] Payload length:', payload.length);
-    
+
     try {
       const encoder = new TextEncoder();
       const keyData = encoder.encode(secret);
@@ -196,7 +198,7 @@ export class CDClickService {
       console.log('[CDCLICK] Expected signature:', signature_hex);
       console.log('[CDCLICK] Provided signature:', signature);
       console.log('[CDCLICK] Signature validation result:', isValid);
-      
+
       return isValid;
     } catch (error) {
       console.error('[CDCLICK] Error validating webhook signature:', error);
@@ -207,7 +209,10 @@ export class CDClickService {
 
   private mapProductToCDClickSku(fourthwallProductId: string): string | null {
     console.log('[CDCLICK] Mapping product ID:', fourthwallProductId);
-    const productMapping: Record<string, string> = {};
+    const productMapping: Record<string, string> = {
+      'b2c201d3-8104-4b2a-b2c9-1f6b335b650a': 'PX00ZTZFZH', //Fourthwall test webhook product
+      'a53316f3-3b7e-493c-b585-e0d3d23d44b9': 'PX00ZTZFZH', //Immich Retro
+    };
 
     const mappedSku = productMapping[fourthwallProductId];
     if (!mappedSku) {
@@ -221,17 +226,17 @@ export class CDClickService {
   canFulfillOrder(order: Order): boolean {
     const country = order.shipping_country.toUpperCase();
     console.log('[CDCLICK] Checking if can fulfill order to country:', country);
-    
+
     const excludedCountries = ['US', 'USA', 'UNITED STATES'];
     const canFulfill = !excludedCountries.includes(country);
-    
+
     console.log('[CDCLICK] Can fulfill:', canFulfill);
     return canFulfill;
   }
 
   mapCDClickStatusToFulfillmentStatus(cdclickStatus: string): string {
     console.log('[CDCLICK] Mapping status:', cdclickStatus);
-    
+
     switch (cdclickStatus.toLowerCase()) {
       case 'pending': {
         return 'pending';
@@ -264,11 +269,11 @@ export class CDClickService {
 
   async cancelOrder(cdclickOrderId: string): Promise<boolean> {
     console.log('[CDCLICK] Cancelling order:', cdclickOrderId);
-    
+
     try {
       const url = `${this.baseUrl}/orders/${cdclickOrderId}/cancel`;
       console.log('[CDCLICK] Making POST request to:', url);
-      
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -276,11 +281,11 @@ export class CDClickService {
           'Content-Type': 'application/json',
         },
       });
-      
+
       console.log('[CDCLICK] Cancel response status:', response.status);
       const success = response.ok;
       console.log('[CDCLICK] Cancel result:', success ? 'success' : 'failed');
-      
+
       return success;
     } catch (error) {
       console.error(`[CDCLICK] Error cancelling order ${cdclickOrderId}:`, error);
@@ -291,18 +296,18 @@ export class CDClickService {
 
   async getAvailableProducts(): Promise<any[]> {
     console.log('[CDCLICK] Getting available products');
-    
+
     try {
       const url = `${this.baseUrl}/products`;
       console.log('[CDCLICK] Making GET request to:', url);
-      
+
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
       });
-      
+
       console.log('[CDCLICK] Response status:', response.status);
 
       if (!response.ok) {

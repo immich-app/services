@@ -72,7 +72,7 @@ export class KunakiService {
           Ship_Country: order.shipping_country,
           Order_Id: `${order.id}-${item.id}`,
         };
-        
+
         // Only add optional fields if they have values
         if (order.shipping_address_line2) {
           kunakiOrder.Ship_Address_2 = order.shipping_address_line2;
@@ -113,15 +113,41 @@ export class KunakiService {
     console.log('[KUNAKI] Submitting single order to Kunaki API');
     console.log('[KUNAKI] Order data:', JSON.stringify(orderData));
 
-    const kunakiParams = this.objectToKunakiParams(orderData);
-    const params = new URLSearchParams({
-      userid: this.username,
-      password: this.password,
-      command: 'SubmitOrder',
-      ...kunakiParams,
-    });
+    // Map our field names to Kunaki's expected parameter names
+    const kunakiParams: Record<string, string> = {
+      RequestType: 'Order',
+      UserId: this.username,
+      Password: this.password,
+      Mode: 'Live', // Use 'TEST' for testing
+      Name: orderData.Ship_Name,
+      Address1: orderData.Ship_Address,
+      City: orderData.Ship_City,
+      PostalCode: orderData.Ship_Postal_Code,
+      Country: this.mapCountryForKunaki(orderData.Ship_Country),
+      ShippingDescription: 'USPS First Class Mail', // Default shipping method
+      ProductId: orderData.Product_Id,
+      Quantity: String(orderData.Quantity),
+      OrderId: orderData.Order_Id || '',
+    };
+
+    // Add optional fields if present
+    if (orderData.Ship_Address_2) {
+      kunakiParams.Address2 = orderData.Ship_Address_2;
+    }
+    if (orderData.Ship_State) {
+      kunakiParams.State_Province = orderData.Ship_State;
+    }
+
+    const params = new URLSearchParams(kunakiParams);
     console.log('[KUNAKI] API URL:', this.baseUrl);
-    console.log('[KUNAKI] Request params (excluding credentials):', JSON.stringify(kunakiParams));
+    console.log(
+      '[KUNAKI] Request params (excluding credentials):',
+      JSON.stringify({
+        ...kunakiParams,
+        UserId: '***',
+        Password: '***',
+      }),
+    );
 
     try {
       console.log('[KUNAKI] Making request to Kunaki API');
@@ -143,7 +169,7 @@ export class KunakiService {
       const responseText = await response.text();
       console.log('[KUNAKI] Order submit response text:', responseText);
       console.log('[KUNAKI] Response length:', responseText.length);
-      
+
       // Log the raw response for debugging
       if (responseText.length === 0) {
         console.error('[KUNAKI] Empty response from Kunaki API');
@@ -175,10 +201,10 @@ export class KunakiService {
     console.log('[KUNAKI] Checking order status for:', kunakiOrderId);
 
     const params = new URLSearchParams({
-      userid: this.username,
-      password: this.password,
-      command: 'OrderStatus',
-      Order_Id: kunakiOrderId,
+      RequestType: 'OrderStatus',
+      UserId: this.username,
+      Password: this.password,
+      OrderId: kunakiOrderId,
     });
 
     try {
@@ -215,55 +241,105 @@ export class KunakiService {
     }
   }
 
-  private objectToKunakiParams(obj: Record<string, any>): Record<string, string> {
-    const params: Record<string, string> = {};
-
-    for (const [key, value] of Object.entries(obj)) {
-      // Skip null and undefined values - Kunaki doesn't accept them
-      if (value !== undefined && value !== null && value !== '') {
-        params[key] = String(value);
-      }
-    }
-
-    return params;
-  }
 
   private parseKunakiResponse(responseText: string): KunakiOrderResponse {
-    const lines = responseText.trim().split('\n');
-    const result: Record<string, string> = {};
-
-    for (const line of lines) {
-      const [key, ...valueParts] = line.split('=');
-      if (key && valueParts.length > 0) {
-        result[key.trim()] = valueParts.join('=').trim();
-      }
+    // Handle empty response
+    if (!responseText || responseText.trim().length === 0) {
+      console.log('[KUNAKI] Empty response - likely authentication or parameter error');
+      return {
+        Order_Id: '',
+        Status: 'Error',
+        Error: 'Empty response - check authentication and parameters',
+      };
     }
 
-    return {
-      Order_Id: result.Order_Id || '',
-      Status: result.Status || 'Error',
-      Error: result.Error,
-    };
+    // Kunaki returns XML format
+    // Example: <Response><ErrorCode>0</ErrorCode><ErrorText>success</ErrorText><OrderId>3345059</OrderId></Response>
+    console.log('[KUNAKI] Parsing XML response');
+    
+    // Simple XML parsing for the specific fields we need
+    const errorCode = this.extractXMLValue(responseText, 'ErrorCode');
+    const errorText = this.extractXMLValue(responseText, 'ErrorText');
+    const orderId = this.extractXMLValue(responseText, 'OrderId');
+    
+    console.log('[KUNAKI] Parsed - ErrorCode:', errorCode, 'ErrorText:', errorText, 'OrderId:', orderId);
+    
+    // ErrorCode 0 means success
+    if (errorCode === '0') {
+      return {
+        Order_Id: orderId || '',
+        Status: 'Success',
+        Error: undefined,
+      };
+    } else {
+      return {
+        Order_Id: '',
+        Status: 'Error',
+        Error: errorText || `Error code: ${errorCode}`,
+      };
+    }
+  }
+  
+  private extractXMLValue(xml: string, tagName: string): string | undefined {
+    const regex = new RegExp(`<${tagName}>([^<]*)</${tagName}>`, 'i');
+    const match = xml.match(regex);
+    return match ? match[1] : undefined;
   }
 
   private parseKunakiStatusResponse(responseText: string): KunakiStatusResponse {
-    const lines = responseText.trim().split('\n');
-    const result: Record<string, string> = {};
+    // Kunaki returns XML format for status check too
+    console.log('[KUNAKI] Parsing status XML response');
+    
+    const errorCode = this.extractXMLValue(responseText, 'ErrorCode');
+    const errorText = this.extractXMLValue(responseText, 'ErrorText');
+    const orderId = this.extractXMLValue(responseText, 'OrderId');
+    const orderStatus = this.extractXMLValue(responseText, 'OrderStatus');
+    const trackingNumber = this.extractXMLValue(responseText, 'TrackingNumber');
+    const trackingType = this.extractXMLValue(responseText, 'TrackingType');
+    
+    console.log('[KUNAKI] Status response - ErrorCode:', errorCode, 'OrderStatus:', orderStatus, 'Tracking:', trackingNumber);
+    
+    if (errorCode === '0') {
+      return {
+        Order_Id: orderId || '',
+        Status: orderStatus || 'Processing',
+        Tracking_Number: trackingNumber,
+        Shipping_Date: undefined,
+        Error: undefined,
+      };
+    } else {
+      return {
+        Order_Id: orderId || '',
+        Status: 'Error',
+        Tracking_Number: undefined,
+        Shipping_Date: undefined,
+        Error: errorText || `Error code: ${errorCode}`,
+      };
+    }
+  }
 
-    for (const line of lines) {
-      const [key, ...valueParts] = line.split('=');
-      if (key && valueParts.length > 0) {
-        result[key.trim()] = valueParts.join('=').trim();
-      }
+  private mapCountryForKunaki(countryCode: string): string {
+    // Map country codes to Kunaki's expected country names
+    const countryMap: Record<string, string> = {
+      US: 'United States',
+      USA: 'United States',
+      'UNITED STATES': 'United States',
+      CA: 'Canada',
+      CANADA: 'Canada',
+      GB: 'United Kingdom',
+      UK: 'United Kingdom',
+      'UNITED KINGDOM': 'United Kingdom',
+      // Add more countries as needed
+    };
+
+    const mapped = countryMap[countryCode.toUpperCase()];
+    if (mapped) {
+      console.log('[KUNAKI] Mapped country:', countryCode, '->', mapped);
+      return mapped;
     }
 
-    return {
-      Order_Id: result.Order_Id || '',
-      Status: result.Status || 'Error',
-      Tracking_Number: result.Tracking_Number,
-      Shipping_Date: result.Shipping_Date,
-      Error: result.Error,
-    };
+    console.log('[KUNAKI] Using country code as-is:', countryCode);
+    return countryCode;
   }
 
   private mapProductToKunakiSku(fourthwallProductId: string): string | null {
