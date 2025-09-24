@@ -1,12 +1,23 @@
 import { FulfillmentRepository, OrderRepository, WebhookRepository } from './repositories/index.js';
-import { CDClickService, FourthwallService, FulfillmentService } from './services/index.js';
+import { CDClickService, FourthwallService, FulfillmentService, MigrationService } from './services/index.js';
 import { CDClickWebhook, Env, FourthwallWebhook, QueueMessage } from './types/index.js';
+
+// Track if migrations have been run in this worker instance
+let migrationsInitialized = false;
 
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     console.log(`[FETCH] Incoming request: ${request.method} ${url.pathname}`);
     console.log(`[FETCH] Headers:`, Object.fromEntries(request.headers.entries()));
+
+    // Run migrations on first request if not already done
+    if (!migrationsInitialized) {
+      console.log('[FETCH] Running database migrations on first request');
+      const migrationService = new MigrationService(env.DB);
+      await migrationService.runMigrations();
+      migrationsInitialized = true;
+    }
 
     try {
       switch (url.pathname) {
@@ -27,10 +38,18 @@ export default {
         }
 
         case '/health': {
+          // Check if migrations are needed
+          const migrationService = new MigrationService(env.DB);
+          const needsMigration = await migrationService.needsMigration();
+          
           return new Response(
             JSON.stringify({
               status: 'healthy',
               timestamp: new Date().toISOString(),
+              database: {
+                migrations_initialized: migrationsInitialized,
+                needs_migration: needsMigration,
+              },
             }),
             {
               headers: {
@@ -49,6 +68,74 @@ export default {
         case '/webhook/cdclick': {
           console.log(`[FETCH] Handling CDClick webhook`);
           return await handleCDClickWebhook(request, env);
+        }
+
+        case '/admin/migrations': {
+          // Admin endpoint to check migration status or run migrations
+          if (request.method === 'POST') {
+            // Manual trigger to run migrations
+            console.log('[ADMIN] Manual migration trigger');
+            const migrationService = new MigrationService(env.DB);
+            await migrationService.runMigrations();
+            migrationsInitialized = true;
+            
+            return new Response(
+              JSON.stringify({
+                message: 'Migrations executed',
+                timestamp: new Date().toISOString(),
+              }),
+              {
+                status: 200,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Access-Control-Allow-Origin': '*',
+                },
+              },
+            );
+          }
+          
+          if (request.method !== 'GET') {
+            return new Response('Method not allowed', { status: 405 });
+          }
+
+          const migrationService = new MigrationService(env.DB);
+          
+          try {
+            // Get list of applied migrations
+            const result = await env.DB
+              .prepare('SELECT * FROM migrations ORDER BY applied_at')
+              .all<{ id: string; name: string; applied_at: string }>();
+
+            return new Response(
+              JSON.stringify({
+                initialized: migrationsInitialized,
+                applied_migrations: result.results || [],
+                total_migrations: (await import('./migrations/index.js')).migrations.length,
+                timestamp: new Date().toISOString(),
+              }),
+              {
+                status: 200,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Access-Control-Allow-Origin': '*',
+                },
+              },
+            );
+          } catch (error) {
+            return new Response(
+              JSON.stringify({
+                error: 'Failed to get migration status',
+                message: error instanceof Error ? error.message : 'Unknown error',
+              }),
+              {
+                status: 500,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Access-Control-Allow-Origin': '*',
+                },
+              },
+            );
+          }
         }
 
         default: {
@@ -156,7 +243,10 @@ async function handleFourthwallWebhook(request: Request, env: Env): Promise<Resp
   try {
     const payload: FourthwallWebhook = JSON.parse(body);
     console.log('[FW-WEBHOOK] Parsed payload type:', payload.type);
-    console.log('[FW-WEBHOOK] Payload data ID:', payload.data?.attributes?.id);
+    console.log('[FW-WEBHOOK] Webhook ID:', payload.id);
+    console.log('[FW-WEBHOOK] Shop ID:', payload.shopId);
+    console.log('[FW-WEBHOOK] API Version:', payload.apiVersion);
+    console.log('[FW-WEBHOOK] Has data:', !!payload.data);
 
     const webhookEvent = await webhookRepository.createWebhookEvent({
       source: 'fourthwall',
@@ -273,9 +363,15 @@ async function processQueueMessage(message: QueueMessage, env: Env): Promise<voi
           // FulfillmentService is used elsewhere but not directly here
           // const fulfillmentService = new FulfillmentService(env, orderRepository, fulfillmentRepository);
 
-          if (payload.type === 'order.paid') {
-            console.log('[PROCESS-QUEUE] Order paid event detected, checking for order');
-            const order = await orderRepository.getOrderByFourthwallId(payload.data.attributes.id);
+          if (payload.type === 'ORDER_PLACED') {
+            console.log('[PROCESS-QUEUE] ORDER_PLACED event detected, checking for order');
+            // Get order ID from the data field
+            const orderId = payload.data?.id;
+            if (!orderId) {
+              console.log('[PROCESS-QUEUE] No order ID found in webhook data');
+              return;
+            }
+            const order = await orderRepository.getOrderByFourthwallId(orderId);
             if (order) {
               console.log(`[PROCESS-QUEUE] Found order ${order.id}, queueing for fulfillment`);
               await env.FULFILLMENT_QUEUE.send({
