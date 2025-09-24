@@ -4,6 +4,10 @@ resource "cloudflare_worker" "worker" {
   logpush    = true
 }
 
+resource "terraform_data" "source_hash" {
+  input = filesha256("${var.dist_dir}/${var.app_name}/index.js")
+}
+
 resource "cloudflare_d1_database" "db" {
   account_id = var.cloudflare_account_id
   name       = "fourthwall-integration-${var.env}-${var.stage}"
@@ -15,6 +19,29 @@ resource "cloudflare_d1_database" "db" {
 resource "cloudflare_queue" "webhook_processor" {
   account_id = var.cloudflare_account_id
   queue_name       = "fourthwall-integration-webhook-processor-${var.env}-${var.stage}"
+  provisioner "local-exec" {
+    on_failure = fail
+    when       = create
+    command    = <<EOT
+      curl --fail-with-body -S -X POST https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/queues/${self.id}/consumers \
+      -H 'Authorization: Bearer ${data.terraform_remote_state.api_keys_state.outputs.terraform_key_cloudflare_account}' \
+      -d '{
+        "script_name": "${cloudflare_worker.queue_processor.name}",
+        "environment": "production",
+        "queue_name": "${cloudflare_queue.webhook_processor.queue_name}}",
+        "dead_letter_queue": "${cloudflare_queue.webhook_processor_dlq.queue_name}",
+        "type": "worker",
+        "settings": {
+          "max_retries": 3,
+          "max_wait_time_ms": 5000,
+          "batch_size": 10,
+          "max_concurrency": null,
+          "retry_delay": 0
+        }
+      }'
+    EOT
+  }
+  depends_on = [cloudflare_worker.queue_processor]
 }
 
 resource "cloudflare_queue" "webhook_processor_dlq" {
@@ -25,6 +52,29 @@ resource "cloudflare_queue" "webhook_processor_dlq" {
 resource "cloudflare_queue" "fulfillment_processor" {
   account_id = var.cloudflare_account_id
   queue_name       = "fourthwall-integration-fulfillment-processor-${var.env}-${var.stage}"
+  provisioner "local-exec" {
+    on_failure = fail
+    when       = create
+    command    = <<EOT
+      curl --fail-with-body -S -X POST https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/queues/${self.id}/consumers \
+      -H 'Authorization: Bearer ${data.terraform_remote_state.api_keys_state.outputs.terraform_key_cloudflare_account}' \
+      -d '{
+        "script_name": "${cloudflare_worker.queue_processor.name}",
+        "environment": "production",
+        "queue_name": "${cloudflare_queue.fulfillment_processor.queue_name}}",
+        "dead_letter_queue": "${cloudflare_queue.fulfillment_processor_dlq.queue_name}",
+        "type": "worker",
+        "settings": {
+          "max_retries": 3,
+          "max_wait_time_ms": 5000,
+          "batch_size": 10,
+          "max_concurrency": null,
+          "retry_delay": 0
+        }
+      }'
+    EOT
+  }
+  depends_on = [cloudflare_worker.queue_processor]
 }
 
 resource "cloudflare_queue" "fulfillment_processor_dlq" {
@@ -92,6 +142,11 @@ resource "cloudflare_worker_version" "worker" {
       name         = "index.js"
     }
   ]
+  lifecycle {
+    replace_triggered_by = [
+      terraform_data.source_hash
+    ]
+  }
 }
 
 resource "cloudflare_workers_cron_trigger" "worker_cron" {
@@ -164,39 +219,44 @@ resource "cloudflare_worker_version" "queue_processor" {
       name         = "index.js"
     }
   ]
+  lifecycle {
+    replace_triggered_by = [
+      terraform_data.source_hash
+    ]
+  }
 }
 
-resource "cloudflare_queue_consumer" "webhook_processor" {
-  consumer_id = "webhookprocessor"
-  account_id = var.cloudflare_account_id
-  queue_id = cloudflare_queue.webhook_processor.id
-  dead_letter_queue = cloudflare_queue.webhook_processor_dlq.queue_name
-  script_name = cloudflare_worker.queue_processor.name
-  settings = {
-    batch_size = 50
-    max_concurrency = 10
-    max_retries = 3
-    max_wait_time_ms = 5000
-    retry_delay = 10
-  }
-  type = "worker"
-}
-
-resource "cloudflare_queue_consumer" "fulfillment_processor" {
-  consumer_id = "fulfillmentprocessor"
-  account_id = var.cloudflare_account_id
-  queue_id = cloudflare_queue.fulfillment_processor.id
-  dead_letter_queue = cloudflare_queue.fulfillment_processor_dlq.queue_name
-  script_name = cloudflare_worker.queue_processor.name
-  settings = {
-    batch_size = 50
-    max_concurrency = 10
-    max_retries = 3
-    max_wait_time_ms = 5000
-    retry_delay = 10
-  }
-  type = "worker"
-}
+# resource "cloudflare_queue_consumer" "webhook_processor" {
+#   consumer_id = "webhookprocessor"
+#   account_id = var.cloudflare_account_id
+#   queue_id = cloudflare_queue.webhook_processor.id
+#   dead_letter_queue = cloudflare_queue.webhook_processor_dlq.queue_name
+#   script_name = cloudflare_worker.queue_processor.name
+#   settings = {
+#     batch_size = 50
+#     max_concurrency = 10
+#     max_retries = 3
+#     max_wait_time_ms = 5000
+#     retry_delay = 10
+#   }
+#   type = "worker"
+# }
+#
+# resource "cloudflare_queue_consumer" "fulfillment_processor" {
+#   consumer_id = "fulfillmentprocessor"
+#   account_id = var.cloudflare_account_id
+#   queue_id = cloudflare_queue.fulfillment_processor.id
+#   dead_letter_queue = cloudflare_queue.fulfillment_processor_dlq.queue_name
+#   script_name = cloudflare_worker.queue_processor.name
+#   settings = {
+#     batch_size = 50
+#     max_concurrency = 10
+#     max_retries = 3
+#     max_wait_time_ms = 5000
+#     retry_delay = 10
+#   }
+#   type = "worker"
+# }
 
 resource "cloudflare_workers_deployment" "queue_processor" {
   account_id  = var.cloudflare_account_id

@@ -131,10 +131,10 @@ async function handleFourthwallWebhook(request: Request, env: Env): Promise<Resp
     return new Response('Method not allowed', { status: 405 });
   }
 
-  const signature = request.headers.get('X-Fourthwall-Signature');
+  const signature = request.headers.get('X-Fourthwall-Hmac-SHA256');
   console.log('[FW-WEBHOOK] Signature present:', !!signature);
   if (!signature) {
-    console.log('[FW-WEBHOOK] Missing signature header');
+    console.log('[FW-WEBHOOK] Missing signature header (X-Fourthwall-Hmac-SHA256)');
     return new Response('Missing signature', { status: 401 });
   }
 
