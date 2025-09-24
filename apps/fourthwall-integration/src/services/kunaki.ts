@@ -50,8 +50,8 @@ export class KunakiService {
       }
       
       if (fulfillableItems.length === 0) {
-        console.log('[KUNAKI] No items have SKU mappings for Kunaki fulfillment');
-        return { success: false, error: 'No items have SKU mappings for Kunaki fulfillment' };
+        console.log('[KUNAKI] No items have SKU mappings for Kunaki fulfillment - order will be fulfilled directly by Fourthwall');
+        return { success: true, provider_order_id: undefined };
       }
       
       // Process only items with SKU mappings
