@@ -130,6 +130,11 @@ resource "cloudflare_worker_version" "worker" {
       name = "WEBHOOK_SECRET"
       type = "secret_text"
       text = var.webhook_secret
+    },
+    {
+      name = "ENVIRONMENT"
+      type = "plain_text"
+      text = var.env
     }
   ]
   compatibility_date = "2025-09-09"
@@ -222,6 +227,11 @@ resource "cloudflare_worker_version" "queue_processor" {
       name = "WEBHOOK_SECRET"
       type = "secret_text"
       text = var.webhook_secret
+    },
+    {
+      name = "ENVIRONMENT"
+      type = "plain_text"
+      text = var.env
     }
   ]
   compatibility_date = "2025-09-09"

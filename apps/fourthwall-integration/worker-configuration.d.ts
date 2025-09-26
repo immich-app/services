@@ -8,4 +8,5 @@ interface Env {
   KUNAKI_API_PASSWORD: string;
   CDCLICK_API_KEY: string;
   WEBHOOK_SECRET: string;
+  ENVIRONMENT?: string;
 }
