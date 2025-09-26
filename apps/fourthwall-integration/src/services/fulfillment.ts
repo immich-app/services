@@ -113,6 +113,23 @@ export class FulfillmentService {
             shippingCarrier: result.carrier,
           });
           console.log(`[FULFILLMENT] Successfully submitted order ${orderId} to ${fulfillmentOrder.provider}`);
+
+          // Notify Fourthwall that the order is in production
+          try {
+            console.log('[FULFILLMENT] Notifying Fourthwall that order is in production');
+            // Use "In Production" as the shipping company until we have real tracking
+            await this.fourthwallService.createFulfillment(
+              order.fourthwall_order_id,
+              items,
+              'PENDING',
+              'In Production'
+            );
+            console.log('[FULFILLMENT] Successfully notified Fourthwall');
+          } catch (error) {
+            console.error('[FULFILLMENT] Error notifying Fourthwall about order in production:', error);
+            console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
+            // Don't fail the fulfillment if Fourthwall notification fails
+          }
         } else {
           console.log('[FULFILLMENT] Order has no items with SKU mappings - marking as skipped');
           await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'skipped', {
