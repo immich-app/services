@@ -37,31 +37,54 @@ export class FulfillmentService {
       console.log('[FULFILLMENT] Number of items:', items.length);
       console.log('[FULFILLMENT] Shipping country:', order.shipping_country);
 
-      if (order.status !== 'received') {
-        console.log(`[FULFILLMENT] Order ${orderId} is not in 'received' status (current: ${order.status}), skipping`);
-        return;
+      // Check if this is a retry of a failed fulfillment
+      let fulfillmentOrder = await this.fulfillmentRepository.getFulfillmentOrderByOrderId(orderId);
+
+      if (fulfillmentOrder) {
+        console.log('[FULFILLMENT] Found existing fulfillment order:', fulfillmentOrder.id);
+        console.log('[FULFILLMENT] Fulfillment status:', fulfillmentOrder.status);
+
+        // Only retry if the fulfillment failed
+        if (fulfillmentOrder.status !== 'failed') {
+          console.log(`[FULFILLMENT] Fulfillment order ${fulfillmentOrder.id} is not in 'failed' status (current: ${fulfillmentOrder.status}), skipping`);
+          return;
+        }
+
+        console.log('[FULFILLMENT] Retrying failed fulfillment order');
+        console.log('[FULFILLMENT] Current retry count:', fulfillmentOrder.retry_count);
+        // Reset status to pending for retry and increment retry count
+        await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'pending', {
+          errorMessage: undefined,
+        });
+        await this.fulfillmentRepository.incrementRetryCount(fulfillmentOrder.id);
+      } else {
+        // New fulfillment - check order status
+        if (order.status !== 'received') {
+          console.log(`[FULFILLMENT] Order ${orderId} is not in 'received' status (current: ${order.status}), skipping`);
+          return;
+        }
+
+        console.log('[FULFILLMENT] Determining fulfillment provider');
+        const provider = this.determineFulfillmentProvider(order);
+        console.log('[FULFILLMENT] Selected provider:', provider);
+
+        console.log('[FULFILLMENT] Updating order with provider:', provider);
+        await this.orderRepository.updateOrderFulfillmentProvider(orderId, provider);
+
+        console.log('[FULFILLMENT] Updating order status to processing');
+        await this.orderRepository.updateOrderStatus(orderId, 'processing');
+
+        console.log('[FULFILLMENT] Creating fulfillment order record');
+        fulfillmentOrder = await this.fulfillmentRepository.createFulfillmentOrder({
+          order_id: orderId,
+          provider,
+          status: 'pending',
+          retry_count: 0,
+        });
       }
 
-      console.log('[FULFILLMENT] Determining fulfillment provider');
-      const provider = this.determineFulfillmentProvider(order);
-      console.log('[FULFILLMENT] Selected provider:', provider);
-
-      console.log('[FULFILLMENT] Updating order with provider:', provider);
-      await this.orderRepository.updateOrderFulfillmentProvider(orderId, provider);
-      
-      console.log('[FULFILLMENT] Updating order status to processing');
-      await this.orderRepository.updateOrderStatus(orderId, 'processing');
-
-      console.log('[FULFILLMENT] Creating fulfillment order record');
-      const fulfillmentOrder = await this.fulfillmentRepository.createFulfillmentOrder({
-        order_id: orderId,
-        provider,
-        status: 'pending',
-        retry_count: 0,
-      });
-
-      console.log('[FULFILLMENT] Submitting order to provider:', provider);
-      const result = await this.submitToProvider(provider, order, items);
+      console.log('[FULFILLMENT] Submitting order to provider:', fulfillmentOrder.provider);
+      const result = await this.submitToProvider(fulfillmentOrder.provider, order, items);
       console.log('[FULFILLMENT] Submission result:', result.success ? 'success' : 'failed');
       if (result.provider_order_id) {
         console.log('[FULFILLMENT] Provider order ID:', result.provider_order_id);
@@ -76,7 +99,7 @@ export class FulfillmentService {
             trackingUrl: result.tracking_url,
             shippingCarrier: result.carrier,
           });
-          console.log(`[FULFILLMENT] Successfully submitted order ${orderId} to ${provider}`);
+          console.log(`[FULFILLMENT] Successfully submitted order ${orderId} to ${fulfillmentOrder.provider}`);
         } else {
           console.log('[FULFILLMENT] Order has no items with SKU mappings - marking as skipped');
           await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'skipped', {
@@ -91,7 +114,7 @@ export class FulfillmentService {
           errorMessage: result.error,
         });
 
-        console.error(`[FULFILLMENT] Failed to submit order ${orderId} to ${provider}: ${result.error}`);
+        console.error(`[FULFILLMENT] Failed to submit order ${orderId} to ${fulfillmentOrder.provider}: ${result.error}`);
 
         console.log('[FULFILLMENT] Enqueueing order for retry');
         await this.enqueueForRetry(orderId);
