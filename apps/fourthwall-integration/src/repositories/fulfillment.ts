@@ -67,6 +67,16 @@ export class FulfillmentRepository extends BaseRepository {
     return order;
   }
 
+  async getFulfillmentOrderByOrderId(orderId: string): Promise<FulfillmentOrder | null> {
+    console.log('[FULFILLMENT-REPO] Getting fulfillment order by order ID:', orderId);
+    const order = await this.executeSingleQuery<FulfillmentOrder>(
+      'SELECT * FROM fulfillment_orders WHERE order_id = ? ORDER BY created_at DESC LIMIT 1',
+      [orderId],
+    );
+    console.log('[FULFILLMENT-REPO] Fulfillment order found:', order ? `ID ${order.id}, status: ${order.status}` : 'none');
+    return order;
+  }
+
   async getFulfillmentOrdersByOrderId(orderId: string): Promise<FulfillmentOrder[]> {
     const result = await this.executeQuery<FulfillmentOrder>('SELECT * FROM fulfillment_orders WHERE order_id = ?', [
       orderId,
