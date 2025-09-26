@@ -119,22 +119,96 @@ export class FourthwallService {
     });
   }
 
+  async createFulfillment(
+    fourthwallOrderId: string,
+    orderItems: Array<{ fourthwall_variant_id?: string; quantity: number }>,
+    trackingNumber: string = 'PENDING',
+    trackingCompany: string = 'In Production'
+  ): Promise<void> {
+    console.log('[FW-SERVICE] Creating fulfillment for order');
+    console.log('[FW-SERVICE] Fourthwall Order ID:', fourthwallOrderId);
+    console.log('[FW-SERVICE] Tracking Number:', trackingNumber);
+    console.log('[FW-SERVICE] Tracking Company:', trackingCompany);
+    console.log('[FW-SERVICE] Items:', orderItems.length);
+
+    try {
+      // Filter out items without variant IDs
+      const fulfillmentItems = orderItems
+        .filter(item => item.fourthwall_variant_id)
+        .map(item => ({
+          variantId: item.fourthwall_variant_id,
+          quantity: item.quantity
+        }));
+
+      if (fulfillmentItems.length === 0) {
+        console.log('[FW-SERVICE] No items with variant IDs to fulfill, skipping');
+        return;
+      }
+
+      const url = `https://api.fourthwall.com/open-api/v1.0/fulfillments`;
+      console.log('[FW-SERVICE] Making POST request to:', url);
+
+      const requestBody = {
+        orderId: fourthwallOrderId,
+        items: fulfillmentItems,
+        shippingLabel: {
+          trackingNumber,
+          trackingCompany
+        }
+      };
+
+      console.log('[FW-SERVICE] Request body:', JSON.stringify(requestBody));
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: this.authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('[FW-SERVICE] Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[FW-SERVICE] Failed to create fulfillment. Status:', response.status);
+        console.error('[FW-SERVICE] Error response:', errorText);
+        throw new Error(`Failed to create Fourthwall fulfillment: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('[FW-SERVICE] Fulfillment created successfully:', result);
+      console.log(`[FW-SERVICE] Successfully created fulfillment for order ${fourthwallOrderId}`);
+    } catch (error) {
+      console.error(`[FW-SERVICE] Error creating fulfillment for order ${fourthwallOrderId}:`, error);
+      console.error('[FW-SERVICE] Error stack:', error instanceof Error ? error.stack : 'No stack');
+      throw error;
+    }
+  }
+
+  // Note: This method is kept for backward compatibility but should use createFulfillment instead
   async updateOrderWithTracking(
     fourthwallOrderId: string,
     trackingNumber: string,
     trackingUrl?: string,
     carrier?: string,
   ): Promise<void> {
-    console.log('[FW-SERVICE] Updating order with tracking');
+    console.log('[FW-SERVICE] Updating order with tracking (legacy method - consider using createFulfillment)');
     console.log('[FW-SERVICE] Fourthwall Order ID:', fourthwallOrderId);
     console.log('[FW-SERVICE] Tracking Number:', trackingNumber);
     console.log('[FW-SERVICE] Tracking URL:', trackingUrl || 'not provided');
     console.log('[FW-SERVICE] Carrier:', carrier || 'not provided');
-    
+
+    // Note: The old endpoint may not work anymore, this method is kept for compatibility
+    // but should be replaced with createFulfillment which uses the correct API
+    console.warn('[FW-SERVICE] Warning: updateOrderWithTracking uses a legacy endpoint that may not work');
+    console.warn('[FW-SERVICE] Consider updating the caller to use createFulfillment instead');
+
     try {
       const url = `https://api.fourthwall.com/v1/orders/${fourthwallOrderId}/fulfillment`;
-      console.log('[FW-SERVICE] Making POST request to:', url);
-      
+      console.log('[FW-SERVICE] Making POST request to legacy endpoint:', url);
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -150,7 +224,7 @@ export class FourthwallService {
       });
 
       console.log('[FW-SERVICE] Response status:', response.status);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[FW-SERVICE] Failed to update order. Status:', response.status);
