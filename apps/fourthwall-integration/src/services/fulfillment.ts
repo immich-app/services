@@ -6,6 +6,7 @@ export class FulfillmentService {
   private kunakiService: KunakiService;
   private cdclickService: CDClickService;
   private fourthwallService: FourthwallService;
+  private readonly MAX_RETRY_ATTEMPTS = 3;
 
   constructor(
     private env: Env,
@@ -16,7 +17,7 @@ export class FulfillmentService {
     console.log('[FULFILLMENT] Kunaki credentials:', env.KUNAKI_API_USERNAME ? 'provided' : 'missing');
     console.log('[FULFILLMENT] CDClick API key:', env.CDCLICK_API_KEY ? 'provided' : 'missing');
     this.kunakiService = new KunakiService(env.KUNAKI_API_USERNAME, env.KUNAKI_API_PASSWORD);
-    this.cdclickService = new CDClickService(env.CDCLICK_API_KEY);
+    this.cdclickService = new CDClickService(env.CDCLICK_API_KEY, env.ENVIRONMENT);
     this.fourthwallService = new FourthwallService(env.FOURTHWALL_USERNAME, env.FOURTHWALL_PASSWORD, orderRepository);
     console.log('[FULFILLMENT] All services initialized');
   }
@@ -52,6 +53,18 @@ export class FulfillmentService {
 
         console.log('[FULFILLMENT] Retrying failed fulfillment order');
         console.log('[FULFILLMENT] Current retry count:', fulfillmentOrder.retry_count);
+
+        // Check if we've exceeded max retries
+        if (fulfillmentOrder.retry_count >= this.MAX_RETRY_ATTEMPTS) {
+          console.error(`[FULFILLMENT] Max retry attempts (${this.MAX_RETRY_ATTEMPTS}) reached for order ${orderId}`);
+          console.log('[FULFILLMENT] Order will be sent to DLQ');
+          await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'failed', {
+            errorMessage: `Max retry attempts (${this.MAX_RETRY_ATTEMPTS}) exceeded`,
+          });
+          // Throw error to let Cloudflare handle DLQ
+          throw new Error(`Max retry attempts exceeded for order ${orderId}`);
+        }
+
         // Reset status to pending for retry and increment retry count
         await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'pending', {
           errorMessage: undefined,
@@ -116,14 +129,25 @@ export class FulfillmentService {
 
         console.error(`[FULFILLMENT] Failed to submit order ${orderId} to ${fulfillmentOrder.provider}: ${result.error}`);
 
-        console.log('[FULFILLMENT] Enqueueing order for retry');
-        await this.enqueueForRetry(orderId);
+        // Throw error to trigger Cloudflare's automatic retry mechanism
+        throw new Error(`Failed to submit order ${orderId}: ${result.error}`);
       }
     } catch (error) {
       console.error(`[FULFILLMENT] Error processing order ${orderId}:`, error);
       console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
+
+      // If it's an intentional failure (for retry/DLQ), re-throw it
+      if (error instanceof Error && (
+        error.message.includes('Failed to submit order') ||
+        error.message.includes('Max retry attempts exceeded')
+      )) {
+        throw error;
+      }
+
+      // For unexpected errors, revert status and still throw to trigger retry
       console.log('[FULFILLMENT] Reverting order status to received');
       await this.orderRepository.updateOrderStatus(orderId, 'received');
+      throw error;
     }
   }
 
@@ -358,19 +382,4 @@ export class FulfillmentService {
     }
   }
 
-  private async enqueueForRetry(orderId: string): Promise<void> {
-    console.log('[FULFILLMENT] Enqueueing order for retry:', orderId);
-    
-    try {
-      await this.env.FULFILLMENT_QUEUE.send({
-        type: 'fulfillment',
-        data: { orderId },
-        retry_count: 0,
-      });
-      console.log('[FULFILLMENT] Order enqueued successfully');
-    } catch (error) {
-      console.error(`[FULFILLMENT] Error enqueueing order ${orderId} for retry:`, error);
-      console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
-    }
-  }
 }

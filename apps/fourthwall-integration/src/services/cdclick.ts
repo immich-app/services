@@ -2,10 +2,14 @@ import { CDClickOrderResponse, CDClickWebhook, FulfillmentResult, Order, OrderIt
 
 export class CDClickService {
   private readonly baseUrl = 'https://wall.cdclick-europe.com/API';
+  private readonly isDevelopment: boolean;
 
-  constructor(private apiKey: string) {
+  constructor(private apiKey: string, environment?: string) {
     console.log('[CDCLICK] Initializing CDClickService');
     console.log('[CDCLICK] API key:', apiKey ? 'provided' : 'missing');
+    this.isDevelopment = environment === 'dev';
+    console.log('[CDCLICK] Environment:', environment || 'production');
+    console.log('[CDCLICK] Is development:', this.isDevelopment);
   }
 
   async submitOrder(order: Order, orderItems: OrderItem[]): Promise<FulfillmentResult> {
@@ -59,9 +63,14 @@ export class CDClickService {
         addressStreet += ', ' + order.shipping_address_line2;
       }
 
+      if (this.isDevelopment) {
+        console.log('[CDCLICK] Development mode: Order will be held for manual confirmation (idle: true)');
+      }
+
       const cdclickOrder = {
         custom_id: order.id,
         check_multiple_custom_id: true,
+        idle: this.isDevelopment,
         shipping: {
           first_name: firstName,
           last_name: lastName,
@@ -71,7 +80,7 @@ export class CDClickService {
           city: order.shipping_city,
           state: order.shipping_state || undefined,
           country_code: order.shipping_country,
-          phone_number: '',
+          phone_number: '00000',
         },
         cart: fulfillableItems.map((item) => ({
           item_id: item.sku,

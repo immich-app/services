@@ -294,7 +294,7 @@ async function handleCDClickWebhook(request: Request, env: Env): Promise<Respons
   console.log('[CD-WEBHOOK] Body preview:', body.slice(0, 200));
 
   const webhookRepository = new WebhookRepository(env.DB);
-  const cdclickService = new CDClickService(env.CDCLICK_API_KEY);
+  const cdclickService = new CDClickService(env.CDCLICK_API_KEY, env.ENVIRONMENT);
 
   const isValidSignature = await cdclickService.validateWebhookSignature(body, signature, env.WEBHOOK_SECRET);
   console.log('[CD-WEBHOOK] Signature validation result:', isValidSignature);
