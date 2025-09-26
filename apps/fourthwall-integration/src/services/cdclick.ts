@@ -1,10 +1,13 @@
-import { CDClickOrderResponse, CDClickWebhook, FulfillmentResult, Order, OrderItem } from '../types/index.js';
+import { CDClickOrderCreateResponse, CDClickOrderResponse, CDClickWebhook, FulfillmentResult, Order, OrderItem } from '../types/index.js';
 
 export class CDClickService {
   private readonly baseUrl = 'https://wall.cdclick-europe.com/API';
   private readonly isDevelopment: boolean;
 
-  constructor(private apiKey: string, environment?: string) {
+  constructor(
+    private apiKey: string,
+    environment?: string,
+  ) {
     console.log('[CDCLICK] Initializing CDClickService');
     console.log('[CDCLICK] API key:', apiKey ? 'provided' : 'missing');
     this.isDevelopment = environment === 'dev';
@@ -109,19 +112,19 @@ export class CDClickService {
         throw new Error(`CDClick API error: ${response.status} - ${errorText}`);
       }
 
-      const result: CDClickOrderResponse = await response.json();
+      const result: CDClickOrderCreateResponse = await response.json();
       console.log('[CDCLICK] Response data:', JSON.stringify(result));
 
       console.log('[CDCLICK] Order submitted successfully');
-      console.log('[CDCLICK] Provider order ID:', result.id);
-      console.log('[CDCLICK] Tracking:', result.tracking?.number || 'not yet available');
+      console.log('[CDCLICK] Provider order ID:', result.order_id);
+      console.log('[CDCLICK] Tracking: not yet available');
 
       return {
         success: true,
-        provider_order_id: result.id,
-        tracking_number: result.tracking?.number,
-        tracking_url: result.tracking?.url,
-        carrier: result.tracking?.carrier,
+        provider_order_id: result.order_id.toString(),
+        tracking_number: undefined,
+        tracking_url: undefined,
+        carrier: undefined,
       };
     } catch (error) {
       console.error('[CDCLICK] Error submitting order:', error);

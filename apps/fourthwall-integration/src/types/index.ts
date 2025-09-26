@@ -270,6 +270,12 @@ export interface CDClickOrderItem {
   quantity: number;
 }
 
+export interface CDClickOrderCreateResponse {
+  success: boolean;
+  order_id: number;
+  errorText: string;
+}
+
 export interface CDClickOrderResponse {
   id: string;
   reference: string;
