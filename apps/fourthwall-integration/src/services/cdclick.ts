@@ -1,11 +1,4 @@
-import {
-  CDClickOrderRequest,
-  CDClickOrderResponse,
-  CDClickWebhook,
-  FulfillmentResult,
-  Order,
-  OrderItem,
-} from '../types/index.js';
+import { CDClickOrderResponse, CDClickWebhook, FulfillmentResult, Order, OrderItem } from '../types/index.js';
 
 export class CDClickService {
   private readonly baseUrl = 'https://wall.cdclick-europe.com/API';
@@ -55,20 +48,35 @@ export class CDClickService {
         return { success: true, provider_order_id: undefined };
       }
 
-      const cdclickOrder: CDClickOrderRequest = {
-        reference: order.id,
-        recipient: {
-          name: order.customer_name,
-          address: {
-            street: order.shipping_address_line1,
-            street2: order.shipping_address_line2,
-            city: order.shipping_city,
-            state: order.shipping_state,
-            zip: order.shipping_postal_code,
-            country: order.shipping_country,
-          },
+      // Parse customer name into first and last name
+      const nameParts = order.customer_name.trim().split(' ');
+      const firstName = nameParts[0] || 'Customer';
+      const lastName = nameParts.slice(1).join(' ') || 'Name';
+
+      // Build the address street combining line1 and line2 if present
+      let addressStreet = order.shipping_address_line1;
+      if (order.shipping_address_line2) {
+        addressStreet += ', ' + order.shipping_address_line2;
+      }
+
+      const cdclickOrder = {
+        custom_id: order.id,
+        check_multiple_custom_id: true,
+        shipping: {
+          first_name: firstName,
+          last_name: lastName,
+          email: order.customer_email,
+          address_street: addressStreet,
+          zip_code: order.shipping_postal_code,
+          city: order.shipping_city,
+          state: order.shipping_state || undefined,
+          country_code: order.shipping_country,
+          phone_number: '',
         },
-        items: fulfillableItems,
+        cart: fulfillableItems.map((item) => ({
+          item_id: item.sku,
+          quantity: item.quantity,
+        })),
       };
 
       console.log('[CDCLICK] Request payload:', JSON.stringify(cdclickOrder));
@@ -210,8 +218,8 @@ export class CDClickService {
   private mapProductToCDClickSku(fourthwallProductId: string): string | null {
     console.log('[CDCLICK] Mapping product ID:', fourthwallProductId);
     const productMapping: Record<string, string> = {
-      'b2c201d3-8104-4b2a-b2c9-1f6b335b650a': 'PX00ZTZFZH', //Fourthwall test webhook product
-      'a53316f3-3b7e-493c-b585-e0d3d23d44b9': 'PX00ZTZFZH', //Immich Retro
+      'b2c201d3-8104-4b2a-b2c9-1f6b335b650a': '4970', //Fourthwall test webhook product
+      'a53316f3-3b7e-493c-b585-e0d3d23d44b9': '4970', //Immich Retro
     };
 
     const mappedSku = productMapping[fourthwallProductId];
