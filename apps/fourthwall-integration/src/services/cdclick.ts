@@ -1,4 +1,11 @@
-import { CDClickOrderCreateResponse, CDClickOrderResponse, CDClickWebhook, FulfillmentResult, Order, OrderItem } from '../types/index.js';
+import {
+  CDClickOrderCreateResponse,
+  CDClickOrderResponse,
+  CDClickWebhook,
+  FulfillmentResult,
+  Order,
+  OrderItem,
+} from '../types/index.js';
 
 export class CDClickService {
   private readonly baseUrl = 'https://wall.cdclick-europe.com/API';

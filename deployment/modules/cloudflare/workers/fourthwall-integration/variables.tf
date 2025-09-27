@@ -41,3 +41,27 @@ variable "webhook_secret" {
   type        = string
   sensitive   = true
 }
+
+variable "smtp_host" {
+  description = "SMTP server hostname"
+  type        = string
+  sensitive   = true
+}
+
+variable "smtp_port" {
+  description = "SMTP server port"
+  type        = string
+  sensitive   = true
+}
+
+variable "smtp_user" {
+  description = "SMTP username"
+  type        = string
+  sensitive   = true
+}
+
+variable "smtp_password" {
+  description = "SMTP password"
+  type        = string
+  sensitive   = true
+}

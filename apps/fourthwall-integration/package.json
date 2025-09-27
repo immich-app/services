@@ -9,5 +9,8 @@
     "tail": "wrangler tail",
     "test": "vitest",
     "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "worker-mailer": "^1.1.5"
   }
 }

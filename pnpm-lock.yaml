@@ -60,7 +60,11 @@ importers:
         specifier: ^4.35.0
         version: 4.35.0(@cloudflare/workers-types@4.20250909.0)
 
-  apps/fourthwall-integration: {}
+  apps/fourthwall-integration:
+    dependencies:
+      worker-mailer:
+        specifier: ^1.1.5
+        version: 1.1.5
 
   apps/github-approval-check:
     dependencies:
@@ -1873,6 +1877,9 @@ packages:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
 
+  worker-mailer@1.1.5:
+    resolution: {integrity: sha512-Yq+LiQ25CHjdQakO3IE/srzYFS94XVQH9e0z30y/NoPyw6vLiLacYDPOBDD9CLpEMhy6vTgLQbsJzFBt9/7E2w==}
+
   workerd@1.20250906.0:
     resolution: {integrity: sha512-ryVyEaqXPPsr/AxccRmYZZmDAkfQVjhfRqrNTlEeN8aftBk6Ca1u7/VqmfOayjCXrA+O547TauebU+J3IpvFXw==}
     engines: {node: '>=16'}
@@ -3579,6 +3586,8 @@ snapshots:
       stackback: 0.0.2
 
   word-wrap@1.2.5: {}
+
+  worker-mailer@1.1.5: {}
 
   workerd@1.20250906.0:
     optionalDependencies:

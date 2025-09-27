@@ -82,6 +82,39 @@ resource "cloudflare_queue" "fulfillment_processor_dlq" {
   queue_name       = "fourthwall-integration-fulfillment-processor-dlq-${var.env}-${var.stage}"
 }
 
+resource "cloudflare_queue" "email_processor" {
+  account_id = var.cloudflare_account_id
+  queue_name       = "fourthwall-integration-email-processor-${var.env}-${var.stage}"
+  provisioner "local-exec" {
+    on_failure = fail
+    when       = create
+    command    = <<EOT
+      curl --fail-with-body -S -X POST https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/queues/${self.id}/consumers \
+      -H 'Authorization: Bearer ${data.terraform_remote_state.api_keys_state.outputs.terraform_key_cloudflare_account}' \
+      -d '{
+        "script_name": "${cloudflare_worker.queue_processor.name}",
+        "environment": "production",
+        "queue_name": "${cloudflare_queue.email_processor.queue_name}}",
+        "dead_letter_queue": "${cloudflare_queue.email_processor_dlq.queue_name}",
+        "type": "worker",
+        "settings": {
+          "max_retries": 3,
+          "max_wait_time_ms": 5000,
+          "batch_size": 5,
+          "max_concurrency": null,
+          "retry_delay": 0
+        }
+      }'
+    EOT
+  }
+  depends_on = [cloudflare_worker.queue_processor]
+}
+
+resource "cloudflare_queue" "email_processor_dlq" {
+  account_id = var.cloudflare_account_id
+  queue_name       = "fourthwall-integration-email-processor-dlq-${var.env}-${var.stage}"
+}
+
 resource "cloudflare_worker_version" "worker" {
   account_id = var.cloudflare_account_id
   worker_id  = cloudflare_worker.worker.id
@@ -100,6 +133,11 @@ resource "cloudflare_worker_version" "worker" {
       name     = "FULFILLMENT_QUEUE"
       type     = "queue"
       queue_name = cloudflare_queue.fulfillment_processor.queue_name
+    },
+    {
+      name     = "EMAIL_QUEUE"
+      type     = "queue"
+      queue_name = cloudflare_queue.email_processor.queue_name
     },
     {
       name = "FOURTHWALL_USERNAME"
@@ -199,6 +237,11 @@ resource "cloudflare_worker_version" "queue_processor" {
       queue_name = cloudflare_queue.fulfillment_processor.queue_name
     },
     {
+      name     = "EMAIL_QUEUE"
+      type     = "queue"
+      queue_name = cloudflare_queue.email_processor.queue_name
+    },
+    {
       name = "FOURTHWALL_USERNAME"
       type = "secret_text"
       text = var.fourthwall_username
@@ -232,6 +275,26 @@ resource "cloudflare_worker_version" "queue_processor" {
       name = "ENVIRONMENT"
       type = "plain_text"
       text = var.env
+    },
+    {
+      name = "SMTP_HOST"
+      type = "secret_text"
+      text = var.smtp_host
+    },
+    {
+      name = "SMTP_PORT"
+      type = "secret_text"
+      text = var.smtp_port
+    },
+    {
+      name = "SMTP_USER"
+      type = "secret_text"
+      text = var.smtp_user
+    },
+    {
+      name = "SMTP_PASSWORD"
+      type = "secret_text"
+      text = var.smtp_password
     }
   ]
   compatibility_date = "2025-09-09"

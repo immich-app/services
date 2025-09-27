@@ -1,6 +1,20 @@
 import { FulfillmentRepository, OrderRepository } from '../repositories/index.js';
-import { Env, FulfillmentProvider, FulfillmentResult, Order, OrderItem } from '../types/index.js';
+import {
+  Env,
+  FulfillmentProvider,
+  FulfillmentResult,
+  Order,
+  OrderItem,
+  ProductKeyEmailData,
+  ProductKeyType,
+} from '../types/index.js';
 import { CDClickService, FourthwallService, KunakiService } from './index.js';
+
+// Product key variant IDs for Immich retro CD
+const PRODUCT_KEY_VARIANT_IDS = {
+  CLIENT_KEY: '1a67c752-4293-4b60-b4c7-fc9ad060d9eb',
+  SERVER_KEY: '9f1c1bce-dc6f-4471-96b3-e0b2f5a5b0fa',
+} as const;
 
 export class FulfillmentService {
   private kunakiService: KunakiService;
@@ -24,7 +38,7 @@ export class FulfillmentService {
 
   async processOrder(orderId: string): Promise<void> {
     console.log('[FULFILLMENT] Processing order:', orderId);
-    
+
     try {
       console.log('[FULFILLMENT] Fetching order with items');
       const orderWithItems = await this.orderRepository.getOrderWithItems(orderId);
@@ -47,7 +61,9 @@ export class FulfillmentService {
 
         // Only retry if the fulfillment failed
         if (fulfillmentOrder.status !== 'failed') {
-          console.log(`[FULFILLMENT] Fulfillment order ${fulfillmentOrder.id} is not in 'failed' status (current: ${fulfillmentOrder.status}), skipping`);
+          console.log(
+            `[FULFILLMENT] Fulfillment order ${fulfillmentOrder.id} is not in 'failed' status (current: ${fulfillmentOrder.status}), skipping`,
+          );
           return;
         }
 
@@ -73,7 +89,9 @@ export class FulfillmentService {
       } else {
         // New fulfillment - check order status
         if (order.status !== 'received') {
-          console.log(`[FULFILLMENT] Order ${orderId} is not in 'received' status (current: ${order.status}), skipping`);
+          console.log(
+            `[FULFILLMENT] Order ${orderId} is not in 'received' status (current: ${order.status}), skipping`,
+          );
           return;
         }
 
@@ -122,13 +140,23 @@ export class FulfillmentService {
               order.fourthwall_order_id,
               items,
               'PENDING',
-              'In Production'
+              'In Production',
             );
             console.log('[FULFILLMENT] Successfully notified Fourthwall');
           } catch (error) {
             console.error('[FULFILLMENT] Error notifying Fourthwall about order in production:', error);
             console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
             // Don't fail the fulfillment if Fourthwall notification fails
+          }
+
+          // Check for product key variants and queue email sending
+          try {
+            console.log('[FULFILLMENT] Checking for product key variants in order items');
+            await this.processProductKeyVariants(order, items);
+          } catch (error) {
+            console.error('[FULFILLMENT] Error processing product key variants:', error);
+            console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
+            // Don't fail the fulfillment if product key processing fails
           }
         } else {
           console.log('[FULFILLMENT] Order has no items with SKU mappings - marking as skipped');
@@ -144,7 +172,9 @@ export class FulfillmentService {
           errorMessage: result.error,
         });
 
-        console.error(`[FULFILLMENT] Failed to submit order ${orderId} to ${fulfillmentOrder.provider}: ${result.error}`);
+        console.error(
+          `[FULFILLMENT] Failed to submit order ${orderId} to ${fulfillmentOrder.provider}: ${result.error}`,
+        );
 
         // Throw error to trigger Cloudflare's automatic retry mechanism
         throw new Error(`Failed to submit order ${orderId}: ${result.error}`);
@@ -154,10 +184,10 @@ export class FulfillmentService {
       console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
 
       // If it's an intentional failure (for retry/DLQ), re-throw it
-      if (error instanceof Error && (
-        error.message.includes('Failed to submit order') ||
-        error.message.includes('Max retry attempts exceeded')
-      )) {
+      if (
+        error instanceof Error &&
+        (error.message.includes('Failed to submit order') || error.message.includes('Max retry attempts exceeded'))
+      ) {
         throw error;
       }
 
@@ -170,21 +200,21 @@ export class FulfillmentService {
 
   private determineFulfillmentProvider(order: Order): FulfillmentProvider {
     console.log('[FULFILLMENT] Checking providers for country:', order.shipping_country);
-    
+
     const kunakiCanFulfill = this.kunakiService.canFulfillOrder(order);
     console.log('[FULFILLMENT] Kunaki can fulfill:', kunakiCanFulfill);
-    
+
     if (kunakiCanFulfill) {
       return 'kunaki';
     }
-    
+
     const cdclickCanFulfill = this.cdclickService.canFulfillOrder(order);
     console.log('[FULFILLMENT] CDClick can fulfill:', cdclickCanFulfill);
-    
+
     if (cdclickCanFulfill) {
       return 'cdclick-europe';
     }
-    
+
     console.error('[FULFILLMENT] No provider available for country:', order.shipping_country);
     throw new Error(`No fulfillment provider available for country: ${order.shipping_country}`);
   }
@@ -197,7 +227,7 @@ export class FulfillmentService {
     console.log('[FULFILLMENT] Submitting to provider:', provider);
     console.log('[FULFILLMENT] Order ID:', order.id);
     console.log('[FULFILLMENT] Item count:', items.length);
-    
+
     switch (provider) {
       case 'kunaki': {
         console.log('[FULFILLMENT] Calling Kunaki submitOrder');
@@ -222,19 +252,21 @@ export class FulfillmentService {
     for (const fulfillmentOrder of pendingOrders) {
       try {
         console.log('[FULFILLMENT] Checking status for fulfillment order:', fulfillmentOrder.id);
-        
+
         if (!fulfillmentOrder.provider_order_id) {
           console.log(`[FULFILLMENT] Kunaki order ${fulfillmentOrder.id} has no provider order ID, skipping`);
           continue;
         }
-        
+
         console.log('[FULFILLMENT] Checking Kunaki order:', fulfillmentOrder.provider_order_id);
 
         const statusResponse = await this.kunakiService.checkOrderStatus(fulfillmentOrder.provider_order_id);
         console.log('[FULFILLMENT] Kunaki status response:', JSON.stringify(statusResponse));
 
         if (statusResponse.Error) {
-          console.error(`[FULFILLMENT] Error checking Kunaki order ${fulfillmentOrder.provider_order_id}: ${statusResponse.Error}`);
+          console.error(
+            `[FULFILLMENT] Error checking Kunaki order ${fulfillmentOrder.provider_order_id}: ${statusResponse.Error}`,
+          );
           continue;
         }
 
@@ -250,14 +282,19 @@ export class FulfillmentService {
           });
 
           if (newStatus === 'shipped' && statusResponse.Tracking_Number) {
-            console.log('[FULFILLMENT] Order shipped, updating Fourthwall with tracking:', statusResponse.Tracking_Number);
+            console.log(
+              '[FULFILLMENT] Order shipped, updating Fourthwall with tracking:',
+              statusResponse.Tracking_Number,
+            );
             await this.updateFourthwallWithTracking(fulfillmentOrder.order_id, statusResponse.Tracking_Number);
 
             console.log('[FULFILLMENT] Updating order status to fulfilled');
             await this.orderRepository.updateOrderStatus(fulfillmentOrder.order_id, 'fulfilled');
           }
 
-          console.log(`[FULFILLMENT] Updated Kunaki order ${fulfillmentOrder.provider_order_id} status to ${newStatus}`);
+          console.log(
+            `[FULFILLMENT] Updated Kunaki order ${fulfillmentOrder.provider_order_id} status to ${newStatus}`,
+          );
         }
       } catch (error) {
         console.error(`[FULFILLMENT] Error processing Kunaki status update for order ${fulfillmentOrder.id}:`, error);
@@ -269,7 +306,7 @@ export class FulfillmentService {
   async processCDClickWebhook(webhook: any): Promise<void> {
     console.log('[FULFILLMENT] Processing CDClick webhook');
     console.log('[FULFILLMENT] Webhook data:', JSON.stringify(webhook));
-    
+
     try {
       const processedWebhook = this.cdclickService.processWebhook(webhook);
       console.log('[FULFILLMENT] Processed webhook:', JSON.stringify(processedWebhook));
@@ -327,7 +364,7 @@ export class FulfillmentService {
       try {
         console.log('[FULFILLMENT] Retrying order:', fulfillmentOrder.order_id);
         console.log('[FULFILLMENT] Retry count:', fulfillmentOrder.retry_count);
-        
+
         await this.fulfillmentRepository.incrementRetryCount(fulfillmentOrder.id);
 
         const orderWithItems = await this.orderRepository.getOrderWithItems(fulfillmentOrder.order_id);
@@ -377,7 +414,7 @@ export class FulfillmentService {
     console.log('[FULFILLMENT] Updating Fourthwall with tracking');
     console.log('[FULFILLMENT] Order ID:', orderId);
     console.log('[FULFILLMENT] Tracking:', trackingNumber);
-    
+
     try {
       const order = await this.orderRepository.getOrderById(orderId);
       if (!order) {
@@ -399,4 +436,53 @@ export class FulfillmentService {
     }
   }
 
+  private async processProductKeyVariants(order: Order, items: OrderItem[]): Promise<void> {
+    console.log('[FULFILLMENT] Processing product key variants for order:', order.id);
+
+    for (const item of items) {
+      if (!item.fourthwall_variant_id) {
+        console.log('[FULFILLMENT] Item has no variant ID, skipping:', item.product_name);
+        continue;
+      }
+
+      let keyType: ProductKeyType | null = null;
+
+      if (item.fourthwall_variant_id === PRODUCT_KEY_VARIANT_IDS.CLIENT_KEY) {
+        keyType = 'client';
+        console.log('[FULFILLMENT] Found client key variant in item:', item.product_name);
+      } else if (item.fourthwall_variant_id === PRODUCT_KEY_VARIANT_IDS.SERVER_KEY) {
+        keyType = 'server';
+        console.log('[FULFILLMENT] Found server key variant in item:', item.product_name);
+      } else {
+        console.log('[FULFILLMENT] Item variant ID does not match product key variants:', item.fourthwall_variant_id);
+        continue;
+      }
+
+      console.log(`[FULFILLMENT] Queueing ${keyType} key email for order ${order.id}`);
+
+      // Queue email for each quantity of the item
+      for (let i = 0; i < item.quantity; i++) {
+        const emailData: ProductKeyEmailData = {
+          orderId: order.id,
+          customerEmail: order.customer_email,
+          customerName: order.customer_name,
+          keyType,
+          keyValue: '', // Will be populated when the key is claimed
+        };
+
+        try {
+          await this.env.EMAIL_QUEUE.send({
+            type: 'product_key_email',
+            data: emailData,
+          });
+          console.log(`[FULFILLMENT] Queued ${keyType} key email ${i + 1}/${item.quantity} for order ${order.id}`);
+        } catch (error) {
+          console.error(`[FULFILLMENT] Failed to queue ${keyType} key email for order ${order.id}:`, error);
+          throw error;
+        }
+      }
+    }
+
+    console.log('[FULFILLMENT] Completed processing product key variants for order:', order.id);
+  }
 }

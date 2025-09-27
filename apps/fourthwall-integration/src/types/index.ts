@@ -300,17 +300,50 @@ export interface Env {
   DB: D1Database;
   WEBHOOK_QUEUE: Queue;
   FULFILLMENT_QUEUE: Queue;
+  EMAIL_QUEUE: Queue;
   FOURTHWALL_USERNAME: string;
   FOURTHWALL_PASSWORD: string;
   KUNAKI_API_USERNAME: string;
   KUNAKI_API_PASSWORD: string;
   CDCLICK_API_KEY: string;
   WEBHOOK_SECRET: string;
+  SMTP_HOST: string;
+  SMTP_PORT: string;
+  SMTP_USER: string;
+  SMTP_PASSWORD: string;
   ENVIRONMENT?: string;
 }
 
+export interface ProductKey {
+  key_value: string;
+  key_type: ProductKeyType;
+  is_claimed: boolean;
+  claimed_at?: string;
+  order_id?: string;
+  customer_email?: string;
+  sent_at?: string;
+  created_at: string;
+}
+
+export type ProductKeyType = 'client' | 'server';
+
+export interface EmailData {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
+export interface ProductKeyEmailData {
+  orderId: string;
+  customerEmail: string;
+  customerName: string;
+  keyType: ProductKeyType;
+  keyValue: string;
+}
+
 export interface QueueMessage {
-  type: 'webhook' | 'fulfillment' | 'status_check';
+  type: 'webhook' | 'fulfillment' | 'status_check' | 'product_key_email';
   data: any;
   retry_count?: number;
 }

@@ -1,6 +1,18 @@
-import { FulfillmentRepository, OrderRepository, WebhookRepository } from './repositories/index.js';
-import { CDClickService, FourthwallService, FulfillmentService, MigrationService } from './services/index.js';
-import { CDClickWebhook, Env, FourthwallWebhook, QueueMessage } from './types/index.js';
+import {
+  FulfillmentRepository,
+  OrderRepository,
+  ProductKeyRepository,
+  WebhookRepository,
+} from './repositories/index.js';
+import {
+  CDClickService,
+  EmailService,
+  EmailTemplateService,
+  FourthwallService,
+  FulfillmentService,
+  MigrationService,
+} from './services/index.js';
+import { CDClickWebhook, Env, FourthwallWebhook, ProductKeyEmailData, QueueMessage } from './types/index.js';
 
 // Track if migrations have been run in this worker instance
 let migrationsInitialized = false;
@@ -41,7 +53,7 @@ export default {
           // Check if migrations are needed
           const migrationService = new MigrationService(env.DB);
           const needsMigration = await migrationService.needsMigration();
-          
+
           return new Response(
             JSON.stringify({
               status: 'healthy',
@@ -78,7 +90,7 @@ export default {
             const migrationService = new MigrationService(env.DB);
             await migrationService.runMigrations();
             migrationsInitialized = true;
-            
+
             return new Response(
               JSON.stringify({
                 message: 'Migrations executed',
@@ -93,17 +105,18 @@ export default {
               },
             );
           }
-          
+
           if (request.method !== 'GET') {
             return new Response('Method not allowed', { status: 405 });
           }
 
-          
           try {
             // Get list of applied migrations
-            const result = await env.DB
-              .prepare('SELECT * FROM migrations ORDER BY applied_at')
-              .all<{ id: string; name: string; applied_at: string }>();
+            const result = await env.DB.prepare('SELECT * FROM migrations ORDER BY applied_at').all<{
+              id: string;
+              name: string;
+              applied_at: string;
+            }>();
 
             return new Response(
               JSON.stringify({
@@ -364,55 +377,55 @@ async function processQueueMessage(message: QueueMessage, env: Env): Promise<voi
 
           if (payload.type === 'ORDER_PLACED') {
             console.log('[PROCESS-QUEUE] ORDER_PLACED event detected');
-            
+
             // Check if order status is CONFIRMED before processing
             const orderStatus = payload.data?.status;
             console.log('[PROCESS-QUEUE] Order status:', orderStatus);
-            
+
             // Handle different order statuses
             switch (orderStatus) {
               case 'CONFIRMED': {
                 console.log('[PROCESS-QUEUE] Order CONFIRMED, proceeding with fulfillment');
                 break;
               }
-              
+
               case 'PARTIALLY_IN_PRODUCTION':
               case 'IN_PRODUCTION': {
                 console.log(`[PROCESS-QUEUE] Order already in production (${orderStatus}), skipping fulfillment`);
                 return;
               }
-              
+
               case 'PARTIALLY_SHIPPED':
               case 'SHIPPED': {
                 console.log(`[PROCESS-QUEUE] Order already shipped (${orderStatus}), skipping fulfillment`);
                 return;
               }
-              
+
               case 'PARTIALLY_DELIVERED':
               case 'DELIVERED':
               case 'COMPLETED': {
                 console.log(`[PROCESS-QUEUE] Order already delivered/completed (${orderStatus}), skipping fulfillment`);
                 return;
               }
-              
+
               case 'CANCELLED': {
                 console.log('[PROCESS-QUEUE] Order CANCELLED, skipping fulfillment');
                 return;
               }
-              
+
               default: {
                 console.log(`[PROCESS-QUEUE] Unknown or pending order status: ${orderStatus}, skipping fulfillment`);
                 return;
               }
             }
-            
+
             // Get order ID from the data field
             const orderId = payload.data?.id;
             if (!orderId) {
               console.log('[PROCESS-QUEUE] No order ID found in webhook data');
               return;
             }
-            
+
             const order = await orderRepository.getOrderByFourthwallId(orderId);
             if (order) {
               console.log(`[PROCESS-QUEUE] Found CONFIRMED order ${order.id}, queueing for fulfillment`);
@@ -460,6 +473,55 @@ async function processQueueMessage(message: QueueMessage, env: Env): Promise<voi
       const fulfillmentService = new FulfillmentService(env, orderRepository, fulfillmentRepository);
       await fulfillmentService.processKunakiStatusUpdates();
       console.log('[PROCESS-QUEUE] Status check complete');
+      break;
+    }
+
+    case 'product_key_email': {
+      const emailData = message.data as ProductKeyEmailData;
+      console.log(`[PROCESS-QUEUE] Processing product key email for order ${emailData.orderId}`);
+
+      try {
+        const productKeyRepository = new ProductKeyRepository(env.DB);
+        const emailService = new EmailService(env);
+
+        // Claim a product key
+        const claimedKey = await productKeyRepository.claimProductKey(
+          emailData.keyType,
+          emailData.orderId,
+          emailData.customerEmail,
+        );
+
+        if (!claimedKey) {
+          console.error(`[PROCESS-QUEUE] No available ${emailData.keyType} keys found`);
+          throw new Error(`No available ${emailData.keyType} keys found`);
+        }
+
+        console.log(`[PROCESS-QUEUE] Claimed ${emailData.keyType} key:`, claimedKey.key_value);
+
+        // Generate email template
+        const emailTemplateData: ProductKeyEmailData = {
+          ...emailData,
+          keyValue: claimedKey.key_value,
+        };
+
+        const { html, text, subject } = EmailTemplateService.generateProductKeyEmail(emailTemplateData);
+
+        // Send the email
+        await emailService.sendEmail({
+          to: emailData.customerEmail,
+          subject,
+          html,
+          text,
+        });
+
+        // Mark the key as sent
+        await productKeyRepository.markKeySent(claimedKey.key_value);
+
+        console.log(`[PROCESS-QUEUE] Product key email sent successfully for order ${emailData.orderId}`);
+      } catch (error) {
+        console.error(`[PROCESS-QUEUE] Error processing product key email:`, error);
+        throw error;
+      }
       break;
     }
 

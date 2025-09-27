@@ -13,7 +13,7 @@ export class MigrationService {
     }
 
     console.log('[MIGRATION] Starting database migrations');
-    
+
     try {
       // First, ensure the migrations table exists
       await this.ensureMigrationsTable();
@@ -67,9 +67,7 @@ export class MigrationService {
 
   private async getAppliedMigrations(): Promise<Set<string>> {
     try {
-      const result = await this.db
-        .prepare('SELECT id FROM migrations')
-        .all<{ id: string }>();
+      const result = await this.db.prepare('SELECT id FROM migrations').all<{ id: string }>();
 
       const appliedSet = new Set<string>();
       if (result.results) {
@@ -77,7 +75,7 @@ export class MigrationService {
           appliedSet.add(row.id);
         }
       }
-      
+
       return appliedSet;
     } catch {
       // If the table doesn't exist yet, return empty set
@@ -93,8 +91,8 @@ export class MigrationService {
       // Start a transaction for the migration
       const statements = migration.sql
         .split(';')
-        .filter(stmt => stmt.trim().length > 0)
-        .map(stmt => stmt.trim() + ';');
+        .filter((stmt) => stmt.trim().length > 0)
+        .map((stmt) => stmt.trim() + ';');
 
       // Run each statement in the migration
       for (const statement of statements) {
@@ -120,7 +118,7 @@ export class MigrationService {
   async needsMigration(): Promise<boolean> {
     try {
       const appliedMigrations = await this.getAppliedMigrations();
-      return migrations.some(m => !appliedMigrations.has(m.id));
+      return migrations.some((m) => !appliedMigrations.has(m.id));
     } catch {
       // If we can't check, assume migrations are needed
       return true;
