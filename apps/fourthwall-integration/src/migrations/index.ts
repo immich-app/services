@@ -113,4 +113,27 @@ export const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_webhook_events_created_at ON webhook_events(created_at);
     `,
   },
+  {
+    id: '007_create_product_keys_table',
+    name: 'Create product keys table with tracking',
+    sql: `
+      CREATE TABLE IF NOT EXISTS product_keys (
+        key_value TEXT PRIMARY KEY,
+        key_type TEXT NOT NULL CHECK (key_type IN ('client', 'server')),
+        is_claimed BOOLEAN NOT NULL DEFAULT FALSE,
+        claimed_at TEXT,
+        order_id TEXT NULL,
+        customer_email TEXT,
+        sent_at TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_product_keys_type_claimed ON product_keys(key_type, is_claimed);
+      CREATE INDEX IF NOT EXISTS idx_product_keys_claimed_at ON product_keys(claimed_at);
+      CREATE INDEX IF NOT EXISTS idx_product_keys_order_id ON product_keys(order_id);
+      CREATE INDEX IF NOT EXISTS idx_product_keys_customer_email ON product_keys(customer_email);
+      CREATE INDEX IF NOT EXISTS idx_product_keys_sent_at ON product_keys(sent_at);
+    `,
+  },
 ];

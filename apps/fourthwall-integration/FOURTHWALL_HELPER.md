@@ -9,14 +9,15 @@ This document provides detailed guidance for working with the Fourthwall integra
 #### Adding a New Fulfillment Provider
 
 1. Create service class in `src/services/new-provider.ts`:
+
 ```typescript
 export class NewProviderService {
   constructor(private apiKey: string) {}
-  
+
   async createOrder(order: Order, items: OrderItem[]): Promise<FulfillmentResult> {
     // Implementation
   }
-  
+
   async getOrderStatus(providerOrderId: string): Promise<FulfillmentStatus> {
     // Implementation
   }
@@ -24,6 +25,7 @@ export class NewProviderService {
 ```
 
 2. Update `src/types/index.ts`:
+
 ```typescript
 export type FulfillmentProvider = 'kunaki' | 'cdclick-europe' | 'new-provider';
 ```

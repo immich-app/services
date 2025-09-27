@@ -6,10 +6,10 @@ export class OrderRepository extends BaseRepository {
     console.log('[ORDER-REPO] Creating new order');
     console.log('[ORDER-REPO] Fourthwall ID:', order.fourthwall_order_id);
     console.log('[ORDER-REPO] Customer:', order.customer_email);
-    
+
     const id = this.generateId();
     const timestamp = this.getCurrentTimestamp();
-    
+
     console.log('[ORDER-REPO] Generated order ID:', id);
 
     const newOrder: Order = {
@@ -96,7 +96,7 @@ export class OrderRepository extends BaseRepository {
   async createOrderItem(orderItem: Omit<OrderItem, 'id'>): Promise<OrderItem> {
     console.log('[ORDER-REPO] Creating order item for order:', orderItem.order_id);
     console.log('[ORDER-REPO] Product:', orderItem.product_name, 'Qty:', orderItem.quantity);
-    
+
     const id = this.generateId();
 
     const newOrderItem: OrderItem = {

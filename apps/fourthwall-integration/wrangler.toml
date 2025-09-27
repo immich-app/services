@@ -17,10 +17,19 @@ binding = "WEBHOOK_QUEUE"
 queue = "fulfillment-processor"
 binding = "FULFILLMENT_QUEUE"
 
-# Queue bindings - Consumer binding (this worker consumes from webhook-processor)
+[[queues.producers]]
+queue = "email-processor"
+binding = "EMAIL_QUEUE"
+
+# Queue bindings - Consumer bindings
 [[queues.consumers]]
 queue = "webhook-processor"
 max_batch_size = 10
+max_batch_timeout = 30
+
+[[queues.consumers]]
+queue = "email-processor"
+max_batch_size = 5
 max_batch_timeout = 30
 
 

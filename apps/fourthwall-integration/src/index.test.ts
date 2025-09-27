@@ -21,7 +21,7 @@ describe('Fourthwall Integration Worker', () => {
 
   it('should return method not allowed for webhooks without POST', async () => {
     const response = await SELF.fetch('https://example.com/webhook/fourthwall');
-    
+
     expect(response.status).toBe(405);
     expect(await response.text()).toBe('Method not allowed');
   });

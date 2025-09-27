@@ -21,7 +21,7 @@ export class FourthwallService {
   async processWebhook(payload: FourthwallWebhook): Promise<void> {
     console.log('[FW-SERVICE] Processing webhook with type:', payload.type);
     console.log('[FW-SERVICE] Webhook ID:', payload.id);
-    
+
     // Only process ORDER_PLACED events
     if (payload.type !== 'ORDER_PLACED') {
       console.log(`[FW-SERVICE] Ignoring webhook type: ${payload.type}`);
@@ -59,9 +59,9 @@ export class FourthwallService {
         // Quantity is in the variant object for Fourthwall webhooks
         const quantity = offer.variant?.quantity || offer.quantity || 1;
         const unitPrice = offer.variant?.unitPrice?.value || offer.price?.value || 0;
-        
+
         console.log(`[FW-SERVICE] Item details - Quantity: ${quantity}, Unit Price: ${unitPrice}`);
-        
+
         await this.orderRepository.createOrderItem({
           order_id: order.id,
           fourthwall_product_id: offer.id,
@@ -73,14 +73,16 @@ export class FourthwallService {
       }
     }
 
-    console.log(`[FW-SERVICE] Successfully created order ${order.id} from Fourthwall order ${orderData.id} with ${orderData.offers?.length || 0} items`);
+    console.log(
+      `[FW-SERVICE] Successfully created order ${order.id} from Fourthwall order ${orderData.id} with ${orderData.offers?.length || 0} items`,
+    );
   }
 
   private async createOrderFromWebhook(orderData: FourthwallOrderAttributes): Promise<Order> {
     console.log('[FW-SERVICE] Creating order from legacy webhook data');
     console.log('[FW-SERVICE] Shipping country:', orderData.shipping_address?.country);
     console.log('[FW-SERVICE] Order total:', orderData.total?.amount, orderData.total?.currency);
-    
+
     return await this.orderRepository.createOrder({
       fourthwall_order_id: orderData.id,
       customer_email: orderData.customer.email,
@@ -101,11 +103,12 @@ export class FourthwallService {
     console.log('[FW-SERVICE] Creating order from webhook data V2');
     console.log('[FW-SERVICE] Shipping country:', orderData.shipping?.address?.country);
     console.log('[FW-SERVICE] Order total:', orderData.amounts?.total?.value, orderData.amounts?.total?.currency);
-    
+
     return await this.orderRepository.createOrder({
       fourthwall_order_id: orderData.id,
       customer_email: orderData.email,
-      customer_name: orderData.shipping?.address?.name || orderData.billing?.address?.name || orderData.username || 'Unknown',
+      customer_name:
+        orderData.shipping?.address?.name || orderData.billing?.address?.name || orderData.username || 'Unknown',
       shipping_address_line1: orderData.shipping?.address?.address1 || '',
       shipping_address_line2: orderData.shipping?.address?.address2 || undefined,
       shipping_city: orderData.shipping?.address?.city || '',
@@ -123,7 +126,7 @@ export class FourthwallService {
     fourthwallOrderId: string,
     orderItems: Array<{ fourthwall_variant_id?: string; quantity: number }>,
     trackingNumber: string = 'PENDING',
-    trackingCompany: string = 'In Production'
+    trackingCompany: string = 'In Production',
   ): Promise<void> {
     console.log('[FW-SERVICE] Creating fulfillment for order');
     console.log('[FW-SERVICE] Fourthwall Order ID:', fourthwallOrderId);
@@ -134,10 +137,10 @@ export class FourthwallService {
     try {
       // Filter out items without variant IDs
       const fulfillmentItems = orderItems
-        .filter(item => item.fourthwall_variant_id)
-        .map(item => ({
+        .filter((item) => item.fourthwall_variant_id)
+        .map((item) => ({
           variantId: item.fourthwall_variant_id,
-          quantity: item.quantity
+          quantity: item.quantity,
         }));
 
       if (fulfillmentItems.length === 0) {
@@ -153,8 +156,8 @@ export class FourthwallService {
         items: fulfillmentItems,
         shippingLabel: {
           trackingNumber,
-          trackingCompany
-        }
+          trackingCompany,
+        },
       };
 
       console.log('[FW-SERVICE] Request body:', JSON.stringify(requestBody));
@@ -232,7 +235,9 @@ export class FourthwallService {
         throw new Error(`Failed to update Fourthwall order: ${response.status} - ${errorText}`);
       }
 
-      console.log(`[FW-SERVICE] Successfully updated Fourthwall order ${fourthwallOrderId} with tracking ${trackingNumber}`);
+      console.log(
+        `[FW-SERVICE] Successfully updated Fourthwall order ${fourthwallOrderId} with tracking ${trackingNumber}`,
+      );
     } catch (error) {
       console.error(`[FW-SERVICE] Error updating Fourthwall order ${fourthwallOrderId}:`, error);
       console.error('[FW-SERVICE] Error stack:', error instanceof Error ? error.stack : 'No stack');
@@ -245,7 +250,7 @@ export class FourthwallService {
     console.log('[FW-SERVICE] Signature provided:', signature ? 'yes' : 'no');
     console.log('[FW-SERVICE] Secret provided:', secret ? 'yes' : 'no');
     console.log('[FW-SERVICE] Payload length:', payload.length);
-    
+
     try {
       const encoder = new TextEncoder();
       const keyData = encoder.encode(secret);
@@ -255,17 +260,17 @@ export class FourthwallService {
 
       const signature_buffer = await crypto.subtle.sign('HMAC', key, data);
       const signature_array = new Uint8Array(signature_buffer);
-      
+
       // Fourthwall uses base64 encoding, not hex
       const expected_signature = btoa(String.fromCodePoint(...signature_array));
-      
+
       console.log('[FW-SERVICE] Expected signature (base64):', expected_signature);
       console.log('[FW-SERVICE] Provided signature:', signature);
-      
+
       // Use constant-time comparison for security
       const isValid = expected_signature === signature;
       console.log('[FW-SERVICE] Signature validation result:', isValid);
-      
+
       return isValid;
     } catch (error) {
       console.error('[FW-SERVICE] Error validating webhook signature:', error);
@@ -276,11 +281,11 @@ export class FourthwallService {
 
   async getOrder(orderId: string): Promise<any> {
     console.log('[FW-SERVICE] Fetching order from Fourthwall API:', orderId);
-    
+
     try {
       const url = `https://api.fourthwall.com/v1/orders/${orderId}`;
       console.log('[FW-SERVICE] Making GET request to:', url);
-      
+
       const response = await fetch(url, {
         headers: {
           Authorization: this.authHeader,
@@ -289,7 +294,7 @@ export class FourthwallService {
       });
 
       console.log('[FW-SERVICE] Response status:', response.status);
-      
+
       if (!response.ok) {
         console.error('[FW-SERVICE] Failed to fetch order. Status:', response.status);
         throw new Error(`Failed to fetch order: ${response.status}`);

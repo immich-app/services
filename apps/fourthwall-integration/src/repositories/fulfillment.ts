@@ -73,7 +73,10 @@ export class FulfillmentRepository extends BaseRepository {
       'SELECT * FROM fulfillment_orders WHERE order_id = ? ORDER BY created_at DESC LIMIT 1',
       [orderId],
     );
-    console.log('[FULFILLMENT-REPO] Fulfillment order found:', order ? `ID ${order.id}, status: ${order.status}` : 'none');
+    console.log(
+      '[FULFILLMENT-REPO] Fulfillment order found:',
+      order ? `ID ${order.id}, status: ${order.status}` : 'none',
+    );
     return order;
   }
 

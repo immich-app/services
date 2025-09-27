@@ -288,6 +288,7 @@ CDCLICK_API_KEY=your_cdclick_key
 ### Queue Messages
 
 The worker processes three types of queue messages:
+
 - `webhook` - Process incoming webhooks
 - `fulfillment` - Process order fulfillment
 - `status_check` - Check fulfillment status updates
@@ -295,6 +296,7 @@ The worker processes three types of queue messages:
 ### Database Schema
 
 Key tables managed by the worker:
+
 - `orders` - Fourthwall order data
 - `order_items` - Line items for each order
 - `fulfillment_orders` - Fulfillment provider tracking

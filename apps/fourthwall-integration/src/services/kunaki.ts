@@ -241,7 +241,6 @@ export class KunakiService {
     }
   }
 
-
   private parseKunakiResponse(responseText: string): KunakiOrderResponse {
     // Handle empty response
     if (!responseText || responseText.trim().length === 0) {
@@ -256,30 +255,26 @@ export class KunakiService {
     // Kunaki returns XML format
     // Example: <Response><ErrorCode>0</ErrorCode><ErrorText>success</ErrorText><OrderId>3345059</OrderId></Response>
     console.log('[KUNAKI] Parsing XML response');
-    
+
     // Simple XML parsing for the specific fields we need
     const errorCode = this.extractXMLValue(responseText, 'ErrorCode');
     const errorText = this.extractXMLValue(responseText, 'ErrorText');
     const orderId = this.extractXMLValue(responseText, 'OrderId');
-    
+
     console.log('[KUNAKI] Parsed - ErrorCode:', errorCode, 'ErrorText:', errorText, 'OrderId:', orderId);
-    
+
     // ErrorCode 0 means success
-    if (errorCode === '0') {
-      return {
+    return errorCode === '0' ? {
         Order_Id: orderId || '',
         Status: 'Success',
         Error: undefined,
-      };
-    } else {
-      return {
+      } : {
         Order_Id: '',
         Status: 'Error',
         Error: errorText || `Error code: ${errorCode}`,
       };
-    }
   }
-  
+
   private extractXMLValue(xml: string, tagName: string): string | undefined {
     const regex = new RegExp(`<${tagName}>([^<]*)</${tagName}>`, 'i');
     const match = xml.match(regex);
@@ -289,33 +284,36 @@ export class KunakiService {
   private parseKunakiStatusResponse(responseText: string): KunakiStatusResponse {
     // Kunaki returns XML format for status check too
     console.log('[KUNAKI] Parsing status XML response');
-    
+
     const errorCode = this.extractXMLValue(responseText, 'ErrorCode');
     const errorText = this.extractXMLValue(responseText, 'ErrorText');
     const orderId = this.extractXMLValue(responseText, 'OrderId');
     const orderStatus = this.extractXMLValue(responseText, 'OrderStatus');
     const trackingNumber = this.extractXMLValue(responseText, 'TrackingNumber');
-    const trackingType = this.extractXMLValue(responseText, 'TrackingType');
-    
-    console.log('[KUNAKI] Status response - ErrorCode:', errorCode, 'OrderStatus:', orderStatus, 'Tracking:', trackingNumber);
-    
-    if (errorCode === '0') {
-      return {
+    const _trackingType = this.extractXMLValue(responseText, 'TrackingType');
+
+    console.log(
+      '[KUNAKI] Status response - ErrorCode:',
+      errorCode,
+      'OrderStatus:',
+      orderStatus,
+      'Tracking:',
+      trackingNumber,
+    );
+
+    return errorCode === '0' ? {
         Order_Id: orderId || '',
         Status: orderStatus || 'Processing',
         Tracking_Number: trackingNumber,
         Shipping_Date: undefined,
         Error: undefined,
-      };
-    } else {
-      return {
+      } : {
         Order_Id: orderId || '',
         Status: 'Error',
         Tracking_Number: undefined,
         Shipping_Date: undefined,
         Error: errorText || `Error code: ${errorCode}`,
       };
-    }
   }
 
   private mapCountryForKunaki(countryCode: string): string {

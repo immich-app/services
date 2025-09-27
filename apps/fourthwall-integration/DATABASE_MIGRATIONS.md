@@ -14,6 +14,7 @@ This worker uses an automatic database migration system for Cloudflare D1.
 Migrations are defined in `/src/migrations/index.ts` as an ordered array.
 
 Each migration has:
+
 - `id`: Unique identifier (e.g., `001_create_orders_table`)
 - `name`: Human-readable description
 - `sql`: SQL statements to execute (can be multiple statements separated by semicolons)
@@ -26,6 +27,7 @@ Each migration has:
 4. Make migrations additive (don't drop/modify existing structures)
 
 Example:
+
 ```typescript
 {
   id: '007_add_customer_phone',
@@ -39,7 +41,9 @@ Example:
 ## API Endpoints
 
 ### Health Check
+
 `GET /health` - Returns migration status in response:
+
 ```json
 {
   "status": "healthy",
@@ -51,7 +55,9 @@ Example:
 ```
 
 ### Migration Status
+
 `GET /admin/migrations` - Shows all applied migrations:
+
 ```json
 {
   "initialized": true,
@@ -67,6 +73,7 @@ Example:
 ```
 
 ### Manual Migration Trigger
+
 `POST /admin/migrations` - Manually trigger migration execution
 
 ## Database Schema
@@ -74,11 +81,13 @@ Example:
 The migration system creates these tables:
 
 ### migrations
+
 - `id` TEXT PRIMARY KEY - Migration identifier
 - `name` TEXT NOT NULL - Migration name
 - `applied_at` TEXT NOT NULL - When migration was applied
 
 ### orders
+
 - `id` TEXT PRIMARY KEY
 - `fourthwall_order_id` TEXT UNIQUE NOT NULL
 - `customer_email` TEXT NOT NULL
@@ -97,6 +106,7 @@ The migration system creates these tables:
 - `updated_at` TEXT NOT NULL
 
 ### order_items
+
 - `id` TEXT PRIMARY KEY
 - `order_id` TEXT NOT NULL (FK -> orders)
 - `fourthwall_product_id` TEXT NOT NULL
@@ -106,6 +116,7 @@ The migration system creates these tables:
 - `unit_price_cents` INTEGER NOT NULL
 
 ### fulfillment_orders
+
 - `id` TEXT PRIMARY KEY
 - `order_id` TEXT NOT NULL (FK -> orders)
 - `provider` TEXT NOT NULL
@@ -122,6 +133,7 @@ The migration system creates these tables:
 - `updated_at` TEXT NOT NULL
 
 ### webhook_events
+
 - `id` TEXT PRIMARY KEY
 - `source` TEXT NOT NULL
 - `event_type` TEXT NOT NULL
@@ -134,17 +146,21 @@ The migration system creates these tables:
 ## Troubleshooting
 
 ### Migrations Not Running
+
 1. Check worker logs for `[MIGRATION]` entries
 2. Visit `/admin/migrations` to see status
 3. POST to `/admin/migrations` to manually trigger
 
 ### Migration Errors
+
 - Migrations are non-fatal - worker continues even if migration fails
 - Check logs for detailed error messages
 - Each migration is atomic - partial migrations are rolled back
 
 ### Resetting Database
+
 To completely reset (development only):
+
 1. Delete the D1 database in Cloudflare Dashboard
 2. Recreate the database
 3. Redeploy the worker

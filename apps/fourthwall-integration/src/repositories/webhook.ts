@@ -6,7 +6,7 @@ export class WebhookRepository extends BaseRepository {
     console.log('[WEBHOOK-REPO] Creating webhook event');
     console.log('[WEBHOOK-REPO] Source:', webhookEvent.source);
     console.log('[WEBHOOK-REPO] Event type:', webhookEvent.event_type);
-    
+
     const id = this.generateId();
     const timestamp = this.getCurrentTimestamp();
 
@@ -61,7 +61,7 @@ export class WebhookRepository extends BaseRepository {
 
   async getUnprocessedWebhooks(source?: WebhookSource): Promise<WebhookEvent[]> {
     console.log('[WEBHOOK-REPO] Getting unprocessed webhooks', source ? `for source: ${source}` : '(all sources)');
-    
+
     let query = 'SELECT * FROM webhook_events WHERE processed_at IS NULL ORDER BY created_at ASC';
     const params: any[] = [];
 
