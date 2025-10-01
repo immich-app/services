@@ -37,7 +37,7 @@ export class EmailService {
         },
         {
           to: emailData.to,
-          from: 'Immich <noreply@immich.app>',
+          from: 'Immich <noreply@futo.org>',
           subject: emailData.subject,
           text: emailData.text,
           html: emailData.html,

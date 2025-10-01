@@ -119,7 +119,7 @@ describe('EmailService', () => {
         },
         {
           to: 'test@example.com',
-          from: 'Immich <noreply@immich.app>',
+          from: 'Immich <noreply@futo.org>',
           subject: 'Test',
           text: 'Test',
           html: '<p>Test</p>',

@@ -36,6 +36,13 @@ variable "cdclick_api_key" {
   sensitive   = true
 }
 
+variable "cdclick_idle_mode" {
+  description = "CDClick idle mode - set to 'true' to hold orders for manual confirmation"
+  type        = string
+  default     = ""
+  sensitive   = false
+}
+
 variable "webhook_secret" {
   description = "Secret for webhook signature validation"
   type        = string

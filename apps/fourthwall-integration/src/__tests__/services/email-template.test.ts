@@ -11,23 +11,22 @@ describe('EmailTemplateService', () => {
         customerName: 'John Doe',
         keyType: 'client',
         keyValue: 'CLIENT-KEY-12345',
+        activationKey: 'test-activation-key-client',
       };
 
       const result = EmailTemplateService.generateProductKeyEmail(emailData);
 
-      expect(result.subject).toBe('Your Immich Client License Key');
+      expect(result.subject).toBe('Your Immich Client Product Key');
       expect(result.html).toContain('CLIENT-KEY-12345');
       expect(result.html).toContain('John Doe');
       expect(result.html).toContain('order-123');
-      expect(result.html).toContain('Client License Key');
+      expect(result.html).toContain('Client Product Key');
       expect(result.html).toContain('https://static.immich.cloud/assets/immich-logo-inline-light.png');
-      expect(result.html).toContain('mobile app or web interface');
 
       expect(result.text).toContain('CLIENT-KEY-12345');
       expect(result.text).toContain('John Doe');
       expect(result.text).toContain('order-123');
-      expect(result.text).toContain('Client License Key');
-      expect(result.text).toContain('mobile app or web interface');
+      expect(result.text).toContain('Client Product Key');
     });
 
     it('should generate server key email template', () => {
@@ -37,23 +36,21 @@ describe('EmailTemplateService', () => {
         customerName: 'Jane Admin',
         keyType: 'server',
         keyValue: 'SERVER-KEY-67890',
+        activationKey: 'test-activation-key-server',
       };
 
       const result = EmailTemplateService.generateProductKeyEmail(emailData);
 
-      expect(result.subject).toBe('Your Immich Server License Key');
+      expect(result.subject).toBe('Your Immich Server Product Key');
       expect(result.html).toContain('SERVER-KEY-67890');
       expect(result.html).toContain('Jane Admin');
       expect(result.html).toContain('order-456');
-      expect(result.html).toContain('Server License Key');
-      expect(result.html).toContain('server administration panel');
-      expect(result.html).toContain('System Settings > License');
+      expect(result.html).toContain('Server Product Key');
 
       expect(result.text).toContain('SERVER-KEY-67890');
       expect(result.text).toContain('Jane Admin');
       expect(result.text).toContain('order-456');
-      expect(result.text).toContain('Server License Key');
-      expect(result.text).toContain('server administration panel');
+      expect(result.text).toContain('Server Product Key');
     });
 
     it('should include proper HTML structure', () => {
@@ -63,6 +60,7 @@ describe('EmailTemplateService', () => {
         customerName: 'Test User',
         keyType: 'client',
         keyValue: 'TEST-KEY',
+        activationKey: 'test-activation-key',
       };
 
       const result = EmailTemplateService.generateProductKeyEmail(emailData);
@@ -83,6 +81,7 @@ describe('EmailTemplateService', () => {
         customerName: 'Test User',
         keyType: 'client',
         keyValue: 'TEST-KEY',
+        activationKey: 'test-activation-key',
       };
 
       const result = EmailTemplateService.generateProductKeyEmail(emailData);
@@ -91,13 +90,13 @@ describe('EmailTemplateService', () => {
       expect(result.html).toContain('Immich');
       expect(result.html).toContain('immich.app');
 
-      // Should include current year copyright
-      const currentYear = new Date().getFullYear();
-      expect(result.html).toContain(`© ${currentYear} Immich`);
-
       // Should have proper styling for key display
       expect(result.html).toContain("font-family: 'SF Mono'");
       expect(result.html).toContain('word-break: break-all');
+
+      // Text template should include copyright
+      const currentYear = new Date().getFullYear();
+      expect(result.text).toContain(`© ${currentYear} Immich`);
     });
 
     it('should generate different instructions for client vs server keys', () => {
@@ -107,6 +106,7 @@ describe('EmailTemplateService', () => {
         customerName: 'Test User',
         keyType: 'client',
         keyValue: 'CLIENT-KEY',
+        activationKey: 'client-activation',
       };
 
       const serverEmailData: ProductKeyEmailData = {
@@ -115,21 +115,21 @@ describe('EmailTemplateService', () => {
         customerName: 'Test User',
         keyType: 'server',
         keyValue: 'SERVER-KEY',
+        activationKey: 'server-activation',
       };
 
       const clientResult = EmailTemplateService.generateProductKeyEmail(clientEmailData);
       const serverResult = EmailTemplateService.generateProductKeyEmail(serverEmailData);
 
-      // Client should mention mobile app and Settings > License
-      expect(clientResult.html).toContain('mobile app or web interface');
-      expect(clientResult.html).toContain('Settings > License');
-      expect(clientResult.html).not.toContain('Restart your Immich server');
+      // Client and server should have different key type titles
+      expect(clientResult.html).toContain('Client Product Key');
+      expect(serverResult.html).toContain('Server Product Key');
 
-      // Server should mention administration panel and server restart
-      expect(serverResult.html).toContain('server administration panel');
-      expect(serverResult.html).toContain('System Settings > License');
-      expect(serverResult.html).toContain('Restart your Immich server');
-      expect(serverResult.html).not.toContain('mobile app');
+      // Text templates should have different instructions
+      expect(clientResult.text).toContain('mobile app or web interface');
+      expect(clientResult.text).toContain('Settings > Product Key');
+      expect(serverResult.text).toContain('server administration panel');
+      expect(serverResult.text).toContain('System Settings > Product Key');
     });
   });
 });

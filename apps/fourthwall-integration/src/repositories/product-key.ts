@@ -2,7 +2,7 @@ import { ProductKey, ProductKeyType } from '../types/index.js';
 import { BaseRepository } from './base.js';
 
 export class ProductKeyRepository extends BaseRepository {
-  async createProductKey(keyType: ProductKeyType, keyValue: string): Promise<ProductKey> {
+  async createProductKey(keyType: ProductKeyType, keyValue: string, activationKey: string): Promise<ProductKey> {
     console.log('[PRODUCT-KEY-REPO] Creating new product key');
     console.log('[PRODUCT-KEY-REPO] Key type:', keyType);
     console.log('[PRODUCT-KEY-REPO] Key value:', keyValue);
@@ -11,6 +11,7 @@ export class ProductKeyRepository extends BaseRepository {
 
     const newKey: ProductKey = {
       key_value: keyValue,
+      activation_key: activationKey,
       key_type: keyType,
       is_claimed: false,
       created_at: timestamp,
@@ -18,9 +19,9 @@ export class ProductKeyRepository extends BaseRepository {
 
     await this.executeUpdate(
       `INSERT INTO product_keys (
-        key_value, key_type, is_claimed, created_at
-      ) VALUES (?, ?, ?, ?)`,
-      [newKey.key_value, newKey.key_type, newKey.is_claimed, newKey.created_at],
+        key_value, activation_key, key_type, is_claimed, created_at
+      ) VALUES (?, ?, ?, ?, ?)`,
+      [newKey.key_value, newKey.activation_key, newKey.key_type, newKey.is_claimed, newKey.created_at],
     );
 
     console.log('[PRODUCT-KEY-REPO] Product key created successfully with key:', newKey.key_value);
@@ -149,22 +150,26 @@ export class ProductKeyRepository extends BaseRepository {
     return result.results || [];
   }
 
-  async bulkCreateProductKeys(keyType: ProductKeyType, keyValues: string[]): Promise<ProductKey[]> {
+  async bulkCreateProductKeys(
+    keyType: ProductKeyType,
+    keys: Array<{ keyValue: string; activationKey: string }>,
+  ): Promise<ProductKey[]> {
     console.log('[PRODUCT-KEY-REPO] Bulk creating product keys');
     console.log('[PRODUCT-KEY-REPO] Key type:', keyType);
-    console.log('[PRODUCT-KEY-REPO] Number of keys:', keyValues.length);
+    console.log('[PRODUCT-KEY-REPO] Number of keys:', keys.length);
 
     const createdKeys: ProductKey[] = [];
     const timestamp = this.getCurrentTimestamp();
 
     // Create keys in batches to avoid overwhelming the database
     const batchSize = 50;
-    for (let i = 0; i < keyValues.length; i += batchSize) {
-      const batch = keyValues.slice(i, i + batchSize);
+    for (let i = 0; i < keys.length; i += batchSize) {
+      const batch = keys.slice(i, i + batchSize);
 
-      for (const keyValue of batch) {
+      for (const { keyValue, activationKey } of batch) {
         const newKey: ProductKey = {
           key_value: keyValue,
+          activation_key: activationKey,
           key_type: keyType,
           is_claimed: false,
           created_at: timestamp,
@@ -172,9 +177,9 @@ export class ProductKeyRepository extends BaseRepository {
 
         await this.executeUpdate(
           `INSERT INTO product_keys (
-            key_value, key_type, is_claimed, created_at
-          ) VALUES (?, ?, ?, ?)`,
-          [newKey.key_value, newKey.key_type, newKey.is_claimed, newKey.created_at],
+            key_value, activation_key, key_type, is_claimed, created_at
+          ) VALUES (?, ?, ?, ?, ?)`,
+          [newKey.key_value, newKey.activation_key, newKey.key_type, newKey.is_claimed, newKey.created_at],
         );
 
         createdKeys.push(newKey);

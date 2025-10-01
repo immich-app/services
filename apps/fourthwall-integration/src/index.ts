@@ -307,7 +307,7 @@ async function handleCDClickWebhook(request: Request, env: Env): Promise<Respons
   console.log('[CD-WEBHOOK] Body preview:', body.slice(0, 200));
 
   const webhookRepository = new WebhookRepository(env.DB);
-  const cdclickService = new CDClickService(env.CDCLICK_API_KEY, env.ENVIRONMENT);
+  const cdclickService = new CDClickService(env.CDCLICK_API_KEY, env.ENVIRONMENT, env.CDCLICK_IDLE_MODE);
 
   const isValidSignature = await cdclickService.validateWebhookSignature(body, signature, env.WEBHOOK_SECRET);
   console.log('[CD-WEBHOOK] Signature validation result:', isValidSignature);
@@ -502,6 +502,7 @@ async function processQueueMessage(message: QueueMessage, env: Env): Promise<voi
         const emailTemplateData: ProductKeyEmailData = {
           ...emailData,
           keyValue: claimedKey.key_value,
+          activationKey: claimedKey.activation_key,
         };
 
         const { html, text, subject } = EmailTemplateService.generateProductKeyEmail(emailTemplateData);

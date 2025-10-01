@@ -103,6 +103,7 @@ describe('FulfillmentService - Product Key Integration', () => {
           customerName: 'John Doe',
           keyType: 'client',
           keyValue: '',
+          activationKey: '',
         },
       });
     });
@@ -173,6 +174,7 @@ describe('FulfillmentService - Product Key Integration', () => {
           customerName: 'Jane Admin',
           keyType: 'server',
           keyValue: '',
+          activationKey: '',
         },
       });
     });
@@ -244,6 +246,7 @@ describe('FulfillmentService - Product Key Integration', () => {
             customerName: 'Bulk Buyer',
             keyType: 'client',
             keyValue: '',
+            activationKey: '',
           },
         });
       }

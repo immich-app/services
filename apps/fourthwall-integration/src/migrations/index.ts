@@ -119,6 +119,7 @@ export const migrations: Migration[] = [
     sql: `
       CREATE TABLE IF NOT EXISTS product_keys (
         key_value TEXT PRIMARY KEY,
+        activation_key TEXT NOT NULL,
         key_type TEXT NOT NULL CHECK (key_type IN ('client', 'server')),
         is_claimed BOOLEAN NOT NULL DEFAULT FALSE,
         claimed_at TEXT,

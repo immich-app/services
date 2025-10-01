@@ -343,8 +343,8 @@ export class KunakiService {
   private mapProductToKunakiSku(fourthwallProductId: string): string | null {
     console.log('[KUNAKI] Mapping product ID:', fourthwallProductId);
     const productMapping: Record<string, string> = {
-      'b2c201d3-8104-4b2a-b2c9-1f6b335b650a': 'PX00ZTZFZH', //Fourthwall test webhook product
-      'a53316f3-3b7e-493c-b585-e0d3d23d44b9': 'PX00ZTZFZH', //Immich Retro
+      'b2c201d3-8104-4b2a-b2c9-1f6b335b650a': 'PX00ZYCKTY', //Fourthwall test webhook product
+      'a53316f3-3b7e-493c-b585-e0d3d23d44b9': 'PX00ZYCKTY', //Immich Retro
     };
 
     const mappedSku = productMapping[fourthwallProductId];

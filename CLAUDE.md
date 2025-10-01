@@ -127,6 +127,7 @@ export TF_VAR_webhook_secret="your_webhook_secret"
 export TF_VAR_kunaki_api_username="kunaki_username"
 export TF_VAR_kunaki_api_password="kunaki_password"
 export TF_VAR_cdclick_api_key="cdclick_key"
+export TF_VAR_cdclick_idle_mode="true"  # Optional: set to "true" to hold CDClick orders for manual confirmation
 
 cd deployment/modules/cloudflare/workers/<worker-name>
 terragrunt init
@@ -276,6 +277,7 @@ WEBHOOK_SECRET=your_webhook_secret
 KUNAKI_API_USERNAME=username
 KUNAKI_API_PASSWORD=password
 CDCLICK_API_KEY=your_cdclick_key
+CDCLICK_IDLE_MODE=true  # Optional: Set to "true" to hold CDClick orders for manual confirmation
 ```
 
 ### API Endpoints
