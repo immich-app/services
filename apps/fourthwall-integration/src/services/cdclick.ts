@@ -9,17 +9,26 @@ import {
 
 export class CDClickService {
   private readonly baseUrl = 'https://wall.cdclick-europe.com/API';
-  private readonly isDevelopment: boolean;
+  private readonly idleMode: boolean;
 
   constructor(
     private apiKey: string,
     environment?: string,
+    idleModeOverride?: string,
   ) {
     console.log('[CDCLICK] Initializing CDClickService');
     console.log('[CDCLICK] API key:', apiKey ? 'provided' : 'missing');
-    this.isDevelopment = environment === 'dev';
+
+    // Check if idle mode is explicitly set, otherwise use environment to determine
+    if (idleModeOverride === undefined) {
+      this.idleMode = environment === 'dev';
+      console.log('[CDCLICK] Idle mode (from environment):', this.idleMode);
+    } else {
+      this.idleMode = idleModeOverride === 'true' || idleModeOverride === '1';
+      console.log('[CDCLICK] Idle mode (override):', this.idleMode);
+    }
+
     console.log('[CDCLICK] Environment:', environment || 'production');
-    console.log('[CDCLICK] Is development:', this.isDevelopment);
   }
 
   async submitOrder(order: Order, orderItems: OrderItem[]): Promise<FulfillmentResult> {
@@ -73,14 +82,14 @@ export class CDClickService {
         addressStreet += ', ' + order.shipping_address_line2;
       }
 
-      if (this.isDevelopment) {
-        console.log('[CDCLICK] Development mode: Order will be held for manual confirmation (idle: true)');
+      if (this.idleMode) {
+        console.log('[CDCLICK] Idle mode enabled: Order will be held for manual confirmation (idle: true)');
       }
 
       const cdclickOrder = {
         custom_id: order.id,
         check_multiple_custom_id: true,
-        idle: this.isDevelopment,
+        idle: this.idleMode,
         shipping: {
           first_name: firstName,
           last_name: lastName,
@@ -237,8 +246,8 @@ export class CDClickService {
   private mapProductToCDClickSku(fourthwallProductId: string): string | null {
     console.log('[CDCLICK] Mapping product ID:', fourthwallProductId);
     const productMapping: Record<string, string> = {
-      'b2c201d3-8104-4b2a-b2c9-1f6b335b650a': '4970', //Fourthwall test webhook product
-      'a53316f3-3b7e-493c-b585-e0d3d23d44b9': '4970', //Immich Retro
+      'b2c201d3-8104-4b2a-b2c9-1f6b335b650a': '4973', //Fourthwall test webhook product
+      'a53316f3-3b7e-493c-b585-e0d3d23d44b9': '4973', //Immich Retro
     };
 
     const mappedSku = productMapping[fourthwallProductId];

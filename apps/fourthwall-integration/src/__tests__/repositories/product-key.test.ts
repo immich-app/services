@@ -23,6 +23,7 @@ describe('ProductKeyRepository', () => {
     it('should create a new product key', async () => {
       const keyType: ProductKeyType = 'client';
       const keyValue = 'test-key-123';
+      const activationKey = 'test-activation-key';
 
       const mockChain = {
         bind: vi.fn().mockReturnThis(),
@@ -30,10 +31,11 @@ describe('ProductKeyRepository', () => {
       };
       mockDB.prepare.mockReturnValue(mockChain);
 
-      const result = await productKeyRepository.createProductKey(keyType, keyValue);
+      const result = await productKeyRepository.createProductKey(keyType, keyValue, activationKey);
 
       expect(result).toMatchObject({
         key_value: keyValue,
+        activation_key: activationKey,
         key_type: keyType,
         is_claimed: false,
       });
@@ -49,6 +51,7 @@ describe('ProductKeyRepository', () => {
 
       const availableKey: ProductKey = {
         key_value: 'test-key-value',
+        activation_key: 'test-activation-key',
         key_type: keyType,
         is_claimed: false,
         created_at: '2024-01-01T00:00:00Z',
@@ -144,6 +147,7 @@ describe('ProductKeyRepository', () => {
       const mockKeys: ProductKey[] = [
         {
           key_value: 'test-key-1',
+          activation_key: 'test-activation-1',
           key_type: 'client',
           is_claimed: true,
           order_id: orderId,
@@ -168,7 +172,11 @@ describe('ProductKeyRepository', () => {
   describe('bulkCreateProductKeys', () => {
     it('should create multiple product keys', async () => {
       const keyType: ProductKeyType = 'client';
-      const keyValues = ['key-1', 'key-2', 'key-3'];
+      const keys = [
+        { keyValue: 'key-1', activationKey: 'activation-1' },
+        { keyValue: 'key-2', activationKey: 'activation-2' },
+        { keyValue: 'key-3', activationKey: 'activation-3' },
+      ];
 
       const mockChain = {
         bind: vi.fn().mockReturnThis(),
@@ -176,21 +184,24 @@ describe('ProductKeyRepository', () => {
       };
       mockDB.prepare.mockReturnValue(mockChain);
 
-      const result = await productKeyRepository.bulkCreateProductKeys(keyType, keyValues);
+      const result = await productKeyRepository.bulkCreateProductKeys(keyType, keys);
 
       expect(result).toHaveLength(3);
       expect(result[0]).toMatchObject({
         key_value: 'key-1',
+        activation_key: 'activation-1',
         key_type: keyType,
         is_claimed: false,
       });
       expect(result[1]).toMatchObject({
         key_value: 'key-2',
+        activation_key: 'activation-2',
         key_type: keyType,
         is_claimed: false,
       });
       expect(result[2]).toMatchObject({
         key_value: 'key-3',
+        activation_key: 'activation-3',
         key_type: keyType,
         is_claimed: false,
       });

@@ -31,7 +31,7 @@ export class FulfillmentService {
     console.log('[FULFILLMENT] Kunaki credentials:', env.KUNAKI_API_USERNAME ? 'provided' : 'missing');
     console.log('[FULFILLMENT] CDClick API key:', env.CDCLICK_API_KEY ? 'provided' : 'missing');
     this.kunakiService = new KunakiService(env.KUNAKI_API_USERNAME, env.KUNAKI_API_PASSWORD);
-    this.cdclickService = new CDClickService(env.CDCLICK_API_KEY, env.ENVIRONMENT);
+    this.cdclickService = new CDClickService(env.CDCLICK_API_KEY, env.ENVIRONMENT, env.CDCLICK_IDLE_MODE);
     this.fourthwallService = new FourthwallService(env.FOURTHWALL_USERNAME, env.FOURTHWALL_PASSWORD, orderRepository);
     console.log('[FULFILLMENT] All services initialized');
   }
@@ -112,6 +112,16 @@ export class FulfillmentService {
           status: 'pending',
           retry_count: 0,
         });
+
+        // Queue product key emails early, independent of fulfillment success
+        try {
+          console.log('[FULFILLMENT] Checking for product key variants in order items');
+          await this.processProductKeyVariants(order, items);
+        } catch (error) {
+          console.error('[FULFILLMENT] Error processing product key variants:', error);
+          console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
+          // Don't fail the fulfillment if product key processing fails
+        }
       }
 
       console.log('[FULFILLMENT] Submitting order to provider:', fulfillmentOrder.provider);
@@ -147,16 +157,6 @@ export class FulfillmentService {
             console.error('[FULFILLMENT] Error notifying Fourthwall about order in production:', error);
             console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
             // Don't fail the fulfillment if Fourthwall notification fails
-          }
-
-          // Check for product key variants and queue email sending
-          try {
-            console.log('[FULFILLMENT] Checking for product key variants in order items');
-            await this.processProductKeyVariants(order, items);
-          } catch (error) {
-            console.error('[FULFILLMENT] Error processing product key variants:', error);
-            console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
-            // Don't fail the fulfillment if product key processing fails
           }
         } else {
           console.log('[FULFILLMENT] Order has no items with SKU mappings - marking as skipped');
@@ -468,6 +468,7 @@ export class FulfillmentService {
           customerName: order.customer_name,
           keyType,
           keyValue: '', // Will be populated when the key is claimed
+          activationKey: '', // Will be populated when the key is claimed
         };
 
         try {

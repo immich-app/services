@@ -2,6 +2,15 @@ resource "cloudflare_worker" "worker" {
   account_id = var.cloudflare_account_id
   name       = "${var.app_name}-api${local.resource_suffix}"
   logpush    = true
+  observability = {
+    enabled = true
+    head_sampling_rate = 1
+    logs = {
+      enabled = true
+      head_sampling_rate = 1
+      invocation_logs = true
+    }
+  }
 }
 
 resource "terraform_data" "source_hash" {
@@ -10,7 +19,7 @@ resource "terraform_data" "source_hash" {
 
 resource "cloudflare_d1_database" "db" {
   account_id = var.cloudflare_account_id
-  name       = "fourthwall-integration-${var.env}-${var.stage}"
+  name       = "fourthwall-integration${local.resource_suffix}"
   read_replication = {
     mode = "disabled"
   }
@@ -18,17 +27,21 @@ resource "cloudflare_d1_database" "db" {
 
 resource "cloudflare_queue" "webhook_processor" {
   account_id = var.cloudflare_account_id
-  queue_name       = "fourthwall-integration-webhook-processor-${var.env}-${var.stage}"
+  queue_name       = "fourthwall-integration-webhook-processor${local.resource_suffix}"
+  depends_on = [cloudflare_worker.queue_processor]
+}
+
+resource null_resource "webhook_processor_consumer" {
   provisioner "local-exec" {
     on_failure = fail
     when       = create
     command    = <<EOT
-      curl --fail-with-body -S -X POST https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/queues/${self.id}/consumers \
+      curl --fail-with-body -S -X POST https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/queues/${cloudflare_queue.webhook_processor.queue_id}/consumers \
       -H 'Authorization: Bearer ${data.terraform_remote_state.api_keys_state.outputs.terraform_key_cloudflare_account}' \
+      -H 'Content-Type: application/json' \
       -d '{
         "script_name": "${cloudflare_worker.queue_processor.name}",
-        "environment": "production",
-        "queue_name": "${cloudflare_queue.webhook_processor.queue_name}}",
+        "queue_id": "${cloudflare_queue.webhook_processor.queue_id}",
         "dead_letter_queue": "${cloudflare_queue.webhook_processor_dlq.queue_name}",
         "type": "worker",
         "settings": {
@@ -41,27 +54,32 @@ resource "cloudflare_queue" "webhook_processor" {
       }'
     EOT
   }
-  depends_on = [cloudflare_worker.queue_processor]
+  depends_on = [cloudflare_worker_version.queue_processor, cloudflare_worker_version.worker, cloudflare_queue.webhook_processor]
 }
 
 resource "cloudflare_queue" "webhook_processor_dlq" {
   account_id = var.cloudflare_account_id
-  queue_name       = "fourthwall-integration-webhook-processor-dlq-${var.env}-${var.stage}"
+  queue_name       = "fourthwall-integration-webhook-processor-dlq${local.resource_suffix}"
 }
 
 resource "cloudflare_queue" "fulfillment_processor" {
   account_id = var.cloudflare_account_id
-  queue_name       = "fourthwall-integration-fulfillment-processor-${var.env}-${var.stage}"
+  queue_name       = "fourthwall-integration-fulfillment-processor${local.resource_suffix}"
+
+  depends_on = [cloudflare_worker.queue_processor]
+}
+
+resource null_resource "fullfillment_processor_consumer" {
   provisioner "local-exec" {
     on_failure = fail
     when       = create
     command    = <<EOT
-      curl --fail-with-body -S -X POST https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/queues/${self.id}/consumers \
+      curl --fail-with-body -S -X POST https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/queues/${cloudflare_queue.fulfillment_processor.queue_id}/consumers \
       -H 'Authorization: Bearer ${data.terraform_remote_state.api_keys_state.outputs.terraform_key_cloudflare_account}' \
+      -H 'Content-Type: application/json' \
       -d '{
         "script_name": "${cloudflare_worker.queue_processor.name}",
-        "environment": "production",
-        "queue_name": "${cloudflare_queue.fulfillment_processor.queue_name}}",
+        "queue_id": "${cloudflare_queue.fulfillment_processor.queue_id}",
         "dead_letter_queue": "${cloudflare_queue.fulfillment_processor_dlq.queue_name}",
         "type": "worker",
         "settings": {
@@ -74,27 +92,31 @@ resource "cloudflare_queue" "fulfillment_processor" {
       }'
     EOT
   }
-  depends_on = [cloudflare_worker.queue_processor]
+  depends_on = [cloudflare_worker_version.queue_processor, cloudflare_worker_version.worker, cloudflare_queue.fulfillment_processor]
 }
 
 resource "cloudflare_queue" "fulfillment_processor_dlq" {
   account_id = var.cloudflare_account_id
-  queue_name       = "fourthwall-integration-fulfillment-processor-dlq-${var.env}-${var.stage}"
+  queue_name       = "fourthwall-integration-fulfillment-processor-dlq${local.resource_suffix}"
 }
 
 resource "cloudflare_queue" "email_processor" {
   account_id = var.cloudflare_account_id
-  queue_name       = "fourthwall-integration-email-processor-${var.env}-${var.stage}"
+  queue_name       = "fourthwall-integration-email-processor${local.resource_suffix}"
+  depends_on = [cloudflare_worker.queue_processor]
+}
+
+resource null_resource "email_processor_consumer" {
   provisioner "local-exec" {
     on_failure = fail
     when       = create
     command    = <<EOT
-      curl --fail-with-body -S -X POST https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/queues/${self.id}/consumers \
+      curl --fail-with-body -S -X POST https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/queues/${cloudflare_queue.email_processor.queue_id}/consumers \
       -H 'Authorization: Bearer ${data.terraform_remote_state.api_keys_state.outputs.terraform_key_cloudflare_account}' \
+      -H 'Content-Type: application/json' \
       -d '{
         "script_name": "${cloudflare_worker.queue_processor.name}",
-        "environment": "production",
-        "queue_name": "${cloudflare_queue.email_processor.queue_name}}",
+        "queue_id": "${cloudflare_queue.email_processor.queue_id}",
         "dead_letter_queue": "${cloudflare_queue.email_processor_dlq.queue_name}",
         "type": "worker",
         "settings": {
@@ -107,12 +129,12 @@ resource "cloudflare_queue" "email_processor" {
       }'
     EOT
   }
-  depends_on = [cloudflare_worker.queue_processor]
+  depends_on = [cloudflare_worker_version.queue_processor, cloudflare_worker_version.worker, cloudflare_queue.email_processor]
 }
 
 resource "cloudflare_queue" "email_processor_dlq" {
   account_id = var.cloudflare_account_id
-  queue_name       = "fourthwall-integration-email-processor-dlq-${var.env}-${var.stage}"
+  queue_name       = "fourthwall-integration-email-processor-dlq${local.resource_suffix}"
 }
 
 resource "cloudflare_worker_version" "worker" {
@@ -165,6 +187,11 @@ resource "cloudflare_worker_version" "worker" {
       text = var.cdclick_api_key
     },
     {
+      name = "CDCLICK_IDLE_MODE"
+      type = "plain_text"
+      text = var.cdclick_idle_mode
+    },
+    {
       name = "WEBHOOK_SECRET"
       type = "secret_text"
       text = var.webhook_secret
@@ -196,6 +223,7 @@ resource "cloudflare_workers_cron_trigger" "worker_cron" {
   account_id  = var.cloudflare_account_id
   script_name = cloudflare_worker.worker.name
   schedules   = [ { cron = "0 */15 * * *" } ]
+  depends_on = [cloudflare_workers_deployment.queue_processor]
 }
 
 resource "cloudflare_workers_deployment" "worker" {
@@ -215,6 +243,15 @@ resource "cloudflare_worker" "queue_processor" {
   account_id = var.cloudflare_account_id
   name       = "${var.app_name}-queue-processor${local.resource_suffix}"
   logpush    = true
+  observability = {
+    enabled = true
+    head_sampling_rate = 1
+    logs = {
+      enabled = true
+      head_sampling_rate = 1
+      invocation_logs = true
+    }
+  }
 }
 
 resource "cloudflare_worker_version" "queue_processor" {
@@ -265,6 +302,11 @@ resource "cloudflare_worker_version" "queue_processor" {
       name = "CDCLICK_API_KEY"
       type = "secret_text"
       text = var.cdclick_api_key
+    },
+    {
+      name = "CDCLICK_IDLE_MODE"
+      type = "plain_text"
+      text = var.cdclick_idle_mode
     },
     {
       name = "WEBHOOK_SECRET"

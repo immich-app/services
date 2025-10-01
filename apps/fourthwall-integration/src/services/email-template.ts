@@ -2,7 +2,7 @@ import { ProductKeyEmailData } from '../types/index.js';
 
 export class EmailTemplateService {
   static generateProductKeyEmail(data: ProductKeyEmailData): { html: string; text: string; subject: string } {
-    const subject = `Your Immich ${data.keyType === 'client' ? 'Client' : 'Server'} License Key`;
+    const subject = `Your Immich ${data.keyType === 'client' ? 'Client' : 'Server'} Product Key`;
 
     const html = this.generateHtmlTemplate(data);
     const text = this.generateTextTemplate(data);
@@ -14,8 +14,8 @@ export class EmailTemplateService {
     const keyTypeTitle = data.keyType === 'client' ? 'Client' : 'Server';
     const keyDescription =
       data.keyType === 'client'
-        ? 'This key unlocks premium features in the Immich mobile and web applications.'
-        : 'This key enables advanced server features for your self-hosted Immich instance.';
+        ? 'This key is your license for the Immich mobile and web applications.'
+        : 'This key is your license for your self-hosted Immich server instance.';
 
     return `
 <!DOCTYPE html>
@@ -23,7 +23,7 @@ export class EmailTemplateService {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Immich ${keyTypeTitle} License Key</title>
+    <title>Your Immich ${keyTypeTitle} Product Key</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -139,13 +139,32 @@ export class EmailTemplateService {
             font-size: 14px;
             color: #22543d;
         }
+        .activate-button {
+            display: inline-block;
+            background-color: #3182ce;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 24px 0;
+            text-align: center;
+        }
+        .activate-button:hover {
+            background-color: #2c5282;
+        }
+        .button-container {
+            text-align: center;
+            margin: 32px 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <img src="https://static.immich.cloud/assets/immich-logo-inline-light.png" alt="Immich" class="logo">
-            <h1 class="title">Your ${keyTypeTitle} License Key</h1>
+            <h1 class="title">Your ${keyTypeTitle} Product Key</h1>
             <p class="subtitle">Thank you for supporting Immich!</p>
         </div>
 
@@ -154,39 +173,33 @@ export class EmailTemplateService {
         </div>
 
         <div class="description">
-            Thank you for your purchase! Your Immich ${keyTypeTitle} license key is ready. ${keyDescription}
+            Thank you for your purchase! Your Immich ${keyTypeTitle} product key is ready. ${keyDescription}
         </div>
 
         <div class="key-section">
-            <div class="key-label">${keyTypeTitle} License Key</div>
+            <div class="key-label">${keyTypeTitle} Product Key</div>
             <div class="key-value">${data.keyValue}</div>
         </div>
 
+        <div class="button-container">
+            <a href="https://my.immich.app/link?target=activate_license&licenseKey=${encodeURIComponent(data.keyValue)}&activationKey=${encodeURIComponent(data.activationKey)}" class="activate-button">Activate Product Key</a>
+        </div>
+
         <div class="instructions">
-            <h3>How to use your license key:</h3>
+            <h3>How to use your product key:</h3>
             <ul>
-                ${
-                  data.keyType === 'client'
-                    ? `<li>Open the Immich mobile app or web interface</li>
-                     <li>Navigate to Settings > License</li>
-                     <li>Enter your license key in the provided field</li>
-                     <li>Enjoy your premium features!</li>`
-                    : `<li>Access your Immich server administration panel</li>
-                     <li>Navigate to System Settings > License</li>
-                     <li>Enter your license key in the server configuration</li>
-                     <li>Restart your Immich server to activate the features</li>`
-                }
+               <li>Click the "Activate Product Key" button above for one-click activation</li>
+               <li>Or manually open the Immich web interface, navigate to Account Settings > Purchase, and enter your product key</li>
             </ul>
         </div>
 
         <div class="support-note">
-            <strong>Need help?</strong> Visit our documentation or contact support if you have any questions about activating your license key.
+            <strong>Need help?</strong> Visit our documentation or contact support if you have any questions about activating your product key.
         </div>
 
         <div class="footer">
             <p>This email was sent for order #${data.orderId}</p>
             <p>Visit <a href="https://immich.app">immich.app</a> for more information</p>
-            <p>© ${new Date().getFullYear()} Immich. All rights reserved.</p>
         </div>
     </div>
 </body>
@@ -197,33 +210,36 @@ export class EmailTemplateService {
     const keyTypeTitle = data.keyType === 'client' ? 'Client' : 'Server';
     const keyDescription =
       data.keyType === 'client'
-        ? 'This key unlocks premium features in the Immich mobile and web applications.'
-        : 'This key enables advanced server features for your self-hosted Immich instance.';
+        ? 'This key is your license for the Immich mobile and web applications.'
+        : 'This key is your license for your self-hosted Immich server instance.';
 
     const instructions =
       data.keyType === 'client'
         ? `- Open the Immich mobile app or web interface
-- Navigate to Settings > License
-- Enter your license key in the provided field
-- Enjoy your premium features!`
+- Navigate to Settings > Product Key
+- Enter your product key in the provided field`
         : `- Access your Immich server administration panel
-- Navigate to System Settings > License
-- Enter your license key in the server configuration
-- Restart your Immich server to activate the features`;
+- Navigate to System Settings > Product Key
+- Enter your product key in the server configuration`;
 
-    return `Your Immich ${keyTypeTitle} License Key
+    const activationUrl = `https://my.immich.app/link?target=activate_license&licenseKey=${encodeURIComponent(data.keyValue)}&activationKey=${encodeURIComponent(data.activationKey)}`;
+
+    return `Your Immich ${keyTypeTitle} Product Key
 
 Hello ${data.customerName},
 
-Thank you for your purchase! Your Immich ${keyTypeTitle} license key is ready. ${keyDescription}
+Thank you for your purchase! Your Immich ${keyTypeTitle} product key is ready. ${keyDescription}
 
-${keyTypeTitle} License Key:
+${keyTypeTitle} Product Key:
 ${data.keyValue}
 
-How to use your license key:
+Activate Your Product Key:
+Click this link to activate automatically: ${activationUrl}
+
+How to use your product key:
 ${instructions}
 
-Need help? Visit our documentation or contact support if you have any questions about activating your license key.
+Need help? Visit our documentation or contact support if you have any questions about activating your product key.
 
 This email was sent for order #${data.orderId}
 Visit https://immich.app for more information

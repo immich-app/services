@@ -306,6 +306,7 @@ export interface Env {
   KUNAKI_API_USERNAME: string;
   KUNAKI_API_PASSWORD: string;
   CDCLICK_API_KEY: string;
+  CDCLICK_IDLE_MODE?: string;
   WEBHOOK_SECRET: string;
   SMTP_HOST: string;
   SMTP_PORT: string;
@@ -316,6 +317,7 @@ export interface Env {
 
 export interface ProductKey {
   key_value: string;
+  activation_key: string;
   key_type: ProductKeyType;
   is_claimed: boolean;
   claimed_at?: string;
@@ -340,6 +342,7 @@ export interface ProductKeyEmailData {
   customerName: string;
   keyType: ProductKeyType;
   keyValue: string;
+  activationKey: string;
 }
 
 export interface QueueMessage {
