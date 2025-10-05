@@ -86,6 +86,14 @@ export class CDClickService {
         console.log('[CDCLICK] Idle mode enabled: Order will be held for manual confirmation (idle: true)');
       }
 
+      // Hong Kong doesn't have zip codes, but CDClick requires one
+      // Use fake zip code "HKG" for Hong Kong orders
+      let zipCode = order.shipping_postal_code;
+      if (order.shipping_country === 'HK' && !zipCode) {
+        console.log('[CDCLICK] Hong Kong order detected, using fake zip code "HKG"');
+        zipCode = 'HKG';
+      }
+
       const cdclickOrder = {
         custom_id: order.id,
         check_multiple_custom_id: true,
@@ -95,7 +103,7 @@ export class CDClickService {
           last_name: lastName,
           email: order.customer_email,
           address_street: addressStreet,
-          zip_code: order.shipping_postal_code,
+          zip_code: zipCode,
           city: order.shipping_city,
           state_province_code: order.shipping_state || undefined,
           country_code: order.shipping_country,
