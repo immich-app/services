@@ -245,6 +245,7 @@ export interface KunakiStatusResponse {
   Order_Id: string;
   Status: string;
   Tracking_Number?: string;
+  Tracking_Type?: string;
   Shipping_Date?: string;
   Error?: string;
 }

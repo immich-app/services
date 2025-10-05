@@ -242,19 +242,39 @@ export class FulfillmentService {
         console.log('[FULFILLMENT] Mapped status:', statusResponse.Status, '->', newStatus);
         console.log('[FULFILLMENT] Current status:', fulfillmentOrder.status);
 
-        if (newStatus !== fulfillmentOrder.status) {
+        // Only mark as shipped if we have tracking information
+        if (newStatus === 'shipped' && (!statusResponse.Tracking_Number || !statusResponse.Tracking_Type)) {
+          console.log('[FULFILLMENT] Order marked as shipped but no tracking number found, keeping status as processing');
+          // Don't update to shipped without tracking
+          if (fulfillmentOrder.status !== 'processing') {
+            await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'processing', {
+              shippedAt: statusResponse.Shipping_Date,
+            });
+            console.log(
+              `[FULFILLMENT] Updated Kunaki order ${fulfillmentOrder.provider_order_id} status to processing (shipped without tracking)`,
+            );
+          }
+        } else if (newStatus !== fulfillmentOrder.status) {
           console.log('[FULFILLMENT] Status changed, updating fulfillment order');
           await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, newStatus as any, {
             trackingNumber: statusResponse.Tracking_Number,
+            shippingCarrier: statusResponse.Tracking_Type,
             shippedAt: statusResponse.Shipping_Date,
           });
 
           if (newStatus === 'shipped' && statusResponse.Tracking_Number) {
             console.log(
-              '[FULFILLMENT] Order shipped, updating Fourthwall with tracking:',
+              '[FULFILLMENT] Order shipped with tracking, updating Fourthwall:',
               statusResponse.Tracking_Number,
+              'Carrier:',
+              statusResponse.Tracking_Type,
             );
-            await this.updateFourthwallWithTracking(fulfillmentOrder.order_id, statusResponse.Tracking_Number);
+            await this.updateFourthwallWithTracking(
+              fulfillmentOrder.order_id,
+              statusResponse.Tracking_Number,
+              undefined,
+              statusResponse.Tracking_Type,
+            );
 
             console.log('[FULFILLMENT] Updating order status to fulfilled');
             await this.orderRepository.updateOrderStatus(fulfillmentOrder.order_id, 'fulfilled');

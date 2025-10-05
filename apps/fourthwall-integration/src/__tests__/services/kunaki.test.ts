@@ -108,7 +108,7 @@ describe('KunakiService', () => {
         ok: true,
         text: () =>
           Promise.resolve(
-            '<Response><ErrorCode>0</ErrorCode><ErrorText>success</ErrorText><OrderId>KUNAKI123</OrderId><OrderStatus>Shipped</OrderStatus><TrackingNumber>1Z999AA1234567890</TrackingNumber></Response>',
+            '<Response><ErrorCode>0</ErrorCode><ErrorText>success</ErrorText><OrderId>KUNAKI123</OrderId><OrderStatus>Shipped</OrderStatus><TrackingType>Fedex</TrackingType><TrackingId>1Z999AA1234567890</TrackingId></Response>',
           ),
       });
 

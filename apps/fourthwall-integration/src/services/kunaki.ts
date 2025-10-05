@@ -289,28 +289,32 @@ export class KunakiService {
     const errorText = this.extractXMLValue(responseText, 'ErrorText');
     const orderId = this.extractXMLValue(responseText, 'OrderId');
     const orderStatus = this.extractXMLValue(responseText, 'OrderStatus');
-    const trackingNumber = this.extractXMLValue(responseText, 'TrackingNumber');
-    const _trackingType = this.extractXMLValue(responseText, 'TrackingType');
+    const trackingId = this.extractXMLValue(responseText, 'TrackingId');
+    const trackingType = this.extractXMLValue(responseText, 'TrackingType');
 
     console.log(
       '[KUNAKI] Status response - ErrorCode:',
       errorCode,
       'OrderStatus:',
       orderStatus,
-      'Tracking:',
-      trackingNumber,
+      'TrackingId:',
+      trackingId,
+      'TrackingType:',
+      trackingType,
     );
 
     return errorCode === '0' ? {
         Order_Id: orderId || '',
         Status: orderStatus || 'Processing',
-        Tracking_Number: trackingNumber,
+        Tracking_Number: trackingId,
+        Tracking_Type: trackingType,
         Shipping_Date: undefined,
         Error: undefined,
       } : {
         Order_Id: orderId || '',
         Status: 'Error',
         Tracking_Number: undefined,
+        Tracking_Type: undefined,
         Shipping_Date: undefined,
         Error: errorText || `Error code: ${errorCode}`,
       };
