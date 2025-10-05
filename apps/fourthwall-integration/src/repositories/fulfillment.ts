@@ -174,14 +174,13 @@ export class FulfillmentRepository extends BaseRepository {
     return orders;
   }
 
-  async getRetryableFulfillmentOrders(maxRetries = 3): Promise<FulfillmentOrder[]> {
-    console.log('[FULFILLMENT-REPO] Getting retryable orders (max retries:', maxRetries, ')');
+  async getRetryableFulfillmentOrders(): Promise<FulfillmentOrder[]> {
+    console.log('[FULFILLMENT-REPO] Getting retryable orders');
     const result = await this.executeQuery<FulfillmentOrder>(
       `SELECT * FROM fulfillment_orders
        WHERE status = 'failed'
-       AND retry_count < ?
        ORDER BY created_at ASC`,
-      [maxRetries],
+      [],
     );
     const orders = result.results || [];
     console.log('[FULFILLMENT-REPO] Found', orders.length, 'retryable orders');

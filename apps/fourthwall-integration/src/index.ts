@@ -212,7 +212,7 @@ export default {
       await fulfillmentService.processKunakiStatusUpdates();
 
       console.log('[SCHEDULED] Starting retry of failed orders');
-      await fulfillmentService.retryFailedOrders();
+      // await fulfillmentService.retryFailedOrders();
 
       console.log('[SCHEDULED] All tasks completed successfully');
     } catch (error) {
