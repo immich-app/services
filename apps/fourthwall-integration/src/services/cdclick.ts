@@ -97,7 +97,7 @@ export class CDClickService {
           address_street: addressStreet,
           zip_code: order.shipping_postal_code,
           city: order.shipping_city,
-          state: order.shipping_state || undefined,
+          state_province_code: order.shipping_state || undefined,
           country_code: order.shipping_country,
           phone_number: '00000',
         },
