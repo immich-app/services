@@ -266,14 +266,14 @@ export class FulfillmentService {
             console.log(
               '[FULFILLMENT] Order shipped with tracking, updating Fourthwall:',
               statusResponse.Tracking_Number,
-              'Carrier:',
-              statusResponse.Tracking_Type,
+              'Carrier: USPS (Kunaki always uses USPS)',
             );
+            // Kunaki always uses USPS for fulfillment, regardless of what Tracking_Type returns
             await this.updateFourthwallWithTracking(
               fulfillmentOrder.order_id,
               statusResponse.Tracking_Number,
               undefined,
-              statusResponse.Tracking_Type,
+              'USPS',
             );
 
             console.log('[FULFILLMENT] Updating order status to fulfilled');
@@ -411,13 +411,24 @@ export class FulfillmentService {
       }
       console.log('[FULFILLMENT] Found order, Fourthwall ID:', order.fourthwall_order_id);
 
-      await this.fourthwallService.updateOrderWithTracking(
+      // Get order items to pass to createFulfillment
+      const items = await this.orderRepository.getOrderItems(orderId);
+      console.log('[FULFILLMENT] Found', items.length, 'items for fulfillment');
+
+      if (!carrier) {
+        throw new Error(`Cannot create fulfillment without carrier information for order ${orderId}`);
+      }
+
+      await this.fourthwallService.createFulfillment(
         order.fourthwall_order_id,
+        items.map((item) => ({
+          fourthwall_variant_id: item.fourthwall_variant_id,
+          quantity: item.quantity,
+        })),
         trackingNumber,
-        trackingUrl,
         carrier,
       );
-      console.log('[FULFILLMENT] Successfully updated Fourthwall with tracking');
+      console.log('[FULFILLMENT] Successfully created Fourthwall fulfillment with tracking');
     } catch (error) {
       console.error(`[FULFILLMENT] Error updating Fourthwall with tracking for order ${orderId}:`, error);
       console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
