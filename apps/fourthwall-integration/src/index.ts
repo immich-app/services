@@ -82,6 +82,11 @@ export default {
           return await handleCDClickWebhook(request, env);
         }
 
+        case '/cron': {
+          console.log(`[FETCH] Manual cron trigger`);
+          return await handleCronTrigger(request, env);
+        }
+
         case '/admin/migrations': {
           // Admin endpoint to check migration status or run migrations
           if (request.method === 'POST') {
@@ -345,6 +350,55 @@ async function handleCDClickWebhook(request: Request, env: Env): Promise<Respons
     console.error('[CD-WEBHOOK] Error processing webhook:', error);
     console.error('[CD-WEBHOOK] Error stack:', error instanceof Error ? error.stack : 'No stack');
     return new Response('Error processing webhook', { status: 500 });
+  }
+}
+
+async function handleCronTrigger(request: Request, env: Env): Promise<Response> {
+  console.log('[CRON] Manual cron trigger requested');
+
+  if (request.method !== 'POST' && request.method !== 'GET') {
+    console.log('[CRON] Invalid method:', request.method);
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  try {
+    console.log('[CRON] Starting Kunaki status check');
+    const orderRepository = new OrderRepository(env.DB);
+    const fulfillmentRepository = new FulfillmentRepository(env.DB);
+    const fulfillmentService = new FulfillmentService(env, orderRepository, fulfillmentRepository);
+
+    await fulfillmentService.processKunakiStatusUpdates();
+    console.log('[CRON] Kunaki status check completed');
+
+    return new Response(
+      JSON.stringify({
+        message: 'Cron tasks completed successfully',
+        timestamp: new Date().toISOString(),
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      },
+    );
+  } catch (error) {
+    console.error('[CRON] Error in manual cron trigger:', error);
+    console.error('[CRON] Error stack:', error instanceof Error ? error.stack : 'No stack');
+    return new Response(
+      JSON.stringify({
+        error: 'Cron task failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      },
+    );
   }
 }
 

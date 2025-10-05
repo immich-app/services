@@ -125,8 +125,8 @@ export class FourthwallService {
   async createFulfillment(
     fourthwallOrderId: string,
     orderItems: Array<{ fourthwall_variant_id?: string; quantity: number }>,
-    trackingNumber: string = 'PENDING',
-    trackingCompany: string = 'In Production',
+    trackingNumber: string,
+    trackingCompany: string,
   ): Promise<void> {
     console.log('[FW-SERVICE] Creating fulfillment for order');
     console.log('[FW-SERVICE] Fourthwall Order ID:', fourthwallOrderId);
