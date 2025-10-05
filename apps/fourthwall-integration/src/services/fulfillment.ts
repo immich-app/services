@@ -20,7 +20,6 @@ export class FulfillmentService {
   private kunakiService: KunakiService;
   private cdclickService: CDClickService;
   private fourthwallService: FourthwallService;
-  private readonly MAX_RETRY_ATTEMPTS = 3;
 
   constructor(
     private env: Env,
@@ -68,24 +67,12 @@ export class FulfillmentService {
         }
 
         console.log('[FULFILLMENT] Retrying failed fulfillment order');
-        console.log('[FULFILLMENT] Current retry count:', fulfillmentOrder.retry_count);
+        console.log('[FULFILLMENT] Cloudflare Queues will handle retry limits and DLQ');
 
-        // Check if we've exceeded max retries
-        if (fulfillmentOrder.retry_count >= this.MAX_RETRY_ATTEMPTS) {
-          console.error(`[FULFILLMENT] Max retry attempts (${this.MAX_RETRY_ATTEMPTS}) reached for order ${orderId}`);
-          console.log('[FULFILLMENT] Order will be sent to DLQ');
-          await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'failed', {
-            errorMessage: `Max retry attempts (${this.MAX_RETRY_ATTEMPTS}) exceeded`,
-          });
-          // Throw error to let Cloudflare handle DLQ
-          throw new Error(`Max retry attempts exceeded for order ${orderId}`);
-        }
-
-        // Reset status to pending for retry and increment retry count
+        // Reset status to pending for retry
         await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'pending', {
           errorMessage: undefined,
         });
-        await this.fulfillmentRepository.incrementRetryCount(fulfillmentOrder.id);
       } else {
         // New fulfillment - check order status
         if (order.status !== 'received') {
@@ -168,10 +155,7 @@ export class FulfillmentService {
       console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
 
       // If it's an intentional failure (for retry/DLQ), re-throw it
-      if (
-        error instanceof Error &&
-        (error.message.includes('Failed to submit order') || error.message.includes('Max retry attempts exceeded'))
-      ) {
+      if (error instanceof Error && error.message.includes('Failed to submit order')) {
         throw error;
       }
 
