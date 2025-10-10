@@ -288,6 +288,17 @@ export class FourthwallService {
   /**
    * Generate CSV content from tracking data
    */
+  /**
+   * Escape a CSV field value
+   */
+  private escapeCsvField(value: string): string {
+    // If the value contains comma, newline, or double quote, wrap it in quotes and escape quotes
+    if (value.includes(',') || value.includes('\n') || value.includes('"')) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
+  }
+
   private generateTrackingCsv(trackingData: Array<{
     orderId: string;
     variantId: string;
@@ -336,46 +347,69 @@ export class FourthwallService {
       'TRACKING NUMBER',
     ];
 
+    console.log('[FW-SERVICE] CSV has', headers.length, 'columns');
+
     const rows = [headers.join(',')];
 
-    for (const item of trackingData) {
+    for (const [index, item] of trackingData.entries()) {
+      console.log(`[FW-SERVICE] Processing row ${index + 1}:`);
+      console.log(`[FW-SERVICE]   Order ID: ${item.orderId}`);
+      console.log(`[FW-SERVICE]   Shipping Address: ${item.shippingAddress}`);
+      console.log(`[FW-SERVICE]   Shipping Country: ${item.shippingCountry}`);
+      console.log(`[FW-SERVICE]   SKU: ${item.sku}`);
+      console.log(`[FW-SERVICE]   Variant ID: ${item.variantId}`);
+      console.log(`[FW-SERVICE]   Carrier: ${item.carrier}`);
+      console.log(`[FW-SERVICE]   Tracking Number: ${item.trackingNumber}`);
+      console.log(`[FW-SERVICE]   Quantity: ${item.quantity}`);
+
       // Build row with all columns (most empty)
       const row = [
-        item.orderId,                 // ORDER ID
-        '',                           // ORDER STATUS
-        '',                           // FULFILLMENT SERVICE
-        '',                           // SHIPPING METHOD
-        '',                           // ORDERED BY
-        '',                           // SHIPPING NAME
-        item.shippingAddress,         // SHIPPING ADDRESS 1
-        '',                           // SHIPPING ADDRESS 2
-        '',                           // SHIPPING CITY
-        '',                           // SHIPPING STATE
-        '',                           // SHIPPING POSTAL CODE
-        item.shippingCountry,         // SHIPPING COUNTRY
-        '',                           // SHIPPING PHONE NUMBER
-        '',                           // ITEM NAME
-        item.quantity.toString(),     // QUANTITY
-        item.sku,                     // ITEM CODE/SKU
-        item.variantId,               // ITEM ID
-        '',                           // ITEM PRICE
-        '',                           // CURRENCY
-        '',                           // ITEM WEIGHT
-        '',                           // WEIGHT UNIT
-        '',                           // COLOR
-        '',                           // SIZE
-        '',                           // CUSTOM ATTRIBUTE
-        '',                           // IMAGE URL
-        '',                           // CONTRIBUTION TIME (UTC)
-        '',                           // EMAIL
-        '',                           // HS CODE
-        '',                           // ORIGIN COUNTRY
-        '',                           // TAX ID
-        item.carrier,                 // CARRIER CODE
-        item.trackingNumber,          // TRACKING NUMBER
+        this.escapeCsvField(item.orderId),                 // ORDER ID
+        '',                                                 // ORDER STATUS
+        '',                                                 // FULFILLMENT SERVICE
+        '',                                                 // SHIPPING METHOD
+        '',                                                 // ORDERED BY
+        '',                                                 // SHIPPING NAME
+        this.escapeCsvField(item.shippingAddress),         // SHIPPING ADDRESS 1
+        '',                                                 // SHIPPING ADDRESS 2
+        '',                                                 // SHIPPING CITY
+        '',                                                 // SHIPPING STATE
+        '',                                                 // SHIPPING POSTAL CODE
+        this.escapeCsvField(item.shippingCountry),         // SHIPPING COUNTRY
+        '',                                                 // SHIPPING PHONE NUMBER
+        '',                                                 // ITEM NAME
+        item.quantity.toString(),                           // QUANTITY
+        this.escapeCsvField(item.sku),                     // ITEM CODE/SKU
+        this.escapeCsvField(item.variantId),               // ITEM ID
+        '',                                                 // ITEM PRICE
+        '',                                                 // CURRENCY
+        '',                                                 // ITEM WEIGHT
+        '',                                                 // WEIGHT UNIT
+        '',                                                 // COLOR
+        '',                                                 // SIZE
+        '',                                                 // CUSTOM ATTRIBUTE
+        '',                                                 // IMAGE URL
+        '',                                                 // CONTRIBUTION TIME (UTC)
+        '',                                                 // EMAIL
+        '',                                                 // HS CODE
+        '',                                                 // ORIGIN COUNTRY
+        '',                                                 // TAX ID
+        this.escapeCsvField(item.carrier),                 // CARRIER CODE
+        this.escapeCsvField(item.trackingNumber),          // TRACKING NUMBER
       ];
 
-      rows.push(row.join(','));
+      console.log(`[FW-SERVICE] Row ${index + 1} has ${row.length} columns`);
+
+      if (row.length !== headers.length) {
+        console.error(`[FW-SERVICE] ERROR: Row ${index + 1} has ${row.length} columns but header has ${headers.length}`);
+        console.error('[FW-SERVICE] Row data:', JSON.stringify(item));
+      }
+
+      const rowString = row.join(',');
+      const commaCount = (rowString.match(/,/g) || []).length;
+      console.log(`[FW-SERVICE] Row ${index + 1} joined string has ${commaCount} commas (should be ${headers.length - 1})`);
+
+      rows.push(rowString);
     }
 
     return rows.join('\n');
