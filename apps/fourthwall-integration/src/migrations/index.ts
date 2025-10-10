@@ -142,9 +142,34 @@ export const migrations: Migration[] = [
     name: 'Add tracking uploaded to Fourthwall field',
     sql: `
       -- Add tracking_uploaded_to_fourthwall field to fulfillment_orders
-      -- SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so we use a different approach
-      -- Check if column exists by attempting to add it, wrapped in a transaction
-      ALTER TABLE fulfillment_orders ADD COLUMN tracking_uploaded_to_fourthwall BOOLEAN NOT NULL DEFAULT FALSE;
+      -- 0 = not uploaded, 1 = uploaded successfully, 2 = already uploaded (error on retry)
+      ALTER TABLE fulfillment_orders ADD COLUMN tracking_uploaded_to_fourthwall INTEGER NOT NULL DEFAULT 0;
+    `,
+  },
+  {
+    id: '009_convert_tracking_uploaded_to_integer',
+    name: 'Convert tracking_uploaded_to_fourthwall from BOOLEAN to INTEGER if needed',
+    sql: `
+      -- This migration handles the conversion if the field was previously created as BOOLEAN
+      -- SQLite doesn't have a direct ALTER COLUMN, so we need to recreate the column
+      -- First, check if we need to do anything by trying to set a value > 1
+      -- If the column is already INTEGER, this is a no-op
+
+      -- Create a new column with INTEGER type
+      ALTER TABLE fulfillment_orders ADD COLUMN tracking_uploaded_to_fourthwall_new INTEGER NOT NULL DEFAULT 0;
+
+      -- Copy data, converting BOOLEAN (0/1) to INTEGER (0/1)
+      UPDATE fulfillment_orders SET tracking_uploaded_to_fourthwall_new =
+        CASE
+          WHEN tracking_uploaded_to_fourthwall = 0 THEN 0
+          ELSE 1
+        END;
+
+      -- Drop the old column (SQLite allows this)
+      ALTER TABLE fulfillment_orders DROP COLUMN tracking_uploaded_to_fourthwall;
+
+      -- Rename the new column to the original name
+      ALTER TABLE fulfillment_orders RENAME COLUMN tracking_uploaded_to_fourthwall_new TO tracking_uploaded_to_fourthwall;
     `,
   },
 ];

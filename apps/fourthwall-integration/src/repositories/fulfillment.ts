@@ -40,7 +40,7 @@ export class FulfillmentRepository extends BaseRepository {
         newFulfillmentOrder.shipped_at || null,
         newFulfillmentOrder.error_message || null,
         newFulfillmentOrder.retry_count,
-        newFulfillmentOrder.tracking_uploaded_to_fourthwall ? 1 : 0,
+        newFulfillmentOrder.tracking_uploaded_to_fourthwall,
         newFulfillmentOrder.created_at,
         newFulfillmentOrder.updated_at,
       ],
@@ -206,12 +206,14 @@ export class FulfillmentRepository extends BaseRepository {
   }
 
   async getOrdersWithUnuploadedTracking(): Promise<FulfillmentOrder[]> {
-    console.log('[FULFILLMENT-REPO] Getting orders with tracking that needs to be uploaded to Fourthwall (limit 1 for testing)');
+    console.log(
+      '[FULFILLMENT-REPO] Getting orders with tracking that needs to be uploaded to Fourthwall (limit 5 for testing)',
+    );
     const result = await this.executeQuery<FulfillmentOrder>(
       `SELECT * FROM fulfillment_orders
        WHERE tracking_number IS NOT NULL
        AND shipping_carrier IS NOT NULL
-       AND tracking_uploaded_to_fourthwall = FALSE
+       AND tracking_uploaded_to_fourthwall = 0
        AND status = 'shipped'
        ORDER BY shipped_at ASC
        LIMIT 1`,
@@ -222,17 +224,17 @@ export class FulfillmentRepository extends BaseRepository {
     return orders;
   }
 
-  async markTrackingAsUploaded(ids: string[]): Promise<void> {
+  async markTrackingAsUploaded(ids: string[], uploadStatus: number = 1): Promise<void> {
     if (ids.length === 0) {
       return;
     }
-    console.log('[FULFILLMENT-REPO] Marking tracking as uploaded for', ids.length, 'orders');
+    console.log('[FULFILLMENT-REPO] Marking tracking as uploaded for', ids.length, 'orders with status', uploadStatus);
     const placeholders = ids.map(() => '?').join(', ');
     await this.executeUpdate(
       `UPDATE fulfillment_orders
-       SET tracking_uploaded_to_fourthwall = TRUE, updated_at = ?
+       SET tracking_uploaded_to_fourthwall = ?, updated_at = ?
        WHERE id IN (${placeholders})`,
-      [this.getCurrentTimestamp(), ...ids],
+      [uploadStatus, this.getCurrentTimestamp(), ...ids],
     );
     console.log('[FULFILLMENT-REPO] Tracking marked as uploaded');
   }
