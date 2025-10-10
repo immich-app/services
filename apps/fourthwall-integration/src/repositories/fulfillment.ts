@@ -25,8 +25,8 @@ export class FulfillmentRepository extends BaseRepository {
         id, order_id, provider, provider_order_id, status,
         tracking_number, tracking_url, shipping_carrier,
         submitted_at, shipped_at, error_message, retry_count,
-        created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        tracking_uploaded_to_fourthwall, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         newFulfillmentOrder.id,
         newFulfillmentOrder.order_id,
@@ -40,6 +40,7 @@ export class FulfillmentRepository extends BaseRepository {
         newFulfillmentOrder.shipped_at || null,
         newFulfillmentOrder.error_message || null,
         newFulfillmentOrder.retry_count,
+        newFulfillmentOrder.tracking_uploaded_to_fourthwall ? 1 : 0,
         newFulfillmentOrder.created_at,
         newFulfillmentOrder.updated_at,
       ],
@@ -202,5 +203,37 @@ export class FulfillmentRepository extends BaseRepository {
     const orders = result.results || [];
     console.log('[FULFILLMENT-REPO] Found', orders.length, 'retryable orders');
     return orders;
+  }
+
+  async getOrdersWithUnuploadedTracking(): Promise<FulfillmentOrder[]> {
+    console.log('[FULFILLMENT-REPO] Getting orders with tracking that needs to be uploaded to Fourthwall');
+    const result = await this.executeQuery<FulfillmentOrder>(
+      `SELECT * FROM fulfillment_orders
+       WHERE tracking_number IS NOT NULL
+       AND shipping_carrier IS NOT NULL
+       AND tracking_uploaded_to_fourthwall = FALSE
+       AND status = 'shipped'
+       ORDER BY shipped_at ASC
+       LIMIT 100`,
+      [],
+    );
+    const orders = result.results || [];
+    console.log('[FULFILLMENT-REPO] Found', orders.length, 'orders with unuploaded tracking');
+    return orders;
+  }
+
+  async markTrackingAsUploaded(ids: string[]): Promise<void> {
+    if (ids.length === 0) {
+      return;
+    }
+    console.log('[FULFILLMENT-REPO] Marking tracking as uploaded for', ids.length, 'orders');
+    const placeholders = ids.map(() => '?').join(', ');
+    await this.executeUpdate(
+      `UPDATE fulfillment_orders
+       SET tracking_uploaded_to_fourthwall = TRUE, updated_at = ?
+       WHERE id IN (${placeholders})`,
+      [this.getCurrentTimestamp(), ...ids],
+    );
+    console.log('[FULFILLMENT-REPO] Tracking marked as uploaded');
   }
 }

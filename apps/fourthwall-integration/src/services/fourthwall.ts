@@ -3,18 +3,26 @@ import { FourthwallOrderAttributes, FourthwallOrderData, FourthwallWebhook, Orde
 
 export class FourthwallService {
   private authHeader: string;
+  private userUsername?: string;
+  private userPassword?: string;
 
   constructor(
     username: string,
     password: string,
     private orderRepository: OrderRepository,
+    userUsername?: string,
+    userPassword?: string,
   ) {
-    // Create basic auth header
+    // Create basic auth header for API key auth
     console.log('[FW-SERVICE] Initializing FourthwallService');
-    console.log('[FW-SERVICE] Username:', username ? 'provided' : 'missing');
-    console.log('[FW-SERVICE] Password:', password ? 'provided' : 'missing');
+    console.log('[FW-SERVICE] API Username:', username ? 'provided' : 'missing');
+    console.log('[FW-SERVICE] API Password:', password ? 'provided' : 'missing');
+    console.log('[FW-SERVICE] User Username:', userUsername ? 'provided' : 'missing');
+    console.log('[FW-SERVICE] User Password:', userPassword ? 'provided' : 'missing');
     const credentials = btoa(`${username}:${password}`);
     this.authHeader = `Basic ${credentials}`;
+    this.userUsername = userUsername;
+    this.userPassword = userPassword;
     console.log('[FW-SERVICE] Auth header created');
   }
 
@@ -122,129 +130,6 @@ export class FourthwallService {
     });
   }
 
-  async createFulfillment(
-    fourthwallOrderId: string,
-    orderItems: Array<{ fourthwall_variant_id?: string; quantity: number }>,
-    trackingNumber: string,
-    trackingCompany: string,
-  ): Promise<void> {
-    console.log('[FW-SERVICE] Creating fulfillment for order');
-    console.log('[FW-SERVICE] Fourthwall Order ID:', fourthwallOrderId);
-    console.log('[FW-SERVICE] Tracking Number:', trackingNumber);
-    console.log('[FW-SERVICE] Tracking Company:', trackingCompany);
-    console.log('[FW-SERVICE] Items:', orderItems.length);
-
-    try {
-      // Filter out items without variant IDs
-      const fulfillmentItems = orderItems
-        .filter((item) => item.fourthwall_variant_id)
-        .map((item) => ({
-          variantId: item.fourthwall_variant_id,
-          quantity: item.quantity,
-        }));
-
-      if (fulfillmentItems.length === 0) {
-        console.log('[FW-SERVICE] No items with variant IDs to fulfill, skipping');
-        return;
-      }
-
-      const url = `https://api.fourthwall.com/open-api/v1.0/fulfillments`;
-      console.log('[FW-SERVICE] Making POST request to:', url);
-
-      const requestBody = {
-        orderId: fourthwallOrderId,
-        items: fulfillmentItems,
-        shippingLabel: {
-          trackingNumber,
-          trackingCompany,
-        },
-      };
-
-      console.log('[FW-SERVICE] Request body:', JSON.stringify(requestBody));
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: this.authHeader,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      console.log('[FW-SERVICE] Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[FW-SERVICE] Failed to create fulfillment. Status:', response.status);
-        console.error('[FW-SERVICE] Error response:', errorText);
-        throw new Error(`Failed to create Fourthwall fulfillment: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('[FW-SERVICE] Fulfillment created successfully:', result);
-      console.log(`[FW-SERVICE] Successfully created fulfillment for order ${fourthwallOrderId}`);
-    } catch (error) {
-      console.error(`[FW-SERVICE] Error creating fulfillment for order ${fourthwallOrderId}:`, error);
-      console.error('[FW-SERVICE] Error stack:', error instanceof Error ? error.stack : 'No stack');
-      throw error;
-    }
-  }
-
-  // Note: This method is kept for backward compatibility but should use createFulfillment instead
-  async updateOrderWithTracking(
-    fourthwallOrderId: string,
-    trackingNumber: string,
-    trackingUrl?: string,
-    carrier?: string,
-  ): Promise<void> {
-    console.log('[FW-SERVICE] Updating order with tracking (legacy method - consider using createFulfillment)');
-    console.log('[FW-SERVICE] Fourthwall Order ID:', fourthwallOrderId);
-    console.log('[FW-SERVICE] Tracking Number:', trackingNumber);
-    console.log('[FW-SERVICE] Tracking URL:', trackingUrl || 'not provided');
-    console.log('[FW-SERVICE] Carrier:', carrier || 'not provided');
-
-    // Note: The old endpoint may not work anymore, this method is kept for compatibility
-    // but should be replaced with createFulfillment which uses the correct API
-    console.warn('[FW-SERVICE] Warning: updateOrderWithTracking uses a legacy endpoint that may not work');
-    console.warn('[FW-SERVICE] Consider updating the caller to use createFulfillment instead');
-
-    try {
-      const url = `https://api.fourthwall.com/v1/orders/${fourthwallOrderId}/fulfillment`;
-      console.log('[FW-SERVICE] Making POST request to legacy endpoint:', url);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: this.authHeader,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tracking_number: trackingNumber,
-          tracking_url: trackingUrl,
-          carrier,
-          status: 'fulfilled',
-        }),
-      });
-
-      console.log('[FW-SERVICE] Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[FW-SERVICE] Failed to update order. Status:', response.status);
-        console.error('[FW-SERVICE] Error response:', errorText);
-        throw new Error(`Failed to update Fourthwall order: ${response.status} - ${errorText}`);
-      }
-
-      console.log(
-        `[FW-SERVICE] Successfully updated Fourthwall order ${fourthwallOrderId} with tracking ${trackingNumber}`,
-      );
-    } catch (error) {
-      console.error(`[FW-SERVICE] Error updating Fourthwall order ${fourthwallOrderId}:`, error);
-      console.error('[FW-SERVICE] Error stack:', error instanceof Error ? error.stack : 'No stack');
-      throw error;
-    }
-  }
-
   async validateWebhookSignature(payload: string, signature: string, secret: string): Promise<boolean> {
     console.log('[FW-SERVICE] Validating webhook signature');
     console.log('[FW-SERVICE] Signature provided:', signature ? 'yes' : 'no');
@@ -308,5 +193,203 @@ export class FourthwallService {
       console.error('[FW-SERVICE] Error stack:', error instanceof Error ? error.stack : 'No stack');
       throw error;
     }
+  }
+
+  /**
+   * Get Basic Auth header for user API access
+   */
+  private getUserAuthHeader(): string {
+    console.log('[FW-SERVICE] Getting user auth header');
+
+    if (!this.userUsername || !this.userPassword) {
+      throw new Error('User credentials not provided - cannot authenticate for CSV upload');
+    }
+
+    const credentials = btoa(`${this.userUsername}:${this.userPassword}`);
+    return `Basic ${credentials}`;
+  }
+
+  /**
+   * Upload tracking information via CSV to Fourthwall
+   * @param trackingData Array of tracking info for orders
+   */
+  async uploadTrackingCsv(trackingData: Array<{
+    orderId: string;
+    variantId: string;
+    quantity: number;
+    trackingNumber: string;
+    carrier: string;
+    shippingAddress: string;
+    shippingCountry: string;
+  }>): Promise<{ errors: string[]; fulfilledOrderIds: string[] }> {
+    console.log('[FW-SERVICE] Uploading tracking CSV');
+    console.log('[FW-SERVICE] Number of orders:', trackingData.length);
+
+    if (trackingData.length === 0) {
+      console.log('[FW-SERVICE] No tracking data to upload');
+      return { errors: [], fulfilledOrderIds: [] };
+    }
+
+    try {
+      // Get Basic Auth header
+      const authHeader = this.getUserAuthHeader();
+
+      // Generate CSV content
+      const csvContent = this.generateTrackingCsv(trackingData);
+      console.log('[FW-SERVICE] Generated CSV with', csvContent.split('\n').length - 1, 'rows');
+
+      // Create FormData for multipart upload
+      const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+      const formData = this.createMultipartFormData(csvContent, boundary);
+
+      const url = 'https://api.fourthwall.com/api/fulfillments/csv';
+      console.log('[FW-SERVICE] Uploading to:', url);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: formData,
+      });
+
+      console.log('[FW-SERVICE] Upload response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[FW-SERVICE] Failed to upload CSV. Status:', response.status);
+        console.error('[FW-SERVICE] Error response:', errorText);
+        throw new Error(`Failed to upload tracking CSV: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json() as { errors: string[]; fulfilledOrderIds: string[] };
+      console.log('[FW-SERVICE] Upload successful');
+      console.log('[FW-SERVICE] Fulfilled orders:', result.fulfilledOrderIds?.length || 0);
+      console.log('[FW-SERVICE] Errors:', result.errors?.length || 0);
+
+      if (result.errors && result.errors.length > 0) {
+        console.log('[FW-SERVICE] Upload errors:', result.errors);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('[FW-SERVICE] Error uploading tracking CSV:', error);
+      console.error('[FW-SERVICE] Error stack:', error instanceof Error ? error.stack : 'No stack');
+      throw error;
+    }
+  }
+
+  /**
+   * Generate CSV content from tracking data
+   */
+  private generateTrackingCsv(trackingData: Array<{
+    orderId: string;
+    variantId: string;
+    quantity: number;
+    trackingNumber: string;
+    carrier: string;
+    shippingAddress: string;
+    shippingCountry: string;
+  }>): string {
+    console.log('[FW-SERVICE] Generating CSV content');
+
+    // CSV header - all 32 columns are required
+    const headers = [
+      'ORDER ID',
+      'ORDER STATUS',
+      'FULFILLMENT SERVICE',
+      'SHIPPING METHOD',
+      'ORDERED BY',
+      'SHIPPING NAME',
+      'SHIPPING ADDRESS 1',
+      'SHIPPING ADDRESS 2',
+      'SHIPPING CITY',
+      'SHIPPING STATE',
+      'SHIPPING POSTAL CODE',
+      'SHIPPING COUNTRY',
+      'SHIPPING PHONE NUMBER',
+      'ITEM NAME',
+      'QUANTITY',
+      'ITEM CODE/SKU',
+      'ITEM ID',
+      'ITEM PRICE',
+      'CURRENCY',
+      'ITEM WEIGHT',
+      'WEIGHT UNIT',
+      'COLOR',
+      'SIZE',
+      'CUSTOM ATTRIBUTE',
+      'IMAGE URL',
+      'CONTRIBUTION TIME (UTC)',
+      'EMAIL',
+      'HS CODE',
+      'ORIGIN COUNTRY',
+      'TAX ID',
+      'CARRIER CODE',
+      'TRACKING NUMBER',
+    ];
+
+    const rows = [headers.join(',')];
+
+    for (const item of trackingData) {
+      // Build row with all columns (most empty)
+      const row = [
+        item.orderId,                 // ORDER ID
+        '',                           // ORDER STATUS
+        '',                           // FULFILLMENT SERVICE
+        '',                           // SHIPPING METHOD
+        '',                           // ORDERED BY
+        '',                           // SHIPPING NAME
+        item.shippingAddress,         // SHIPPING ADDRESS 1
+        '',                           // SHIPPING ADDRESS 2
+        '',                           // SHIPPING CITY
+        '',                           // SHIPPING STATE
+        '',                           // SHIPPING POSTAL CODE
+        item.shippingCountry,         // SHIPPING COUNTRY
+        '',                           // SHIPPING PHONE NUMBER
+        '',                           // ITEM NAME
+        item.quantity.toString(),     // QUANTITY
+        '',                           // ITEM CODE/SKU
+        item.variantId,               // ITEM ID
+        '',                           // ITEM PRICE
+        '',                           // CURRENCY
+        '',                           // ITEM WEIGHT
+        '',                           // WEIGHT UNIT
+        '',                           // COLOR
+        '',                           // SIZE
+        '',                           // CUSTOM ATTRIBUTE
+        '',                           // IMAGE URL
+        '',                           // CONTRIBUTION TIME (UTC)
+        '',                           // EMAIL
+        '',                           // HS CODE
+        '',                           // ORIGIN COUNTRY
+        '',                           // TAX ID
+        item.carrier,                 // CARRIER CODE
+        item.trackingNumber,          // TRACKING NUMBER
+      ];
+
+      rows.push(row.join(','));
+    }
+
+    return rows.join('\n');
+  }
+
+  /**
+   * Create multipart form data for CSV upload
+   */
+  private createMultipartFormData(csvContent: string, boundary: string): string {
+    const parts: string[] = [];
+
+    // Add CSV file part
+    parts.push(`--${boundary}\r\n`);
+    parts.push('Content-Disposition: form-data; name="csv"; filename="tracking.csv"\r\n');
+    parts.push('Content-Type: text/csv\r\n');
+    parts.push('\r\n');
+    parts.push(csvContent);
+    parts.push('\r\n');
+    parts.push(`--${boundary}--\r\n`);
+
+    return parts.join('');
   }
 }

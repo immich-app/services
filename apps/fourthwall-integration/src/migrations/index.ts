@@ -137,4 +137,14 @@ export const migrations: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_product_keys_sent_at ON product_keys(sent_at);
     `,
   },
+  {
+    id: '008_add_tracking_uploaded_field',
+    name: 'Add tracking uploaded to Fourthwall field',
+    sql: `
+      -- Add tracking_uploaded_to_fourthwall field to fulfillment_orders
+      -- SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so we use a different approach
+      -- Check if column exists by attempting to add it, wrapped in a transaction
+      ALTER TABLE fulfillment_orders ADD COLUMN tracking_uploaded_to_fourthwall BOOLEAN NOT NULL DEFAULT FALSE;
+    `,
+  },
 ];

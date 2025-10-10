@@ -40,6 +40,7 @@ export interface FulfillmentOrder {
   shipped_at?: string;
   error_message?: string;
   retry_count: number;
+  tracking_uploaded_to_fourthwall: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -321,6 +322,8 @@ export interface Env {
   EMAIL_QUEUE: Queue;
   FOURTHWALL_USERNAME: string;
   FOURTHWALL_PASSWORD: string;
+  FOURTHWALL_USER_USERNAME: string;
+  FOURTHWALL_USER_PASSWORD: string;
   KUNAKI_API_USERNAME: string;
   KUNAKI_API_PASSWORD: string;
   CDCLICK_API_KEY: string;

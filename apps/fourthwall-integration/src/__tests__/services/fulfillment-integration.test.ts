@@ -75,6 +75,7 @@ describe('FulfillmentService - Product Key Integration', () => {
         provider: 'kunaki',
         status: 'pending',
         retry_count: 0,
+        tracking_uploaded_to_fourthwall: false,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       });
@@ -146,6 +147,7 @@ describe('FulfillmentService - Product Key Integration', () => {
         provider: 'kunaki',
         status: 'pending',
         retry_count: 0,
+        tracking_uploaded_to_fourthwall: false,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       });
@@ -217,6 +219,7 @@ describe('FulfillmentService - Product Key Integration', () => {
         provider: 'kunaki',
         status: 'pending',
         retry_count: 0,
+        tracking_uploaded_to_fourthwall: false,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       });
@@ -290,6 +293,7 @@ describe('FulfillmentService - Product Key Integration', () => {
         provider: 'kunaki',
         status: 'pending',
         retry_count: 0,
+        tracking_uploaded_to_fourthwall: false,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',
       });

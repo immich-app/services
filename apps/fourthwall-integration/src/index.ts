@@ -219,6 +219,9 @@ export default {
       console.log('[SCHEDULED] Starting CDClick status check (max 50 orders)');
       await fulfillmentService.processCDClickStatusUpdates();
 
+      console.log('[SCHEDULED] Starting tracking upload to Fourthwall via CSV');
+      await fulfillmentService.uploadTrackingToFourthwall();
+
       console.log('[SCHEDULED] Starting retry of failed orders');
       // await fulfillmentService.retryFailedOrders();
 
@@ -251,7 +254,13 @@ async function handleFourthwallWebhook(request: Request, env: Env): Promise<Resp
 
   const orderRepository = new OrderRepository(env.DB);
   const webhookRepository = new WebhookRepository(env.DB);
-  const fourthwallService = new FourthwallService(env.FOURTHWALL_USERNAME, env.FOURTHWALL_PASSWORD, orderRepository);
+  const fourthwallService = new FourthwallService(
+    env.FOURTHWALL_USERNAME,
+    env.FOURTHWALL_PASSWORD,
+    orderRepository,
+    env.FOURTHWALL_USER_USERNAME,
+    env.FOURTHWALL_USER_PASSWORD
+  );
 
   const isValidSignature = await fourthwallService.validateWebhookSignature(body, signature, env.WEBHOOK_SECRET);
   console.log('[FW-WEBHOOK] Signature validation result:', isValidSignature);
@@ -382,6 +391,10 @@ async function handleCronTrigger(request: Request, env: Env): Promise<Response> 
     await fulfillmentService.processCDClickStatusUpdates();
     console.log('[CRON] CDClick status check completed');
 
+    console.log('[CRON] Starting tracking upload to Fourthwall via CSV');
+    await fulfillmentService.uploadTrackingToFourthwall();
+    console.log('[CRON] Tracking upload completed');
+
     return new Response(
       JSON.stringify({
         message: 'Cron tasks completed successfully',
@@ -434,6 +447,8 @@ async function processQueueMessage(message: QueueMessage, env: Env): Promise<voi
             env.FOURTHWALL_USERNAME,
             env.FOURTHWALL_PASSWORD,
             orderRepository,
+            env.FOURTHWALL_USER_USERNAME,
+            env.FOURTHWALL_USER_PASSWORD
           );
           await fourthwallService.processWebhook(payload);
           console.log('[PROCESS-QUEUE] Fourthwall webhook processed successfully');
