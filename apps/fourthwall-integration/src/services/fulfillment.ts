@@ -631,11 +631,11 @@ export class FulfillmentService {
       console.log('[FULFILLMENT] CSV upload complete');
       console.log('[FULFILLMENT] Fulfilled order IDs:', uploadResult.fulfilledOrderIds);
 
-      // Separate orders into successful uploads and already-uploaded errors
-      const successfulOrderIds = new Set<string>(uploadResult.fulfilledOrderIds || []);
-      const alreadyUploadedOrderIds = new Set<string>();
-
       // Parse errors to find already-uploaded orders
+      // Fourthwall order IDs in errors are in different format than what we store,
+      // so we can't match them. Instead, assume all orders not in errors were successful.
+      const alreadyUploadedFourthwallOrderIds = new Set<string>();
+
       if (uploadResult.errors && uploadResult.errors.length > 0) {
         console.log('[FULFILLMENT] CSV upload had', uploadResult.errors.length, 'errors');
         console.log('[FULFILLMENT] Parsing errors for already-uploaded orders');
@@ -645,7 +645,7 @@ export class FulfillmentService {
           const match = error.match(/FulfillmentOrder\(([^)]+)\)/);
           if (match) {
             const fourthwallOrderId = match[1];
-            alreadyUploadedOrderIds.add(fourthwallOrderId);
+            alreadyUploadedFourthwallOrderIds.add(fourthwallOrderId);
             console.log('[FULFILLMENT] Found already-uploaded order in error:', fourthwallOrderId);
           } else {
             console.log('[FULFILLMENT] Could not parse error message:', error);
@@ -653,7 +653,7 @@ export class FulfillmentService {
         }
       }
 
-      // Map Fourthwall order IDs to fulfillment order IDs
+      // Map our fulfillment orders to Fourthwall order IDs to determine which had errors
       const successfulFulfillmentIds: string[] = [];
       const alreadyUploadedFulfillmentIds: string[] = [];
 
@@ -666,10 +666,12 @@ export class FulfillmentService {
         const { order } = orderWithItems;
         const fourthwallOrderId = order.fourthwall_order_id;
 
-        if (successfulOrderIds.has(fourthwallOrderId)) {
-          successfulFulfillmentIds.push(fulfillmentOrder.id);
-        } else if (alreadyUploadedOrderIds.has(fourthwallOrderId)) {
+        // If this order's ID is in the error list, mark as already uploaded (status 2)
+        // Otherwise, assume it was successfully uploaded (status 1)
+        if (alreadyUploadedFourthwallOrderIds.has(fourthwallOrderId)) {
           alreadyUploadedFulfillmentIds.push(fulfillmentOrder.id);
+        } else {
+          successfulFulfillmentIds.push(fulfillmentOrder.id);
         }
       }
 

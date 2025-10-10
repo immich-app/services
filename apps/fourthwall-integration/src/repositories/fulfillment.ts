@@ -168,7 +168,7 @@ export class FulfillmentRepository extends BaseRepository {
        AND status IN ('submitted', 'processing')
        AND provider_order_id IS NOT NULL
        ORDER BY created_at ASC
-       LIMIT 1`,
+       LIMIT 15`,
       [],
     );
     const orders = result.results || [];
@@ -184,7 +184,7 @@ export class FulfillmentRepository extends BaseRepository {
        AND status IN ('submitted', 'processing')
        AND provider_order_id IS NOT NULL
        ORDER BY created_at ASC
-       LIMIT 1`,
+       LIMIT 15`,
       [],
     );
     const orders = result.results || [];
@@ -206,9 +206,7 @@ export class FulfillmentRepository extends BaseRepository {
   }
 
   async getOrdersWithUnuploadedTracking(): Promise<FulfillmentOrder[]> {
-    console.log(
-      '[FULFILLMENT-REPO] Getting orders with tracking that needs to be uploaded to Fourthwall (limit 5 for testing)',
-    );
+    console.log('[FULFILLMENT-REPO] Getting orders with tracking that needs to be uploaded to Fourthwall');
     const result = await this.executeQuery<FulfillmentOrder>(
       `SELECT * FROM fulfillment_orders
        WHERE tracking_number IS NOT NULL
@@ -216,7 +214,7 @@ export class FulfillmentRepository extends BaseRepository {
        AND tracking_uploaded_to_fourthwall = 0
        AND status = 'shipped'
        ORDER BY shipped_at ASC
-       LIMIT 1`,
+       LIMIT 25`,
       [],
     );
     const orders = result.results || [];
