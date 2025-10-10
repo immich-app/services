@@ -114,9 +114,29 @@ describe('CDClickService', () => {
   describe('getOrderStatus', () => {
     it('should fetch order status successfully', async () => {
       const mockResponse = {
-        id: 'CDCLICK123',
-        status: 'processing',
-        tracking: null,
+        success: true,
+        errorText: '',
+        orders: [
+          {
+            id: 123,
+            custom_id: 'order-123',
+            orderDate: '2024-01-01',
+            shipping_address: {
+              first_name: 'John',
+              last_name: 'Doe',
+              email: 'john@example.com',
+              address_street: '123 Main St',
+              zip_code: '12345',
+              city: 'Test City',
+              country_code: 'UK',
+              phone_number: '1234567890',
+            },
+            isShipped: false,
+            flag: false,
+            shipping_fee: 10,
+            box_and_handling_fee: 2.5,
+          },
+        ],
       };
 
       mockFetch.mockResolvedValue({
@@ -124,11 +144,11 @@ describe('CDClickService', () => {
         json: () => Promise.resolve(mockResponse),
       });
 
-      const result = await cdclickService.getOrderStatus('CDCLICK123');
+      const result = await cdclickService.getOrderStatus('123');
 
       expect(result).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://wall.cdclick-europe.com/API/orders/CDCLICK123',
+        'https://wall.cdclick-europe.com/API/orders/123',
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: 'Bearer test-api-key',
@@ -137,15 +157,13 @@ describe('CDClickService', () => {
       );
     });
 
-    it('should return null for 404 responses', async () => {
+    it('should throw error for non-ok responses', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         status: 404,
       });
 
-      const result = await cdclickService.getOrderStatus('NONEXISTENT');
-
-      expect(result).toBeNull();
+      await expect(cdclickService.getOrderStatus('NONEXISTENT')).rejects.toThrow('CDClick API error: 404');
     });
   });
 });

@@ -35,4 +35,4 @@ max_batch_timeout = 30
 
 # Cron triggers
 [triggers]
-crons = ["0 */15 * * * *"] # Every 15 minutes for Kunaki status polling
+crons = ["0 */10 * * * *"] # Every 10 minutes for Kunaki and CDClick status polling (max 50 CDClick orders per run)

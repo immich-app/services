@@ -291,6 +291,86 @@ export class FulfillmentService {
     }
   }
 
+  async processCDClickStatusUpdates(): Promise<void> {
+    console.log('[FULFILLMENT] Processing CDClick status updates (max 50 orders)');
+    const pendingOrders = await this.fulfillmentRepository.getPendingCDClickOrders();
+    console.log('[FULFILLMENT] Found', pendingOrders.length, 'pending CDClick orders');
+
+    for (const fulfillmentOrder of pendingOrders) {
+      try {
+        console.log('[FULFILLMENT] Checking status for fulfillment order:', fulfillmentOrder.id);
+
+        if (!fulfillmentOrder.provider_order_id) {
+          console.log(`[FULFILLMENT] CDClick order ${fulfillmentOrder.id} has no provider order ID, skipping`);
+          continue;
+        }
+
+        console.log('[FULFILLMENT] Checking CDClick order:', fulfillmentOrder.provider_order_id);
+
+        const statusResponse = await this.cdclickService.checkOrderStatus(fulfillmentOrder.provider_order_id);
+        console.log('[FULFILLMENT] CDClick status response:', JSON.stringify(statusResponse));
+
+        if (statusResponse.Error) {
+          console.error(
+            `[FULFILLMENT] Error checking CDClick order ${fulfillmentOrder.provider_order_id}: ${statusResponse.Error}`,
+          );
+          continue;
+        }
+
+        const newStatus = this.cdclickService.mapCDClickStatusToFulfillmentStatus(statusResponse.Status);
+        console.log('[FULFILLMENT] Mapped status:', statusResponse.Status, '->', newStatus);
+        console.log('[FULFILLMENT] Current status:', fulfillmentOrder.status);
+
+        // Only mark as shipped if we have tracking information
+        if (newStatus === 'shipped' && !statusResponse.Tracking_Number) {
+          console.log('[FULFILLMENT] Order marked as shipped but no tracking number found, keeping status as processing');
+          // Don't update to shipped without tracking
+          if (fulfillmentOrder.status !== 'processing') {
+            await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'processing', {
+              shippedAt: statusResponse.Shipping_Date,
+            });
+            console.log(
+              `[FULFILLMENT] Updated CDClick order ${fulfillmentOrder.provider_order_id} status to processing (shipped without tracking)`,
+            );
+          }
+        } else if (newStatus !== fulfillmentOrder.status) {
+          console.log('[FULFILLMENT] Status changed, updating fulfillment order');
+          await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, newStatus as any, {
+            trackingNumber: statusResponse.Tracking_Number,
+            trackingUrl: statusResponse.Tracking_Url,
+            shippingCarrier: statusResponse.Carrier,
+            shippedAt: statusResponse.Shipping_Date,
+          });
+
+          if (newStatus === 'shipped' && statusResponse.Tracking_Number && statusResponse.Carrier) {
+            console.log(
+              '[FULFILLMENT] Order shipped with tracking, updating Fourthwall:',
+              statusResponse.Tracking_Number,
+              'Carrier:',
+              statusResponse.Carrier,
+            );
+            await this.updateFourthwallWithTracking(
+              fulfillmentOrder.order_id,
+              statusResponse.Tracking_Number,
+              statusResponse.Tracking_Url,
+              statusResponse.Carrier,
+            );
+
+            console.log('[FULFILLMENT] Updating order status to fulfilled');
+            await this.orderRepository.updateOrderStatus(fulfillmentOrder.order_id, 'fulfilled');
+          }
+
+          console.log(
+            `[FULFILLMENT] Updated CDClick order ${fulfillmentOrder.provider_order_id} status to ${newStatus}`,
+          );
+        }
+      } catch (error) {
+        console.error(`[FULFILLMENT] Error processing CDClick status update for order ${fulfillmentOrder.id}:`, error);
+        console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
+      }
+    }
+  }
+
   async processCDClickWebhook(webhook: any): Promise<void> {
     console.log('[FULFILLMENT] Processing CDClick webhook');
     console.log('[FULFILLMENT] Webhook data:', JSON.stringify(webhook));

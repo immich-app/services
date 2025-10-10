@@ -160,7 +160,7 @@ export class CDClickService {
     }
   }
 
-  async getOrderStatus(cdclickOrderId: string): Promise<CDClickOrderResponse | null> {
+  async getOrderStatus(cdclickOrderId: string): Promise<CDClickOrderResponse> {
     console.log('[CDCLICK] Getting order status for:', cdclickOrderId);
 
     try {
@@ -177,10 +177,6 @@ export class CDClickService {
       console.log('[CDCLICK] Response status:', response.status);
 
       if (!response.ok) {
-        if (response.status === 404) {
-          console.log('[CDCLICK] Order not found');
-          return null;
-        }
         console.error('[CDCLICK] API error:', response.status);
         throw new Error(`CDClick API error: ${response.status}`);
       }
@@ -192,6 +188,69 @@ export class CDClickService {
       console.error(`[CDCLICK] Error fetching order ${cdclickOrderId}:`, error);
       console.error('[CDCLICK] Error stack:', error instanceof Error ? error.stack : 'No stack');
       throw error;
+    }
+  }
+
+  async checkOrderStatus(cdclickOrderId: string): Promise<{
+    Order_Id: string;
+    Status: string;
+    Tracking_Number?: string;
+    Tracking_Url?: string;
+    Carrier?: string;
+    Shipping_Date?: string;
+    Error?: string;
+  }> {
+    console.log('[CDCLICK] Checking order status for:', cdclickOrderId);
+
+    try {
+      const response = await this.getOrderStatus(cdclickOrderId);
+
+      if (!response.success) {
+        console.log('[CDCLICK] API returned error:', response.errorText);
+        return {
+          Order_Id: cdclickOrderId,
+          Status: 'Error',
+          Error: response.errorText || 'Unknown error',
+        };
+      }
+
+      if (!response.orders || response.orders.length === 0) {
+        console.log('[CDCLICK] No orders found in response');
+        return {
+          Order_Id: cdclickOrderId,
+          Status: 'Error',
+          Error: 'Order not found',
+        };
+      }
+
+      const order = response.orders[0];
+      console.log('[CDCLICK] Order ID:', order.id);
+      console.log('[CDCLICK] Is shipped:', order.isShipped);
+      console.log('[CDCLICK] Tracking:', order.courier_tracking || 'not available');
+
+      // Determine status based on shipping state
+      let status = 'processing';
+      if (order.isShipped) {
+        status = 'shipped';
+      }
+
+      return {
+        Order_Id: order.id.toString(),
+        Status: status,
+        Tracking_Number: order.courier_tracking,
+        Tracking_Url: undefined, // CDClick doesn't provide tracking URL in the API
+        Carrier: order.courier_name,
+        Shipping_Date: order.shipDate,
+        Error: undefined,
+      };
+    } catch (error) {
+      console.error(`[CDCLICK] Error checking order status for ${cdclickOrderId}:`, error);
+      console.error('[CDCLICK] Error stack:', error instanceof Error ? error.stack : 'No stack');
+      return {
+        Order_Id: cdclickOrderId,
+        Status: 'Error',
+        Error: error instanceof Error ? error.message : 'Network error',
+      };
     }
   }
 

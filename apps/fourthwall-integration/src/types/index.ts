@@ -278,14 +278,31 @@ export interface CDClickOrderCreateResponse {
 }
 
 export interface CDClickOrderResponse {
-  id: string;
-  reference: string;
-  status: string;
-  tracking?: {
-    number: string;
-    url: string;
-    carrier: string;
-  };
+  success: boolean;
+  errorText: string;
+  orders: Array<{
+    id: number;
+    custom_id: string;
+    orderDate: string;
+    shipping_address: {
+      first_name: string;
+      last_name: string;
+      email: string;
+      address_street: string;
+      zip_code: string;
+      city: string;
+      state_province_code?: string;
+      country_code: string;
+      phone_number: string;
+    };
+    isShipped: boolean;
+    shipDate?: string;
+    courier_name?: string;
+    courier_tracking?: string;
+    flag: boolean;
+    shipping_fee: number;
+    box_and_handling_fee: number;
+  }>;
 }
 
 export interface FulfillmentResult {

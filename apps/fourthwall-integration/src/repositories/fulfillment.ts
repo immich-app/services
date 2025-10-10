@@ -166,11 +166,28 @@ export class FulfillmentRepository extends BaseRepository {
        WHERE provider = 'kunaki'
        AND status IN ('submitted', 'processing')
        AND provider_order_id IS NOT NULL
-       ORDER BY created_at ASC`,
+       ORDER BY created_at ASC
+       LIMIT 1`,
       [],
     );
     const orders = result.results || [];
     console.log('[FULFILLMENT-REPO] Found', orders.length, 'pending Kunaki orders');
+    return orders;
+  }
+
+  async getPendingCDClickOrders(): Promise<FulfillmentOrder[]> {
+    console.log('[FULFILLMENT-REPO] Getting pending CDClick orders (limit 50)');
+    const result = await this.executeQuery<FulfillmentOrder>(
+      `SELECT * FROM fulfillment_orders
+       WHERE provider = 'cdclick-europe'
+       AND status IN ('submitted', 'processing')
+       AND provider_order_id IS NOT NULL
+       ORDER BY created_at ASC
+       LIMIT 1`,
+      [],
+    );
+    const orders = result.results || [];
+    console.log('[FULFILLMENT-REPO] Found', orders.length, 'pending CDClick orders');
     return orders;
   }
 
