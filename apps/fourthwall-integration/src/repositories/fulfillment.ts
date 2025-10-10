@@ -206,7 +206,7 @@ export class FulfillmentRepository extends BaseRepository {
   }
 
   async getOrdersWithUnuploadedTracking(): Promise<FulfillmentOrder[]> {
-    console.log('[FULFILLMENT-REPO] Getting orders with tracking that needs to be uploaded to Fourthwall');
+    console.log('[FULFILLMENT-REPO] Getting orders with tracking that needs to be uploaded to Fourthwall (limit 1 for testing)');
     const result = await this.executeQuery<FulfillmentOrder>(
       `SELECT * FROM fulfillment_orders
        WHERE tracking_number IS NOT NULL
@@ -214,7 +214,7 @@ export class FulfillmentRepository extends BaseRepository {
        AND tracking_uploaded_to_fourthwall = FALSE
        AND status = 'shipped'
        ORDER BY shipped_at ASC
-       LIMIT 100`,
+       LIMIT 1`,
       [],
     );
     const orders = result.results || [];
