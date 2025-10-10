@@ -5,7 +5,6 @@ import {
   WebhookRepository,
 } from './repositories/index.js';
 import {
-  CDClickService,
   EmailService,
   EmailTemplateService,
   FourthwallService,
@@ -75,11 +74,6 @@ export default {
         case '/webhook/fourthwall': {
           console.log(`[FETCH] Handling Fourthwall webhook`);
           return await handleFourthwallWebhook(request, env);
-        }
-
-        case '/webhook/cdclick': {
-          console.log(`[FETCH] Handling CDClick webhook`);
-          return await handleCDClickWebhook(request, env);
         }
 
         case '/cron': {
@@ -156,6 +150,12 @@ export default {
         }
 
         default: {
+          // CDClick webhook handling is disabled - using cron-based status updates instead
+          // if (url.pathname.startsWith('/webhook/cdclick/')) {
+          //   console.log(`[FETCH] Handling CDClick webhook with path-based secret`);
+          //   return await handleCDClickWebhook(request, env);
+          // }
+
           return new Response(
             JSON.stringify({
               error: 'Not Found',
@@ -215,6 +215,9 @@ export default {
     try {
       console.log('[SCHEDULED] Starting Kunaki status check');
       await fulfillmentService.processKunakiStatusUpdates();
+
+      console.log('[SCHEDULED] Starting CDClick status check (max 50 orders)');
+      await fulfillmentService.processCDClickStatusUpdates();
 
       console.log('[SCHEDULED] Starting retry of failed orders');
       // await fulfillmentService.retryFailedOrders();
@@ -292,6 +295,8 @@ async function handleFourthwallWebhook(request: Request, env: Env): Promise<Resp
   }
 }
 
+// CDClick webhook handling disabled - using cron-based status updates instead
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function handleCDClickWebhook(request: Request, env: Env): Promise<Response> {
   console.log('[CD-WEBHOOK] Processing CDClick webhook');
 
@@ -300,11 +305,22 @@ async function handleCDClickWebhook(request: Request, env: Env): Promise<Respons
     return new Response('Method not allowed', { status: 405 });
   }
 
-  const signature = request.headers.get('X-CDClick-Signature');
-  console.log('[CD-WEBHOOK] Signature present:', !!signature);
-  if (!signature) {
-    console.log('[CD-WEBHOOK] Missing signature header');
-    return new Response('Missing signature', { status: 401 });
+  // CDClick doesn't support custom headers, so the secret is passed in the URL path
+  // Expected format: /webhook/cdclick/{secret}
+  const url = new URL(request.url);
+  const pathParts = url.pathname.split('/');
+  const secretFromPath = pathParts[3]; // /webhook/cdclick/{secret}
+
+  console.log('[CD-WEBHOOK] Secret in path:', !!secretFromPath);
+
+  if (!secretFromPath) {
+    console.log('[CD-WEBHOOK] Missing secret in URL path');
+    return new Response('Missing secret in path', { status: 401 });
+  }
+
+  if (secretFromPath !== env.WEBHOOK_SECRET) {
+    console.log('[CD-WEBHOOK] Invalid secret in path');
+    return new Response('Invalid secret', { status: 401 });
   }
 
   const body = await request.text();
@@ -312,14 +328,6 @@ async function handleCDClickWebhook(request: Request, env: Env): Promise<Respons
   console.log('[CD-WEBHOOK] Body preview:', body.slice(0, 200));
 
   const webhookRepository = new WebhookRepository(env.DB);
-  const cdclickService = new CDClickService(env.CDCLICK_API_KEY, env.ENVIRONMENT, env.CDCLICK_IDLE_MODE);
-
-  const isValidSignature = await cdclickService.validateWebhookSignature(body, signature, env.WEBHOOK_SECRET);
-  console.log('[CD-WEBHOOK] Signature validation result:', isValidSignature);
-  if (!isValidSignature) {
-    console.log('[CD-WEBHOOK] Invalid signature, rejecting');
-    return new Response('Invalid signature', { status: 401 });
-  }
 
   try {
     const payload: CDClickWebhook = JSON.parse(body);
@@ -362,13 +370,17 @@ async function handleCronTrigger(request: Request, env: Env): Promise<Response> 
   }
 
   try {
-    console.log('[CRON] Starting Kunaki status check');
     const orderRepository = new OrderRepository(env.DB);
     const fulfillmentRepository = new FulfillmentRepository(env.DB);
     const fulfillmentService = new FulfillmentService(env, orderRepository, fulfillmentRepository);
 
+    console.log('[CRON] Starting Kunaki status check');
     await fulfillmentService.processKunakiStatusUpdates();
     console.log('[CRON] Kunaki status check completed');
+
+    console.log('[CRON] Starting CDClick status check (max 50 orders)');
+    await fulfillmentService.processCDClickStatusUpdates();
+    console.log('[CRON] CDClick status check completed');
 
     return new Response(
       JSON.stringify({
@@ -493,10 +505,11 @@ async function processQueueMessage(message: QueueMessage, env: Env): Promise<voi
             }
           }
         } else if (source === 'cdclick-europe') {
-          console.log('[PROCESS-QUEUE] Processing CDClick webhook payload');
-          const fulfillmentService = new FulfillmentService(env, orderRepository, fulfillmentRepository);
-          await fulfillmentService.processCDClickWebhook(payload);
-          console.log('[PROCESS-QUEUE] CDClick webhook processed successfully');
+          console.log('[PROCESS-QUEUE] CDClick webhooks disabled - using cron-based status updates');
+          // CDClick webhook processing disabled - using cron-based status updates instead
+          // const fulfillmentService = new FulfillmentService(env, orderRepository, fulfillmentRepository);
+          // await fulfillmentService.processCDClickWebhook(payload);
+          // console.log('[PROCESS-QUEUE] CDClick webhook processed successfully');
         }
 
         console.log(`[PROCESS-QUEUE] Marking webhook ${webhookId} as processed`);
