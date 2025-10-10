@@ -172,6 +172,16 @@ resource "cloudflare_worker_version" "worker" {
       text = var.fourthwall_password
     },
     {
+      name = "FOURTHWALL_USER_USERNAME"
+      type = "secret_text"
+      text = var.fourthwall_user_username
+    },
+    {
+      name = "FOURTHWALL_USER_PASSWORD"
+      type = "secret_text"
+      text = var.fourthwall_user_password
+    },
+    {
       name = "KUNAKI_API_USERNAME"
       type = "secret_text"
       text = var.kunaki_api_username
@@ -287,6 +297,16 @@ resource "cloudflare_worker_version" "queue_processor" {
       name = "FOURTHWALL_PASSWORD"
       type = "secret_text"
       text = var.fourthwall_password
+    },
+    {
+      name = "FOURTHWALL_USER_USERNAME"
+      type = "secret_text"
+      text = var.fourthwall_user_username
+    },
+    {
+      name = "FOURTHWALL_USER_PASSWORD"
+      type = "secret_text"
+      text = var.fourthwall_user_password
     },
     {
       name = "KUNAKI_API_USERNAME"

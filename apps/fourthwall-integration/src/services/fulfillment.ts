@@ -31,7 +31,13 @@ export class FulfillmentService {
     console.log('[FULFILLMENT] CDClick API key:', env.CDCLICK_API_KEY ? 'provided' : 'missing');
     this.kunakiService = new KunakiService(env.KUNAKI_API_USERNAME, env.KUNAKI_API_PASSWORD);
     this.cdclickService = new CDClickService(env.CDCLICK_API_KEY, env.ENVIRONMENT, env.CDCLICK_IDLE_MODE);
-    this.fourthwallService = new FourthwallService(env.FOURTHWALL_USERNAME, env.FOURTHWALL_PASSWORD, orderRepository);
+    this.fourthwallService = new FourthwallService(
+      env.FOURTHWALL_USERNAME,
+      env.FOURTHWALL_PASSWORD,
+      orderRepository,
+      env.FOURTHWALL_USER_USERNAME,
+      env.FOURTHWALL_USER_PASSWORD,
+    );
     console.log('[FULFILLMENT] All services initialized');
   }
 
@@ -98,6 +104,7 @@ export class FulfillmentService {
           provider,
           status: 'pending',
           retry_count: 0,
+          tracking_uploaded_to_fourthwall: false,
         });
 
         // Queue product key emails early, independent of fulfillment success
@@ -128,7 +135,9 @@ export class FulfillmentService {
             shippingCarrier: result.carrier,
           });
           console.log(`[FULFILLMENT] Successfully submitted order ${orderId} to ${fulfillmentOrder.provider}`);
-          console.log('[FULFILLMENT] Order will be marked as fulfilled when tracking is received via cron job or webhook');
+          console.log(
+            '[FULFILLMENT] Order will be marked as fulfilled when tracking is received via cron job or webhook',
+          );
         } else {
           console.log('[FULFILLMENT] Order has no items with SKU mappings - marking as skipped');
           await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'skipped', {
@@ -244,7 +253,9 @@ export class FulfillmentService {
 
         // Only mark as shipped if we have tracking information
         if (newStatus === 'shipped' && (!statusResponse.Tracking_Number || !statusResponse.Tracking_Type)) {
-          console.log('[FULFILLMENT] Order marked as shipped but no tracking number found, keeping status as processing');
+          console.log(
+            '[FULFILLMENT] Order marked as shipped but no tracking number found, keeping status as processing',
+          );
           // Don't update to shipped without tracking
           if (fulfillmentOrder.status !== 'processing') {
             await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'processing', {
@@ -264,17 +275,11 @@ export class FulfillmentService {
 
           if (newStatus === 'shipped' && statusResponse.Tracking_Number) {
             console.log(
-              '[FULFILLMENT] Order shipped with tracking, updating Fourthwall:',
+              '[FULFILLMENT] Order shipped with tracking:',
               statusResponse.Tracking_Number,
               'Carrier: USPS (Kunaki always uses USPS)',
             );
-            // Kunaki always uses USPS for fulfillment, regardless of what Tracking_Type returns
-            await this.updateFourthwallWithTracking(
-              fulfillmentOrder.order_id,
-              statusResponse.Tracking_Number,
-              undefined,
-              'USPS',
-            );
+            console.log('[FULFILLMENT] Tracking will be uploaded to Fourthwall via CSV in the next cron run');
 
             console.log('[FULFILLMENT] Updating order status to fulfilled');
             await this.orderRepository.updateOrderStatus(fulfillmentOrder.order_id, 'fulfilled');
@@ -323,7 +328,9 @@ export class FulfillmentService {
 
         // Only mark as shipped if we have tracking information
         if (newStatus === 'shipped' && !statusResponse.Tracking_Number) {
-          console.log('[FULFILLMENT] Order marked as shipped but no tracking number found, keeping status as processing');
+          console.log(
+            '[FULFILLMENT] Order marked as shipped but no tracking number found, keeping status as processing',
+          );
           // Don't update to shipped without tracking
           if (fulfillmentOrder.status !== 'processing') {
             await this.fulfillmentRepository.updateFulfillmentOrderStatus(fulfillmentOrder.id, 'processing', {
@@ -344,17 +351,12 @@ export class FulfillmentService {
 
           if (newStatus === 'shipped' && statusResponse.Tracking_Number && statusResponse.Carrier) {
             console.log(
-              '[FULFILLMENT] Order shipped with tracking, updating Fourthwall:',
+              '[FULFILLMENT] Order shipped with tracking:',
               statusResponse.Tracking_Number,
               'Carrier:',
               statusResponse.Carrier,
             );
-            await this.updateFourthwallWithTracking(
-              fulfillmentOrder.order_id,
-              statusResponse.Tracking_Number,
-              statusResponse.Tracking_Url,
-              statusResponse.Carrier,
-            );
+            console.log('[FULFILLMENT] Tracking will be uploaded to Fourthwall via CSV in the next cron run');
 
             console.log('[FULFILLMENT] Updating order status to fulfilled');
             await this.orderRepository.updateOrderStatus(fulfillmentOrder.order_id, 'fulfilled');
@@ -403,13 +405,8 @@ export class FulfillmentService {
       );
 
       if (processedWebhook.status === 'shipped' && processedWebhook.trackingNumber) {
-        console.log('[FULFILLMENT] Order shipped, updating Fourthwall with tracking');
-        await this.updateFourthwallWithTracking(
-          fulfillmentOrder.order_id,
-          processedWebhook.trackingNumber,
-          processedWebhook.trackingUrl,
-          processedWebhook.carrier,
-        );
+        console.log('[FULFILLMENT] Order shipped with tracking');
+        console.log('[FULFILLMENT] Tracking will be uploaded to Fourthwall via CSV in the next cron run');
 
         console.log('[FULFILLMENT] Updating order status to fulfilled');
         await this.orderRepository.updateOrderStatus(fulfillmentOrder.order_id, 'fulfilled');
@@ -473,48 +470,6 @@ export class FulfillmentService {
     }
   }
 
-  private async updateFourthwallWithTracking(
-    orderId: string,
-    trackingNumber: string,
-    trackingUrl?: string,
-    carrier?: string,
-  ): Promise<void> {
-    console.log('[FULFILLMENT] Updating Fourthwall with tracking');
-    console.log('[FULFILLMENT] Order ID:', orderId);
-    console.log('[FULFILLMENT] Tracking:', trackingNumber);
-
-    try {
-      const order = await this.orderRepository.getOrderById(orderId);
-      if (!order) {
-        console.error(`[FULFILLMENT] Order not found for tracking update: ${orderId}`);
-        return;
-      }
-      console.log('[FULFILLMENT] Found order, Fourthwall ID:', order.fourthwall_order_id);
-
-      // Get order items to pass to createFulfillment
-      const items = await this.orderRepository.getOrderItems(orderId);
-      console.log('[FULFILLMENT] Found', items.length, 'items for fulfillment');
-
-      if (!carrier) {
-        throw new Error(`Cannot create fulfillment without carrier information for order ${orderId}`);
-      }
-
-      await this.fourthwallService.createFulfillment(
-        order.fourthwall_order_id,
-        items.map((item) => ({
-          fourthwall_variant_id: item.fourthwall_variant_id,
-          quantity: item.quantity,
-        })),
-        trackingNumber,
-        carrier,
-      );
-      console.log('[FULFILLMENT] Successfully created Fourthwall fulfillment with tracking');
-    } catch (error) {
-      console.error(`[FULFILLMENT] Error updating Fourthwall with tracking for order ${orderId}:`, error);
-      console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
-    }
-  }
-
   private async processProductKeyVariants(order: Order, items: OrderItem[]): Promise<void> {
     console.log('[FULFILLMENT] Processing product key variants for order:', order.id);
 
@@ -564,5 +519,101 @@ export class FulfillmentService {
     }
 
     console.log('[FULFILLMENT] Completed processing product key variants for order:', order.id);
+  }
+
+  async uploadTrackingToFourthwall(): Promise<void> {
+    console.log('[FULFILLMENT] Starting tracking upload to Fourthwall via CSV');
+
+    try {
+      // Get all orders with tracking that hasn't been uploaded yet
+      const ordersToUpload = await this.fulfillmentRepository.getOrdersWithUnuploadedTracking();
+
+      if (ordersToUpload.length === 0) {
+        console.log('[FULFILLMENT] No orders with unuploaded tracking found');
+        return;
+      }
+
+      console.log('[FULFILLMENT] Found', ordersToUpload.length, 'orders with tracking to upload');
+
+      // Build tracking data array for CSV upload
+      const trackingData: Array<{
+        orderId: string;
+        variantId: string;
+        quantity: number;
+        trackingNumber: string;
+        carrier: string;
+        shippingAddress: string;
+        shippingCountry: string;
+      }> = [];
+
+      const fulfillmentIdsToMark: string[] = [];
+
+      for (const fulfillmentOrder of ordersToUpload) {
+        try {
+          console.log('[FULFILLMENT] Processing order:', fulfillmentOrder.order_id);
+
+          // Get order details
+          const orderWithItems = await this.orderRepository.getOrderWithItems(fulfillmentOrder.order_id);
+          if (!orderWithItems) {
+            console.error(`[FULFILLMENT] Order not found: ${fulfillmentOrder.order_id}`);
+            continue;
+          }
+
+          const { order, items } = orderWithItems;
+
+          // Add each item to the tracking data
+          for (const item of items) {
+            if (!item.fourthwall_variant_id) {
+              console.log(`[FULFILLMENT] Skipping item without variant ID: ${item.product_name}`);
+              continue;
+            }
+
+            trackingData.push({
+              orderId: order.fourthwall_order_id,
+              variantId: item.fourthwall_variant_id,
+              quantity: item.quantity,
+              trackingNumber: fulfillmentOrder.tracking_number!,
+              carrier: fulfillmentOrder.shipping_carrier!,
+              shippingAddress: order.shipping_address_line1,
+              shippingCountry: order.shipping_country,
+            });
+          }
+
+          fulfillmentIdsToMark.push(fulfillmentOrder.id);
+        } catch (error) {
+          console.error(`[FULFILLMENT] Error processing order ${fulfillmentOrder.order_id} for CSV upload:`, error);
+          // Continue with other orders even if one fails
+        }
+      }
+
+      if (trackingData.length === 0) {
+        console.log('[FULFILLMENT] No valid tracking data to upload');
+        return;
+      }
+
+      console.log('[FULFILLMENT] Uploading tracking data for', trackingData.length, 'items');
+
+      // Upload tracking CSV to Fourthwall
+      const uploadResult = await this.fourthwallService.uploadTrackingCsv(trackingData);
+
+      console.log('[FULFILLMENT] CSV upload complete');
+      console.log('[FULFILLMENT] Fulfilled order IDs:', uploadResult.fulfilledOrderIds);
+
+      if (uploadResult.errors && uploadResult.errors.length > 0) {
+        console.error('[FULFILLMENT] CSV upload had errors:', uploadResult.errors);
+        // Don't mark orders as uploaded if there were errors
+        // They will be retried on next cron run
+      } else {
+        // Mark all processed orders as uploaded
+        await this.fulfillmentRepository.markTrackingAsUploaded(fulfillmentIdsToMark);
+        console.log('[FULFILLMENT] Marked', fulfillmentIdsToMark.length, 'orders as uploaded');
+      }
+
+      console.log('[FULFILLMENT] Tracking upload to Fourthwall completed successfully');
+    } catch (error) {
+      console.error('[FULFILLMENT] Error uploading tracking to Fourthwall:', error);
+      console.error('[FULFILLMENT] Error stack:', error instanceof Error ? error.stack : 'No stack');
+      throw error;
+    }
   }
 }

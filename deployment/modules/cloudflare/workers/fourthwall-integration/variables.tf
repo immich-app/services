@@ -18,6 +18,18 @@ variable "fourthwall_password" {
   sensitive   = true
 }
 
+variable "fourthwall_user_username" {
+  description = "Username for Fourthwall user API (for CSV upload)"
+  type        = string
+  sensitive   = true
+}
+
+variable "fourthwall_user_password" {
+  description = "Password for Fourthwall user API (for CSV upload)"
+  type        = string
+  sensitive   = true
+}
+
 variable "kunaki_api_username" {
   description = "Username for Kunaki API"
   type        = string
