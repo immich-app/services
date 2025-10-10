@@ -216,6 +216,7 @@ export class FourthwallService {
   async uploadTrackingCsv(trackingData: Array<{
     orderId: string;
     variantId: string;
+    sku: string;
     quantity: number;
     trackingNumber: string;
     carrier: string;
@@ -237,6 +238,8 @@ export class FourthwallService {
       // Generate CSV content
       const csvContent = this.generateTrackingCsv(trackingData);
       console.log('[FW-SERVICE] Generated CSV with', csvContent.split('\n').length - 1, 'rows');
+      console.log('[FW-SERVICE] CSV content:');
+      console.log(csvContent);
 
       // Create FormData for multipart upload
       const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
@@ -265,6 +268,8 @@ export class FourthwallService {
 
       const result = await response.json() as { errors: string[]; fulfilledOrderIds: string[] };
       console.log('[FW-SERVICE] Upload successful');
+      console.log('[FW-SERVICE] Full response from Fourthwall:');
+      console.log(JSON.stringify(result, null, 2));
       console.log('[FW-SERVICE] Fulfilled orders:', result.fulfilledOrderIds?.length || 0);
       console.log('[FW-SERVICE] Errors:', result.errors?.length || 0);
 
@@ -286,6 +291,7 @@ export class FourthwallService {
   private generateTrackingCsv(trackingData: Array<{
     orderId: string;
     variantId: string;
+    sku: string;
     quantity: number;
     trackingNumber: string;
     carrier: string;
@@ -350,7 +356,7 @@ export class FourthwallService {
         '',                           // SHIPPING PHONE NUMBER
         '',                           // ITEM NAME
         item.quantity.toString(),     // QUANTITY
-        '',                           // ITEM CODE/SKU
+        item.sku,                     // ITEM CODE/SKU
         item.variantId,               // ITEM ID
         '',                           // ITEM PRICE
         '',                           // CURRENCY

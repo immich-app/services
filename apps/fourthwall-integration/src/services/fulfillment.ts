@@ -14,6 +14,7 @@ import { CDClickService, FourthwallService, KunakiService } from './index.js';
 const PRODUCT_KEY_VARIANT_IDS = {
   CLIENT_KEY: '1a67c752-4293-4b60-b4c7-fc9ad060d9eb',
   SERVER_KEY: '9f1c1bce-dc6f-4471-96b3-e0b2f5a5b0fa',
+  NO_KEY: '080a9d6d-3087-4ddd-8050-0d323d74f0eb',
 } as const;
 
 export class FulfillmentService {
@@ -104,7 +105,7 @@ export class FulfillmentService {
           provider,
           status: 'pending',
           retry_count: 0,
-          tracking_uploaded_to_fourthwall: false,
+          tracking_uploaded_to_fourthwall: 0,
         });
 
         // Queue product key emails early, independent of fulfillment success
@@ -521,6 +522,28 @@ export class FulfillmentService {
     console.log('[FULFILLMENT] Completed processing product key variants for order:', order.id);
   }
 
+  private mapVariantToSku(variantId: string): string | null {
+    const variantMapping: Record<string, string> = {
+      [PRODUCT_KEY_VARIANT_IDS.CLIENT_KEY]: 'WVXN-R1W0500', // Client key SKU
+      [PRODUCT_KEY_VARIANT_IDS.SERVER_KEY]: 'WVXN-PRV0400', // Server key SKU
+      [PRODUCT_KEY_VARIANT_IDS.NO_KEY]: 'WVXN-AGQ0C00',
+    };
+
+    return variantMapping[variantId] || null;
+  }
+
+  private normalizeCarrierCode(carrier: string): string {
+    // Map specific carrier codes to their normalized forms
+    switch (carrier.toLowerCase()) {
+      case 'http://usps.com': {
+        return 'USPS';
+      }
+      default: {
+        return carrier;
+      }
+    }
+  }
+
   async uploadTrackingToFourthwall(): Promise<void> {
     console.log('[FULFILLMENT] Starting tracking upload to Fourthwall via CSV');
 
@@ -539,6 +562,7 @@ export class FulfillmentService {
       const trackingData: Array<{
         orderId: string;
         variantId: string;
+        sku: string;
         quantity: number;
         trackingNumber: string;
         carrier: string;
@@ -568,12 +592,20 @@ export class FulfillmentService {
               continue;
             }
 
+            // Map variant ID to SKU
+            const sku = this.mapVariantToSku(item.fourthwall_variant_id);
+            if (!sku) {
+              console.log(`[FULFILLMENT] No SKU mapping for variant: ${item.fourthwall_variant_id}`);
+              continue;
+            }
+
             trackingData.push({
               orderId: order.fourthwall_order_id,
               variantId: item.fourthwall_variant_id,
+              sku,
               quantity: item.quantity,
               trackingNumber: fulfillmentOrder.tracking_number!,
-              carrier: fulfillmentOrder.shipping_carrier!,
+              carrier: this.normalizeCarrierCode(fulfillmentOrder.shipping_carrier!),
               shippingAddress: order.shipping_address_line1,
               shippingCountry: order.shipping_country,
             });
@@ -599,14 +631,58 @@ export class FulfillmentService {
       console.log('[FULFILLMENT] CSV upload complete');
       console.log('[FULFILLMENT] Fulfilled order IDs:', uploadResult.fulfilledOrderIds);
 
+      // Separate orders into successful uploads and already-uploaded errors
+      const successfulOrderIds = new Set<string>(uploadResult.fulfilledOrderIds || []);
+      const alreadyUploadedOrderIds = new Set<string>();
+
+      // Parse errors to find already-uploaded orders
       if (uploadResult.errors && uploadResult.errors.length > 0) {
-        console.error('[FULFILLMENT] CSV upload had errors:', uploadResult.errors);
-        // Don't mark orders as uploaded if there were errors
-        // They will be retried on next cron run
-      } else {
-        // Mark all processed orders as uploaded
-        await this.fulfillmentRepository.markTrackingAsUploaded(fulfillmentIdsToMark);
-        console.log('[FULFILLMENT] Marked', fulfillmentIdsToMark.length, 'orders as uploaded');
+        console.log('[FULFILLMENT] CSV upload had', uploadResult.errors.length, 'errors');
+        console.log('[FULFILLMENT] Parsing errors for already-uploaded orders');
+
+        for (const error of uploadResult.errors) {
+          // Error format: "FulfillmentOrder(fbf1d1b1-90d7-466d-a6dd-a67c7d471fe8) variant(9f1c1bce-dc6f-4471-96b3-e0b2f5a5b0fa) 0 < 1"
+          const match = error.match(/FulfillmentOrder\(([^)]+)\)/);
+          if (match) {
+            const fourthwallOrderId = match[1];
+            alreadyUploadedOrderIds.add(fourthwallOrderId);
+            console.log('[FULFILLMENT] Found already-uploaded order in error:', fourthwallOrderId);
+          } else {
+            console.log('[FULFILLMENT] Could not parse error message:', error);
+          }
+        }
+      }
+
+      // Map Fourthwall order IDs to fulfillment order IDs
+      const successfulFulfillmentIds: string[] = [];
+      const alreadyUploadedFulfillmentIds: string[] = [];
+
+      for (const fulfillmentOrder of ordersToUpload) {
+        const orderWithItems = await this.orderRepository.getOrderWithItems(fulfillmentOrder.order_id);
+        if (!orderWithItems) {
+          continue;
+        }
+
+        const { order } = orderWithItems;
+        const fourthwallOrderId = order.fourthwall_order_id;
+
+        if (successfulOrderIds.has(fourthwallOrderId)) {
+          successfulFulfillmentIds.push(fulfillmentOrder.id);
+        } else if (alreadyUploadedOrderIds.has(fourthwallOrderId)) {
+          alreadyUploadedFulfillmentIds.push(fulfillmentOrder.id);
+        }
+      }
+
+      // Mark successfully uploaded orders with status 1
+      if (successfulFulfillmentIds.length > 0) {
+        await this.fulfillmentRepository.markTrackingAsUploaded(successfulFulfillmentIds, 1);
+        console.log('[FULFILLMENT] Marked', successfulFulfillmentIds.length, 'orders as successfully uploaded (status 1)');
+      }
+
+      // Mark already-uploaded orders with status 2
+      if (alreadyUploadedFulfillmentIds.length > 0) {
+        await this.fulfillmentRepository.markTrackingAsUploaded(alreadyUploadedFulfillmentIds, 2);
+        console.log('[FULFILLMENT] Marked', alreadyUploadedFulfillmentIds.length, 'orders as already uploaded (status 2)');
       }
 
       console.log('[FULFILLMENT] Tracking upload to Fourthwall completed successfully');

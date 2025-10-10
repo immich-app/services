@@ -40,7 +40,7 @@ export interface FulfillmentOrder {
   shipped_at?: string;
   error_message?: string;
   retry_count: number;
-  tracking_uploaded_to_fourthwall: boolean;
+  tracking_uploaded_to_fourthwall: number; // 0 = not uploaded, 1 = uploaded successfully, 2 = already uploaded
   created_at: string;
   updated_at: string;
 }
