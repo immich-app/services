@@ -232,7 +232,7 @@ resource "cloudflare_worker_version" "worker" {
 resource "cloudflare_workers_cron_trigger" "worker_cron" {
   account_id  = var.cloudflare_account_id
   script_name = cloudflare_worker.worker.name
-  schedules   = [ { cron = "0 */15 * * *" } ]
+  schedules   = [ { cron = "0,30 * * * *" } ]
   depends_on = [cloudflare_workers_deployment.queue_processor]
 }
 
