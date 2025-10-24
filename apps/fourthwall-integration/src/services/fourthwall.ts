@@ -242,7 +242,7 @@ export class FourthwallService {
       console.log(csvContent);
 
       // Create FormData for multipart upload
-      const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+      const boundary = '----WebKitFormBoundary' + Math.random().toString(36).slice(2);
       const formData = this.createMultipartFormData(csvContent, boundary);
 
       const url = 'https://api.fourthwall.com/api/fulfillments/csv';
@@ -294,7 +294,7 @@ export class FourthwallService {
   private escapeCsvField(value: string): string {
     // If the value contains comma, newline, or double quote, wrap it in quotes and escape quotes
     if (value.includes(',') || value.includes('\n') || value.includes('"')) {
-      return `"${value.replace(/"/g, '""')}"`;
+      return `"${value.replaceAll('"', '""')}"`;
     }
     return value;
   }
@@ -422,13 +422,7 @@ export class FourthwallService {
     const parts: string[] = [];
 
     // Add CSV file part
-    parts.push(`--${boundary}\r\n`);
-    parts.push('Content-Disposition: form-data; name="csv"; filename="tracking.csv"\r\n');
-    parts.push('Content-Type: text/csv\r\n');
-    parts.push('\r\n');
-    parts.push(csvContent);
-    parts.push('\r\n');
-    parts.push(`--${boundary}--\r\n`);
+    parts.push(`--${boundary}\r\n`, 'Content-Disposition: form-data; name="csv"; filename="tracking.csv"\r\n', 'Content-Type: text/csv\r\n', '\r\n', csvContent, '\r\n', `--${boundary}--\r\n`);
 
     return parts.join('');
   }
