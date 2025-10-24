@@ -56,49 +56,78 @@ export class KunakiService {
         return { success: true, provider_order_id: undefined };
       }
 
-      // Process only items with SKU mappings
-      for (const [index, item] of fulfillableItems.entries()) {
-        console.log(`[KUNAKI] Processing item ${index + 1}/${fulfillableItems.length}:`, item.product_name);
+      // Group items by Kunaki SKU and sum quantities
+      const skuQuantityMap = new Map<string, { quantity: number; itemIds: string[] }>();
+
+      for (const item of fulfillableItems) {
         const mappedSku = this.mapProductToKunakiSku(item.fourthwall_product_id);
-        console.log('[KUNAKI] Using SKU:', mappedSku);
-
-        const kunakiOrder: KunakiOrderRequest = {
-          Product_Id: mappedSku!,
-          Quantity: item.quantity,
-          Ship_Name: order.customer_name,
-          Ship_Address: order.shipping_address_line1,
-          Ship_City: order.shipping_city,
-          Ship_Postal_Code: order.shipping_postal_code,
-          Ship_Country: order.shipping_country,
-          Order_Id: `${order.id}-${item.id}`,
-        };
-
-        // Only add optional fields if they have values
-        if (order.shipping_address_line2) {
-          kunakiOrder.Ship_Address_2 = order.shipping_address_line2;
-        }
-        if (order.shipping_state) {
-          kunakiOrder.Ship_State = order.shipping_state;
-        }
-        console.log('[KUNAKI] Kunaki order ID:', kunakiOrder.Order_Id);
-
-        const result = await this.submitSingleOrder(kunakiOrder);
-        console.log('[KUNAKI] Submission result:', result.success ? 'success' : 'failed');
-
-        if (!result.success) {
-          console.error('[KUNAKI] Order submission failed:', result.error);
-          return result;
+        if (!mappedSku) {
+          continue;
         }
 
-        console.log('[KUNAKI] Order submitted successfully, provider ID:', result.provider_order_id);
-        return {
-          success: true,
-          provider_order_id: result.provider_order_id,
-        };
+        const existing = skuQuantityMap.get(mappedSku);
+        if (existing) {
+          existing.quantity += item.quantity;
+          existing.itemIds.push(item.id);
+          console.log(
+            `[KUNAKI] Added ${item.quantity} of ${item.product_name} to existing SKU ${mappedSku}, new total: ${existing.quantity}`,
+          );
+        } else {
+          skuQuantityMap.set(mappedSku, { quantity: item.quantity, itemIds: [item.id] });
+          console.log(`[KUNAKI] Starting new SKU group ${mappedSku} with quantity: ${item.quantity}`);
+        }
       }
 
-      console.error('[KUNAKI] No items to fulfill');
-      return { success: false, error: 'No items to fulfill' };
+      console.log(`[KUNAKI] Grouped items into ${skuQuantityMap.size} unique SKU(s)`);
+
+      // Validate that we only have one unique SKU (current expected behavior)
+      if (skuQuantityMap.size > 1) {
+        const skus = [...skuQuantityMap.keys()].join(', ');
+        console.error('[KUNAKI] Multiple different SKUs detected - this is unexpected behavior');
+        console.error(`[KUNAKI] SKUs: ${skus}`);
+        throw new Error(
+          `Multiple different Kunaki SKUs in order (${skus}) - this behavior is not currently supported`,
+        );
+      }
+
+      // Submit the single order (we validated there's only one SKU above)
+      const [[sku, { quantity, itemIds }]] = skuQuantityMap.entries();
+
+      console.log(`[KUNAKI] Submitting order for SKU ${sku} with total quantity: ${quantity}`);
+      console.log(`[KUNAKI] Combined from ${itemIds.length} line item(s): ${itemIds.join(', ')}`);
+
+      const kunakiOrder: KunakiOrderRequest = {
+        Product_Id: sku,
+        Quantity: quantity,
+        Ship_Name: order.customer_name,
+        Ship_Address: order.shipping_address_line1,
+        Ship_City: order.shipping_city,
+        Ship_Postal_Code: order.shipping_postal_code,
+        Ship_Country: order.shipping_country,
+      };
+
+      // Only add optional fields if they have values
+      if (order.shipping_address_line2) {
+        kunakiOrder.Ship_Address_2 = order.shipping_address_line2;
+      }
+      if (order.shipping_state) {
+        kunakiOrder.Ship_State = order.shipping_state;
+      }
+      console.log('[KUNAKI] Total quantity being sent to Kunaki:', kunakiOrder.Quantity);
+
+      const result = await this.submitSingleOrder(kunakiOrder);
+      console.log('[KUNAKI] Submission result:', result.success ? 'success' : 'failed');
+
+      if (!result.success) {
+        console.error('[KUNAKI] Order submission failed:', result.error);
+        return result;
+      }
+
+      console.log('[KUNAKI] Order submitted successfully, provider ID:', result.provider_order_id);
+      return {
+        success: true,
+        provider_order_id: result.provider_order_id,
+      };
     } catch (error) {
       console.error('[KUNAKI] Error submitting order:', error);
       console.error('[KUNAKI] Error stack:', error instanceof Error ? error.stack : 'No stack');
@@ -264,15 +293,17 @@ export class KunakiService {
     console.log('[KUNAKI] Parsed - ErrorCode:', errorCode, 'ErrorText:', errorText, 'OrderId:', orderId);
 
     // ErrorCode 0 means success
-    return errorCode === '0' ? {
-        Order_Id: orderId || '',
-        Status: 'Success',
-        Error: undefined,
-      } : {
-        Order_Id: '',
-        Status: 'Error',
-        Error: errorText || `Error code: ${errorCode}`,
-      };
+    return errorCode === '0'
+      ? {
+          Order_Id: orderId || '',
+          Status: 'Success',
+          Error: undefined,
+        }
+      : {
+          Order_Id: '',
+          Status: 'Error',
+          Error: errorText || `Error code: ${errorCode}`,
+        };
   }
 
   private extractXMLValue(xml: string, tagName: string): string | undefined {
@@ -303,21 +334,23 @@ export class KunakiService {
       trackingType,
     );
 
-    return errorCode === '0' ? {
-        Order_Id: orderId || '',
-        Status: orderStatus || 'Processing',
-        Tracking_Number: trackingId,
-        Tracking_Type: trackingType,
-        Shipping_Date: undefined,
-        Error: undefined,
-      } : {
-        Order_Id: orderId || '',
-        Status: 'Error',
-        Tracking_Number: undefined,
-        Tracking_Type: undefined,
-        Shipping_Date: undefined,
-        Error: errorText || `Error code: ${errorCode}`,
-      };
+    return errorCode === '0'
+      ? {
+          Order_Id: orderId || '',
+          Status: orderStatus || 'Processing',
+          Tracking_Number: trackingId,
+          Tracking_Type: trackingType,
+          Shipping_Date: undefined,
+          Error: undefined,
+        }
+      : {
+          Order_Id: orderId || '',
+          Status: 'Error',
+          Tracking_Number: undefined,
+          Tracking_Type: undefined,
+          Shipping_Date: undefined,
+          Error: errorText || `Error code: ${errorCode}`,
+        };
   }
 
   private mapCountryForKunaki(countryCode: string): string {
