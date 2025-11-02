@@ -1,124 +1,53 @@
-import { SignJWT, importPKCS8 } from 'jose';
-import type {
-  GitHubCreateCommitResponse,
-  GitHubCreateTreeResponse,
-  GitHubPullRequest,
-  GitHubRef,
-  GitHubTreeItem,
-} from './types.js';
+import { App, Octokit } from 'octokit';
+import type { GitHubTreeItem } from './types.js';
 
-const GITHUB_API_BASE = 'https://api.github.com';
 const GITHUB_REPO = 'immich-app/static-pages';
 const GITHUB_BASE_BRANCH = 'main';
+const [GITHUB_OWNER, GITHUB_REPO_NAME] = GITHUB_REPO.split('/');
 
 /**
- * Generate a JWT for GitHub App authentication.
- */
-async function generateGitHubAppJWT(appId: string, privateKey: string): Promise<string> {
-  // Parse the private key
-  const key = await importPKCS8(privateKey, 'RS256');
-
-  // Create JWT
-  const jwt = await new SignJWT({})
-    .setProtectedHeader({ alg: 'RS256' })
-    .setIssuedAt()
-    .setIssuer(appId)
-    .setExpirationTime('10m')
-    .sign(key);
-
-  return jwt;
-}
-
-/**
- * Get an installation access token for the GitHub App.
- */
-async function getInstallationToken(
-  appId: string,
-  privateKey: string,
-  installationId: string,
-): Promise<string> {
-  const jwt = await generateGitHubAppJWT(appId, privateKey);
-
-  const response = await fetch(
-    `${GITHUB_API_BASE}/app/installations/${installationId}/access_tokens`,
-    {
-      method: 'POST',
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${jwt}`,
-      },
-    },
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Failed to get installation token: ${response.status} ${error}`);
-  }
-
-  const data = (await response.json()) as { token: string };
-  return data.token;
-}
-
-// CLAUDE: Use octokit, wtf
-/**
- * GitHub API client with authentication.
+ * GitHub API client with App authentication.
  */
 export class GitHubClient {
-  private token: string | null = null;
+  private app: App;
+  private octokit: Octokit | null = null;
 
   constructor(
-    private appId: string,
-    private privateKey: string,
+    appId: string,
+    privateKey: string,
     private installationId: string,
-  ) {}
-
-  /**
-   * Ensure we have a valid token.
-   */
-  private async ensureToken(): Promise<string> {
-    if (!this.token) {
-      this.token = await getInstallationToken(this.appId, this.privateKey, this.installationId);
-    }
-    return this.token;
+  ) {
+    this.app = new App({
+      appId,
+      privateKey,
+    });
   }
 
   /**
-   * Make an authenticated GitHub API request.
+   * Get authenticated Octokit instance for the installation.
    */
-  private async request<T>(
-    path: string,
-    options?: RequestInit,
-  ): Promise<T> {
-    const token = await this.ensureToken();
-    const url = `${GITHUB_API_BASE}${path}`;
-
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`GitHub API error: ${response.status} ${error} (${path})`);
+  private async getOctokit(): Promise<Octokit> {
+    if (!this.octokit) {
+      this.octokit = await this.app.getInstallationOctokit(Number.parseInt(this.installationId));
     }
-
-    return response.json() as Promise<T>;
+    return this.octokit;
   }
 
   /**
    * Get a reference (branch or tag).
    */
-  async getRef(ref: string): Promise<GitHubRef | null> {
+  async getRef(ref: string): Promise<{ sha: string } | null> {
+    const octokit = await this.getOctokit();
     try {
-      return await this.request<GitHubRef>(`/repos/${GITHUB_REPO}/git/ref/${ref}`);
+      const { data } = await octokit.rest.git.getRef({
+        owner: GITHUB_OWNER,
+        repo: GITHUB_REPO_NAME,
+        ref,
+      });
+      return { sha: data.object.sha };
     } catch (error) {
-      // 404 means ref doesn't exist
-      if (error instanceof Error && error.message.includes('404')) {
+      // @ts-expect-error - Octokit error type
+      if (error.status === 404) {
         return null;
       }
       throw error;
@@ -127,70 +56,85 @@ export class GitHubClient {
 
   /**
    * Create or update a reference.
+   * Tries to create first, and if it already exists (422), updates it instead.
    */
   async createOrUpdateRef(ref: string, sha: string): Promise<void> {
-    // CLAUDE: Instead of a separate get, just try to create and catch 422 error?
-    const existingRef = await this.getRef(ref);
+    const octokit = await this.getOctokit();
 
-    // eslint-disable-next-line unicorn/prefer-ternary
-    if (existingRef) {
-      // Update existing ref (force push)
-      await this.request(`/repos/${GITHUB_REPO}/git/refs/${ref}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ sha, force: true }),
+    try {
+      // Try to create the ref first
+      await octokit.rest.git.createRef({
+        owner: GITHUB_OWNER,
+        repo: GITHUB_REPO_NAME,
+        ref: `refs/${ref}`,
+        sha,
       });
-    } else {
-      // Create new ref
-      await this.request(`/repos/${GITHUB_REPO}/git/refs`, {
-        method: 'POST',
-        body: JSON.stringify({ ref: `refs/${ref}`, sha }),
-      });
+    } catch (error) {
+      // @ts-expect-error - Octokit error type
+      if (error.status === 422) {
+        // Ref already exists, update it (force push)
+        await octokit.rest.git.updateRef({
+          owner: GITHUB_OWNER,
+          repo: GITHUB_REPO_NAME,
+          ref,
+          sha,
+          force: true,
+        });
+      } else {
+        throw error;
+      }
     }
   }
 
-  // CLAUDE: Do these calls properly handle an object already existing?
   /**
    * Create a tree (represents a directory structure).
+   * Trees are content-addressed by SHA - creating the same tree twice returns the same SHA (idempotent).
    */
-  async createTree(
-    baseTreeSha: string,
-    files: GitHubTreeItem[],
-  ): Promise<GitHubCreateTreeResponse> {
-    return this.request<GitHubCreateTreeResponse>(`/repos/${GITHUB_REPO}/git/trees`, {
-      method: 'POST',
-      body: JSON.stringify({
-        base_tree: baseTreeSha,
-        tree: files,
-      }),
+  async createTree(baseTreeSha: string, files: GitHubTreeItem[]): Promise<{ sha: string }> {
+    const octokit = await this.getOctokit();
+    const { data } = await octokit.rest.git.createTree({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO_NAME,
+      base_tree: baseTreeSha,
+      tree: files,
     });
+    return { sha: data.sha };
   }
 
   /**
    * Create a commit.
+   * Commits are content-addressed by SHA - creating the same commit twice returns the same SHA (idempotent).
    */
-  async createCommit(
-    message: string,
-    treeSha: string,
-    parentSha: string,
-  ): Promise<GitHubCreateCommitResponse> {
-    return this.request<GitHubCreateCommitResponse>(`/repos/${GITHUB_REPO}/git/commits`, {
-      method: 'POST',
-      body: JSON.stringify({
-        message,
-        tree: treeSha,
-        parents: [parentSha],
-      }),
+  async createCommit(message: string, treeSha: string, parentSha: string): Promise<{ sha: string }> {
+    const octokit = await this.getOctokit();
+    const { data } = await octokit.rest.git.createCommit({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO_NAME,
+      message,
+      tree: treeSha,
+      parents: [parentSha],
     });
+    return { sha: data.sha };
   }
 
   /**
    * Find an existing PR for a branch.
    */
-  async findPullRequest(headBranch: string): Promise<GitHubPullRequest | null> {
-    const prs = await this.request<GitHubPullRequest[]>(
-      `/repos/${GITHUB_REPO}/pulls?state=open&head=immich-app:${headBranch}`,
-    );
-    return prs.length > 0 ? prs[0] : null;
+  async findPullRequest(headBranch: string): Promise<{ number: number; html_url: string } | null> {
+    const octokit = await this.getOctokit();
+    const { data } = await octokit.rest.pulls.list({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO_NAME,
+      state: 'open',
+      head: `${GITHUB_OWNER}:${headBranch}`,
+    });
+    if (data.length === 0) {
+      return null;
+    }
+    return {
+      number: data[0].number,
+      html_url: data[0].html_url,
+    };
   }
 
   /**
@@ -200,16 +144,20 @@ export class GitHubClient {
     title: string,
     headBranch: string,
     body: string,
-  ): Promise<GitHubPullRequest> {
-    return this.request<GitHubPullRequest>(`/repos/${GITHUB_REPO}/pulls`, {
-      method: 'POST',
-      body: JSON.stringify({
-        title,
-        head: headBranch,
-        base: GITHUB_BASE_BRANCH,
-        body,
-      }),
+  ): Promise<{ number: number; html_url: string }> {
+    const octokit = await this.getOctokit();
+    const { data } = await octokit.rest.pulls.create({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO_NAME,
+      title,
+      head: headBranch,
+      base: GITHUB_BASE_BRANCH,
+      body,
     });
+    return {
+      number: data.number,
+      html_url: data.html_url,
+    };
   }
 
   /**
@@ -221,17 +169,13 @@ export class GitHubClient {
     filePath: string,
     fileContent: string,
     commitMessage: string,
-    prTitle: string,
   ): Promise<{ prUrl: string; prNumber: number }> {
-    // Get the current main branch SHA
     const mainRef = await this.getRef(`heads/${GITHUB_BASE_BRANCH}`);
     if (!mainRef) {
       throw new Error(`Base branch ${GITHUB_BASE_BRANCH} not found`);
     }
-    const baseSha = mainRef.object.sha;
 
-    // Create a tree with the new file
-    const tree = await this.createTree(baseSha, [
+    const tree = await this.createTree(mainRef.sha, [
       {
         path: filePath,
         mode: '100644',
@@ -240,26 +184,18 @@ export class GitHubClient {
       },
     ]);
 
-    // Create a commit
-    const commit = await this.createCommit(commitMessage, tree.sha, baseSha);
-
-    // Create or update the branch
+    const commit = await this.createCommit(commitMessage, tree.sha, mainRef.sha);
     await this.createOrUpdateRef(`heads/${branchName}`, commit.sha);
 
-    // Check if PR already exists
     const existingPR = await this.findPullRequest(branchName);
-
     if (existingPR) {
-      // PR exists and branch was force-updated, return existing PR
       return {
         prUrl: existingPR.html_url,
         prNumber: existingPR.number,
       };
     }
 
-    // Create new PR
-    const pr = await this.createPullRequest(prTitle, branchName, commitMessage);
-
+    const pr = await this.createPullRequest(commitMessage, branchName, commitMessage);
     return {
       prUrl: pr.html_url,
       prNumber: pr.number,

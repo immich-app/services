@@ -10,10 +10,8 @@ export async function clearR2Directory(bucket: R2Bucket, prefix: string): Promis
     const listed = await bucket.list({ prefix, cursor });
 
     if (listed.objects.length > 0) {
-      // CLAUDE: You claim it accepts an array, but you are still mapping and calling delete individually?
-      // R2 bucket.delete() accepts an array of keys
       const keys = listed.objects.map((obj) => obj.key);
-      await Promise.all(keys.map((key) => bucket.delete(key)));
+      await bucket.delete(keys);
       deletedCount += keys.length;
     }
 

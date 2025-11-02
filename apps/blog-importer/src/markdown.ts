@@ -64,7 +64,5 @@ export function resolveImageUrl(imageUrl: string, baseUrl: string): string {
   }
 
   // Relative URL - resolve against base
-  const base = new URL(baseUrl);
-  // CLAUDE: Is it necessary to use base.origin? Can't you just pass it baseUrl straight?
-  return new URL(imageUrl, base.origin).toString();
+  return new URL(imageUrl, baseUrl).toString();
 }

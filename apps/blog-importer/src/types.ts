@@ -8,7 +8,6 @@ export interface OutlineWebhookEvent {
   createdAt: string;
 }
 
-// CLAUDE: I think you're missing a nesting level here. Based on the python script it's payload.model.data.text etc
 export interface OutlineDocument {
   id: string;
   title: string;
@@ -35,30 +34,6 @@ export interface GitHubTreeItem {
   mode: '100644' | '100755' | '040000' | '160000' | '120000';
   type: 'blob' | 'tree' | 'commit';
   content?: string;
-}
-
-export interface GitHubCreateTreeResponse {
-  sha: string;
-  url: string;
-}
-
-export interface GitHubCreateCommitResponse {
-  sha: string;
-  url: string;
-}
-
-export interface GitHubRef {
-  ref: string;
-  object: {
-    sha: string;
-    type: string;
-  };
-}
-
-export interface GitHubPullRequest {
-  number: number;
-  html_url: string;
-  state: 'open' | 'closed';
 }
 
 // Image processing types

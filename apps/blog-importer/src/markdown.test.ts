@@ -164,20 +164,20 @@ No images here, just text and [links](https://example.com).`;
     expect(result.replacements).toHaveLength(0);
   });
 
-  it('preserves reference-style images', async () => {
+  it('does not process reference-style images', async () => {
     const markdown = `![Alt text][image-ref]
 
 [image-ref]: https://example.com/image.png "Image title"`;
 
     const result = await processMarkdownImages(markdown, async () => {
-      // Reference-style images are parsed differently
-      // This test documents the current behavior
       return 'https://cdn.example.com/new.webp';
     });
 
-    // CLAUDE: Seems like there's assertion missing here?
-    // The function should process any images it finds
-    expect(result.markdown).toBeDefined();
+    // Reference-style images use a different AST node type (definition)
+    // and are not processed as regular images
+    expect(result.replacements).toHaveLength(0);
+    expect(result.markdown).toContain('https://example.com/image.png');
+    expect(result.markdown).not.toContain('https://cdn.example.com/new.webp');
   });
 
   it('handles images with titles', async () => {

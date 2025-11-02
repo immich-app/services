@@ -22,11 +22,11 @@ This worker listens for Outline webhook events (specifically `documents.publish`
 The worker is organized into focused modules:
 
 - **`index.ts`**: Main webhook handler and orchestration
-- **`frontmatter.ts`**: Parse, update, and serialize frontmatter
 - **`markdown.ts`**: Process markdown AST and replace image URLs
 - **`images.ts`**: Download images and convert to WebP
 - **`r2.ts`**: R2 bucket operations (upload, clear directory)
-- **`github.ts`**: GitHub API client with App authentication
+- **`github.ts`**: GitHub API client with Octokit
+- **`formatter.ts`**: Prettier integration for markdown formatting
 - **`types.ts`**: Shared TypeScript interfaces
 
 ## Environment Variables
@@ -42,6 +42,7 @@ The worker requires the following environment variables:
 
 - `OUTLINE_WEBHOOK_SECRET`: Secret for verifying webhook signatures
 - `OUTLINE_BASE_URL`: Base URL of your Outline instance (e.g., `https://app.getoutline.com`)
+- `OUTLINE_API_KEY`: API key for authenticating image downloads
 
 ### GitHub App
 
@@ -83,11 +84,15 @@ Create a `.dev.vars` file with required environment variables:
 ```
 OUTLINE_WEBHOOK_SECRET=your-secret
 OUTLINE_BASE_URL=https://app.getoutline.com
+OUTLINE_API_KEY=your-api-key
 R2_PUBLIC_URL=https://static.immich.cloud
 GITHUB_APP_ID=123456
 GITHUB_APP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 GITHUB_INSTALLATION_ID=123456
+SKIP_WEBHOOK_VALIDATION=true
 ```
+
+**Note**: `SKIP_WEBHOOK_VALIDATION=true` disables webhook signature validation for local testing.
 
 Start the development server:
 
@@ -104,7 +109,6 @@ pnpm run test
 ```
 
 The test suite includes comprehensive coverage of:
-- ✅ Frontmatter parsing, updating, and serialization (16 tests)
 - ✅ Markdown AST processing and image URL replacement (13 tests)
 
 For manual integration testing:

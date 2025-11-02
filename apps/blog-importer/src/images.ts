@@ -1,71 +1,51 @@
 import { decode as decodeJpeg } from '@jsquash/jpeg';
 import { decode as decodePng } from '@jsquash/png';
 import { decode as decodeWebp, encode as encodeWebp } from '@jsquash/webp';
+import imageType from 'image-type';
 import type { ImageProcessingResult } from './types.js';
 
 const WEBP_QUALITY = 85;
 
 /**
- * Download an image from a URL.
+ * Download an image from a URL with Outline API authentication.
  */
-export async function downloadImage(url: string): Promise<ArrayBuffer> {
-  // CLAUDE: We need an outline API key for this request
-  const response = await fetch(url);
+export async function downloadImage(url: string, apiKey: string): Promise<ArrayBuffer> {
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
   if (!response.ok) {
     throw new Error(`Failed to download image from ${url}: ${response.status} ${response.statusText}`);
   }
   return response.arrayBuffer();
 }
 
-// CLAUDE: Do we really need this shit? In python, pillow was able to figure it out itself just fine
 /**
- * Determine image type from file extension or content.
+ * Determine image type from buffer using image-type library.
  */
-function getImageType(url: string, data: ArrayBuffer): 'jpeg' | 'png' | 'webp' | 'unknown' {
-  // Check URL extension first
-  const urlLower = url.toLowerCase();
-  if (urlLower.endsWith('.jpg') || urlLower.endsWith('.jpeg')) {
-    return 'jpeg';
-  }
-  if (urlLower.endsWith('.png')) {
-    return 'png';
-  }
-  if (urlLower.endsWith('.webp')) {
-    return 'webp';
-  }
+async function getImageType(data: ArrayBuffer): Promise<'jpeg' | 'png' | 'webp' | 'unknown'> {
+  const result = await imageType(new Uint8Array(data));
 
-  // Check magic bytes
-  const bytes = new Uint8Array(data);
-  if (bytes.length < 4) {
+  if (!result) {
     return 'unknown';
   }
 
-  // JPEG: FF D8 FF
-  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-    return 'jpeg';
+  // Map mime types to our supported formats
+  switch (result.mime) {
+    case 'image/jpeg': {
+      return 'jpeg';
+    }
+    case 'image/png': {
+      return 'png';
+    }
+    case 'image/webp': {
+      return 'webp';
+    }
+    default: {
+      return 'unknown';
+    }
   }
-
-  // PNG: 89 50 4E 47
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
-    return 'png';
-  }
-
-  // WebP: RIFF....WEBP
-  if (
-    bytes[0] === 0x52 &&
-    bytes[1] === 0x49 &&
-    bytes[2] === 0x46 &&
-    bytes[3] === 0x46 &&
-    bytes.length >= 12 &&
-    bytes[8] === 0x57 &&
-    bytes[9] === 0x45 &&
-    bytes[10] === 0x42 &&
-    bytes[11] === 0x50
-  ) {
-    return 'webp';
-  }
-
-  return 'unknown';
 }
 
 /**
@@ -98,13 +78,12 @@ async function decodeImage(
  */
 export async function convertToWebp(
   imageData: ArrayBuffer,
-  url: string,
   quality: number = WEBP_QUALITY,
 ): Promise<ArrayBuffer> {
-  const imageType = getImageType(url, imageData);
+  const imageType = await getImageType(imageData);
 
   if (imageType === 'unknown') {
-    throw new Error(`Unsupported image format for ${url}`);
+    throw new Error('Unsupported image format');
   }
 
   // Decode the image to ImageData
@@ -128,11 +107,12 @@ export async function hashContent(data: Uint8Array | ArrayBuffer): Promise<strin
 
 /**
  * Download an image, convert to WebP, and calculate hash.
+ * The hash is calculated from the original image data for content addressing.
  */
-export async function processImage(url: string): Promise<ImageProcessingResult> {
-  const imageData = await downloadImage(url);
-  const webpData = await convertToWebp(imageData, url);
-  const contentHash = await hashContent(webpData); // CLAUDE: this is wrong, hash the original data not the converted webp
+export async function processImage(url: string, apiKey: string): Promise<ImageProcessingResult> {
+  const imageData = await downloadImage(url, apiKey);
+  const contentHash = await hashContent(imageData);
+  const webpData = await convertToWebp(imageData);
 
   return {
     webpData,
