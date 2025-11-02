@@ -4,16 +4,16 @@ import { processMarkdownImages, resolveImageUrl } from './markdown.js';
 describe('resolveImageUrl', () => {
   it('returns absolute URLs unchanged', () => {
     const url = 'https://example.com/image.png';
-    expect(resolveImageUrl(url, 'https://base.com')).toBe(url);
+    expect(new URL(url, 'https://base.com').toString()).toBe(url);
   });
 
   it('resolves relative URLs against base URL', () => {
-    const result = resolveImageUrl('/images/photo.jpg', 'https://outline.example.com/doc/123');
+    const result = new URL('/images/photo.jpg', 'https://outline.example.com/doc/123').toString();
     expect(result).toBe('https://outline.example.com/images/photo.jpg');
   });
 
   it('handles base URLs with paths', () => {
-    const result = resolveImageUrl('/api/image.png', 'https://app.getoutline.com/s/guide/doc/123');
+    const result = new URL('/api/image.png', 'https://app.getoutline.com/s/guide/doc/123').toString();
     expect(result).toBe('https://app.getoutline.com/api/image.png');
   });
 });

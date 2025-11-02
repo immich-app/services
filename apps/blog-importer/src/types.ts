@@ -1,4 +1,3 @@
-// Outline webhook event types
 export interface OutlineWebhookEvent {
   event: string;
   payload: {
@@ -17,7 +16,6 @@ export interface OutlineDocument {
   publishedAt?: string;
 }
 
-// Frontmatter structure
 export interface PostFrontmatter {
   id: string;
   title: string;
@@ -28,7 +26,6 @@ export interface PostFrontmatter {
   [key: string]: unknown;
 }
 
-// GitHub API types
 export interface GitHubTreeItem {
   path: string;
   mode: '100644' | '100755' | '040000' | '160000' | '120000';
@@ -36,7 +33,6 @@ export interface GitHubTreeItem {
   content?: string;
 }
 
-// Image processing types
 export interface ImageProcessingResult {
   webpData: ArrayBuffer;
   contentHash: string;

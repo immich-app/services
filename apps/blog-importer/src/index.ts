@@ -1,8 +1,8 @@
 import matter from 'gray-matter';
-import { formatMarkdown } from './formatter.js';
+import prettier from 'prettier';
 import { GitHubClient } from './github.js';
 import { processImage } from './images.js';
-import { processMarkdownImages, resolveImageUrl } from './markdown.js';
+import { processMarkdownImages } from './markdown.js';
 import { clearR2Directory, uploadToR2 } from './r2.js';
 import type { OutlineWebhookEvent, PostFrontmatter } from './types.js';
 
@@ -20,9 +20,6 @@ function slugify(text: string): string {
   return slug.replaceAll(/^-+|-+$/g, '');
 }
 
-/**
- * Verify Outline webhook signature using HMAC.
- */
 async function verifyWebhookSignature(payload: string, signature: string, secret: string): Promise<boolean> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [
@@ -35,14 +32,10 @@ async function verifyWebhookSignature(payload: string, signature: string, secret
   return computedSignature === signature;
 }
 
-/**
- * Process a blog post import from Outline.
- */
 async function processBlogImport(event: OutlineWebhookEvent, env: Env): Promise<string> {
   const document = event.payload.model;
   console.log(`Processing document: ${document.id} - ${document.title}`);
 
-  // Outline escapes the frontmatter delimiters, so unescape them
   const text = document.text.replaceAll(String.raw`\---`, '---');
   const { data: frontmatterData, content } = matter(text);
 
@@ -51,7 +44,7 @@ async function processBlogImport(event: OutlineWebhookEvent, env: Env): Promise<
   console.log(`Cleared ${deletedCount} old images from R2`);
 
   const { markdown: processedMarkdown, replacements } = await processMarkdownImages(content, async (imageUrl) => {
-    const absoluteUrl = resolveImageUrl(imageUrl, env.OUTLINE_BASE_URL);
+    const absoluteUrl = new URL(imageUrl, env.OUTLINE_BASE_URL).toString();
     console.log(`Processing image: ${absoluteUrl}`);
 
     const { webpData, contentHash } = await processImage(absoluteUrl, env.OUTLINE_API_KEY);
@@ -81,7 +74,14 @@ async function processBlogImport(event: OutlineWebhookEvent, env: Env): Promise<
   } as PostFrontmatter;
 
   const finalMarkdown = matter.stringify(processedMarkdown, updatedFrontmatter);
-  const formattedMarkdown = await formatMarkdown(finalMarkdown);
+  const formattedMarkdown = await prettier.format(finalMarkdown, {
+    parser: 'markdown',
+    semi: true,
+    singleQuote: true,
+    trailingComma: 'es5',
+    printWidth: 120,
+    tabWidth: 2,
+  });
 
   const github = new GitHubClient(env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY, env.GITHUB_INSTALLATION_ID);
 
@@ -96,9 +96,6 @@ async function processBlogImport(event: OutlineWebhookEvent, env: Env): Promise<
   return prUrl;
 }
 
-/**
- * Main worker handler.
- */
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -107,7 +104,6 @@ export default {
       try {
         const payload = await request.text();
 
-        // Skip validation only if explicitly enabled for dev (set SKIP_WEBHOOK_VALIDATION=true in .dev.vars)
         if (env.SKIP_WEBHOOK_VALIDATION !== 'true') {
           const signature = request.headers.get('Outline-Signature');
           if (!signature) {

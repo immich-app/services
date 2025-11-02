@@ -1,7 +1,7 @@
+import type { Image, Root } from 'mdast';
 import { remark } from 'remark';
 import remarkFrontmatter from 'remark-frontmatter';
 import { visit } from 'unist-util-visit';
-import type { Image, Root } from 'mdast';
 
 export interface ImageReplacement {
   originalUrl: string;
@@ -24,17 +24,14 @@ export async function processMarkdownImages(
 
   // TODO: Maybe support different fences so we can easily enter them in outline?
   // https://github.com/remarkjs/remark-frontmatter#example-different-markers-and-fences
-  // Parse markdown to AST
   const processor = remark().use(remarkFrontmatter, ['yaml']);
   const tree = processor.parse(markdown) as Root;
 
-  // Find all image nodes and collect URLs
   const imageNodes: Image[] = [];
   visit(tree, 'image', (node: Image) => {
     imageNodes.push(node);
   });
 
-  // Process each image
   for (const node of imageNodes) {
     const originalUrl = node.url;
     const newUrl = await replacementFn(originalUrl);
@@ -45,24 +42,10 @@ export async function processMarkdownImages(
     }
   }
 
-  // Convert AST back to markdown
   const updatedMarkdown = processor.stringify(tree);
 
   return {
     markdown: updatedMarkdown,
     replacements,
   };
-}
-
-/**
- * Convert a potentially relative URL to an absolute URL using a base URL.
- */
-export function resolveImageUrl(imageUrl: string, baseUrl: string): string {
-  // Already absolute
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    return imageUrl;
-  }
-
-  // Relative URL - resolve against base
-  return new URL(imageUrl, baseUrl).toString();
 }

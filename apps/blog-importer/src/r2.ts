@@ -1,7 +1,3 @@
-/**
- * Clear all objects in an R2 bucket with a given prefix.
- * Useful for cleaning up old images before uploading new ones.
- */
 export async function clearR2Directory(bucket: R2Bucket, prefix: string): Promise<number> {
   let deletedCount = 0;
   let cursor: string | undefined;
@@ -21,9 +17,6 @@ export async function clearR2Directory(bucket: R2Bucket, prefix: string): Promis
   return deletedCount;
 }
 
-/**
- * Upload data to R2 bucket.
- */
 export async function uploadToR2(
   bucket: R2Bucket,
   key: string,

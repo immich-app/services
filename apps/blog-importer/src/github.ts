@@ -5,9 +5,6 @@ const GITHUB_REPO = 'immich-app/static-pages';
 const GITHUB_BASE_BRANCH = 'main';
 const [GITHUB_OWNER, GITHUB_REPO_NAME] = GITHUB_REPO.split('/');
 
-/**
- * GitHub API client with App authentication.
- */
 export class GitHubClient {
   private app: App;
   private octokit: Octokit | null = null;
@@ -23,9 +20,6 @@ export class GitHubClient {
     });
   }
 
-  /**
-   * Get authenticated Octokit instance for the installation.
-   */
   private async getOctokit(): Promise<Octokit> {
     if (!this.octokit) {
       this.octokit = await this.app.getInstallationOctokit(Number.parseInt(this.installationId));
@@ -33,9 +27,6 @@ export class GitHubClient {
     return this.octokit;
   }
 
-  /**
-   * Get a reference (branch or tag).
-   */
   async getRef(ref: string): Promise<{ sha: string } | null> {
     const octokit = await this.getOctokit();
     try {
@@ -54,10 +45,6 @@ export class GitHubClient {
     }
   }
 
-  /**
-   * Create or update a reference.
-   * Tries to create first, and if it already exists (422), updates it instead.
-   */
   async createOrUpdateRef(ref: string, sha: string): Promise<void> {
     const octokit = await this.getOctokit();
 
@@ -86,10 +73,6 @@ export class GitHubClient {
     }
   }
 
-  /**
-   * Create a tree (represents a directory structure).
-   * Trees are content-addressed by SHA - creating the same tree twice returns the same SHA (idempotent).
-   */
   async createTree(baseTreeSha: string, files: GitHubTreeItem[]): Promise<{ sha: string }> {
     const octokit = await this.getOctokit();
     const { data } = await octokit.rest.git.createTree({
@@ -101,10 +84,6 @@ export class GitHubClient {
     return { sha: data.sha };
   }
 
-  /**
-   * Create a commit.
-   * Commits are content-addressed by SHA - creating the same commit twice returns the same SHA (idempotent).
-   */
   async createCommit(message: string, treeSha: string, parentSha: string): Promise<{ sha: string }> {
     const octokit = await this.getOctokit();
     const { data } = await octokit.rest.git.createCommit({
@@ -117,9 +96,6 @@ export class GitHubClient {
     return { sha: data.sha };
   }
 
-  /**
-   * Find an existing PR for a branch.
-   */
   async findPullRequest(headBranch: string): Promise<{ number: number; html_url: string } | null> {
     const octokit = await this.getOctokit();
     const { data } = await octokit.rest.pulls.list({
@@ -137,9 +113,6 @@ export class GitHubClient {
     };
   }
 
-  /**
-   * Create a pull request.
-   */
   async createPullRequest(
     title: string,
     headBranch: string,
@@ -160,10 +133,6 @@ export class GitHubClient {
     };
   }
 
-  /**
-   * Commit a file to a branch and create a PR.
-   * If the branch/PR already exists, it will be force-updated.
-   */
   async commitAndCreatePR(
     branchName: string,
     filePath: string,
