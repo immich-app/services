@@ -107,9 +107,7 @@ The test suite includes comprehensive coverage of:
 - ✅ Frontmatter parsing, updating, and serialization (16 tests)
 - ✅ Markdown AST processing and image URL replacement (13 tests)
 
-**Note on Integration Tests:** Full integration tests via the Workers test environment (`SELF.fetch`) are disabled due to a Cloudflare Workers test environment compatibility issue (not a code issue). The core business logic is thoroughly tested via 29 unit tests.
-
-**✅ Prettier formatting IS ENABLED** using dynamic imports - it works perfectly in development (`pnpm run dev`) and production, just not in the test environment. For manual integration testing:
+For manual integration testing:
 
 ```bash
 # Start development server

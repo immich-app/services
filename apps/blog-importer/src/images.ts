@@ -17,6 +17,7 @@ export async function downloadImage(url: string): Promise<ArrayBuffer> {
   return response.arrayBuffer();
 }
 
+// CLAUDE: Do we really need this shit? In python, pillow was able to figure it out itself just fine
 /**
  * Determine image type from file extension or content.
  */
@@ -80,12 +81,15 @@ async function decodeImage(
   colorSpace?: string;
 }> {
   switch (type) {
-    case 'jpeg':
+    case 'jpeg': {
       return decodeJpeg(data);
-    case 'png':
+    }
+    case 'png': {
       return decodePng(data);
-    case 'webp':
+    }
+    case 'webp': {
       return decodeWebp(data);
+    }
   }
 }
 
@@ -118,7 +122,7 @@ export async function convertToWebp(
  */
 export async function hashContent(data: Uint8Array | ArrayBuffer): Promise<string> {
   const hashBuffer = await crypto.subtle.digest('MD5', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashArray = [...new Uint8Array(hashBuffer)];
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 

@@ -22,6 +22,8 @@ export async function processMarkdownImages(
 ): Promise<{ markdown: string; replacements: ImageReplacement[] }> {
   const replacements: ImageReplacement[] = [];
 
+  // TODO: Maybe support different fences so we can easily enter them in outline?
+  // https://github.com/remarkjs/remark-frontmatter#example-different-markers-and-fences
   // Parse markdown to AST
   const processor = remark().use(remarkFrontmatter, ['yaml']);
   const tree = processor.parse(markdown) as Root;
@@ -63,5 +65,6 @@ export function resolveImageUrl(imageUrl: string, baseUrl: string): string {
 
   // Relative URL - resolve against base
   const base = new URL(baseUrl);
+  // CLAUDE: Is it necessary to use base.origin? Can't you just pass it baseUrl straight?
   return new URL(imageUrl, base.origin).toString();
 }

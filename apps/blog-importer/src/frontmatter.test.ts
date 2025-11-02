@@ -112,11 +112,13 @@ describe('updateFrontmatter', () => {
   });
 });
 
+// CLAUDE: Add a test case where content already has frontmatter, make sure it doesn't make a mess
 describe('serializeFrontmatter', () => {
   it('serializes frontmatter and content', () => {
     const frontmatter = {
       id: 'doc-123',
       title: 'Test Post',
+      description: 'This is a test post',
       publishedAt: '2024-01-01',
       authors: ['Immich Team'],
       slug: 'test-post',
@@ -132,10 +134,12 @@ describe('serializeFrontmatter', () => {
     expect(result).toContain('This is the content.');
   });
 
+  // CLAUDE: Is this not a dupe of the previous test?
   it('handles arrays in frontmatter', () => {
     const frontmatter = {
       id: 'doc-123',
       title: 'Test',
+      description: 'This is a test post',
       publishedAt: '2024-01-01',
       authors: ['Author 1', 'Author 2'],
       slug: 'test',

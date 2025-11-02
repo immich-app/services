@@ -143,7 +143,7 @@ export default {
     // Webhook endpoint
     if (url.pathname === '/webhook' && request.method === 'POST') {
       try {
-        // CLAUDE: If we're running in dev (locally), skip signature validation
+        // CLAUDE: If we're running in dev (locally), skip signature validation so I can manually post a test request
         // Get webhook signature
         const signature = request.headers.get('Outline-Signature');
         if (!signature) {

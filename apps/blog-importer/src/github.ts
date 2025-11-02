@@ -8,7 +8,7 @@ import type {
 } from './types.js';
 
 const GITHUB_API_BASE = 'https://api.github.com';
-const GITHUB_REPO = 'immich/static-pages';
+const GITHUB_REPO = 'immich-app/static-pages';
 const GITHUB_BASE_BRANCH = 'main';
 
 /**
@@ -59,7 +59,7 @@ async function getInstallationToken(
   return data.token;
 }
 
-// CLAUDE: Surely there's a client library
+// CLAUDE: Use octokit, wtf
 /**
  * GitHub API client with authentication.
  */
@@ -129,8 +129,10 @@ export class GitHubClient {
    * Create or update a reference.
    */
   async createOrUpdateRef(ref: string, sha: string): Promise<void> {
+    // CLAUDE: Instead of a separate get, just try to create and catch 422 error?
     const existingRef = await this.getRef(ref);
 
+    // eslint-disable-next-line unicorn/prefer-ternary
     if (existingRef) {
       // Update existing ref (force push)
       await this.request(`/repos/${GITHUB_REPO}/git/refs/${ref}`, {
@@ -146,6 +148,7 @@ export class GitHubClient {
     }
   }
 
+  // CLAUDE: Do these calls properly handle an object already existing?
   /**
    * Create a tree (represents a directory structure).
    */
@@ -185,7 +188,7 @@ export class GitHubClient {
    */
   async findPullRequest(headBranch: string): Promise<GitHubPullRequest | null> {
     const prs = await this.request<GitHubPullRequest[]>(
-      `/repos/${GITHUB_REPO}/pulls?state=open&head=immich:${headBranch}`,
+      `/repos/${GITHUB_REPO}/pulls?state=open&head=immich-app:${headBranch}`,
     );
     return prs.length > 0 ? prs[0] : null;
   }

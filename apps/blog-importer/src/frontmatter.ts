@@ -7,13 +7,13 @@ import type { OutlineDocument, PostFrontmatter } from './types.js';
  */
 export function slugify(text: string): string {
   let slug = text.toLowerCase().trim();
-  slug = slug.replace(/[^\w\s-]/g, '');
-  slug = slug.replace(/[-\s]+/g, '-');
-  return slug.replace(/^-+|-+$/g, '');
+  slug = slug.replaceAll(/[^\w\s-]/g, '');
+  slug = slug.replaceAll(/[-\s]+/g, '-');
+  return slug.replaceAll(/^-+|-+$/g, '');
 }
 
 /**
- * Parse markdown text with frontmatter.
+ * Parse Markdown text with frontmatter.
  * Returns the frontmatter data and the content.
  */
 export function parseFrontmatter(text: string): {
@@ -21,6 +21,7 @@ export function parseFrontmatter(text: string): {
   content: string;
 } {
   const parsed = matter(text);
+  // CLAUDE: Why wrap in another object? Just return parsed directly
   return {
     data: parsed.data,
     content: parsed.content,

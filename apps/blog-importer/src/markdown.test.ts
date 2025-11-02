@@ -32,7 +32,7 @@ And some more content.`;
       if (url === 'https://example.com/old-image.png') {
         return 'https://cdn.example.com/new-image.webp';
       }
-      return undefined;
+      return;
     });
 
     expect(result.markdown).toContain('https://cdn.example.com/new-image.webp');
@@ -134,7 +134,7 @@ slug: test-post
       if (url.includes('img1')) {
         return 'https://cdn.example.com/new1.webp';
       }
-      return undefined;
+      return;
     });
 
     expect(result.replacements).toHaveLength(1);
@@ -175,6 +175,7 @@ No images here, just text and [links](https://example.com).`;
       return 'https://cdn.example.com/new.webp';
     });
 
+    // CLAUDE: Seems like there's assertion missing here?
     // The function should process any images it finds
     expect(result.markdown).toBeDefined();
   });

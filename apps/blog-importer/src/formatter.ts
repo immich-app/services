@@ -10,7 +10,7 @@ export async function formatMarkdown(content: string): Promise<string> {
       semi: true,
       singleQuote: true,
       trailingComma: 'es5',
-      printWidth: 100,
+      printWidth: 120,
       tabWidth: 2,
     });
   } catch (error) {
