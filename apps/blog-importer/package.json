@@ -1,0 +1,30 @@
+{
+  "name": "@immich-services/blog-importer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir ../../dist/blog-importer",
+    "tail": "wrangler tail",
+    "test": "vitest",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@jsquash/jpeg": "^1.4.0",
+    "@jsquash/png": "^3.0.0",
+    "@jsquash/webp": "^1.4.0",
+    "gray-matter": "^4.0.3",
+    "jose": "^5.9.6",
+    "prettier": "^3.4.1",
+    "remark": "^15.0.1",
+    "remark-frontmatter": "^5.0.0",
+    "unist-util-visit": "^5.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.71",
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "@types/mdast": "^4.0.4",
+    "vitest": "^3.0.0"
+  }
+}
