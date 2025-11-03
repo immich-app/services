@@ -172,4 +172,11 @@ export const migrations: Migration[] = [
       ALTER TABLE fulfillment_orders RENAME COLUMN tracking_uploaded_to_fourthwall_new TO tracking_uploaded_to_fourthwall;
     `,
   },
+  {
+    id: '010_add_customer_phone',
+    name: 'Add customer phone to orders table',
+    sql: `
+      ALTER TABLE orders ADD COLUMN customer_phone TEXT;
+    `,
+  },
 ];

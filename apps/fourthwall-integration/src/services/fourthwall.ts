@@ -111,12 +111,14 @@ export class FourthwallService {
     console.log('[FW-SERVICE] Creating order from webhook data V2');
     console.log('[FW-SERVICE] Shipping country:', orderData.shipping?.address?.country);
     console.log('[FW-SERVICE] Order total:', orderData.amounts?.total?.value, orderData.amounts?.total?.currency);
+    console.log('[FW-SERVICE] Customer phone:', orderData.shipping?.address?.phone || 'not provided');
 
     return await this.orderRepository.createOrder({
       fourthwall_order_id: orderData.id,
       customer_email: orderData.email,
       customer_name:
         orderData.shipping?.address?.name || orderData.billing?.address?.name || orderData.username || 'Unknown',
+      customer_phone: orderData.shipping?.address?.phone || undefined,
       shipping_address_line1: orderData.shipping?.address?.address1 || '',
       shipping_address_line2: orderData.shipping?.address?.address2 || undefined,
       shipping_city: orderData.shipping?.address?.city || '',
