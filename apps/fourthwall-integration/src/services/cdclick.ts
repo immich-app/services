@@ -94,6 +94,10 @@ export class CDClickService {
         zipCode = 'HKG';
       }
 
+      // Use customer phone number if available, otherwise use a placeholder
+      const phoneNumber = order.customer_phone || '00000';
+      console.log('[CDCLICK] Phone number:', phoneNumber);
+
       const cdclickOrder = {
         custom_id: order.id,
         check_multiple_custom_id: true,
@@ -107,7 +111,7 @@ export class CDClickService {
           city: order.shipping_city,
           state_province_code: order.shipping_state || undefined,
           country_code: order.shipping_country,
-          phone_number: '00000',
+          phone_number: phoneNumber,
         },
         cart: fulfillableItems.map((item) => ({
           item_id: item.sku,

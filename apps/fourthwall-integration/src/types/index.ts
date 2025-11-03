@@ -3,6 +3,7 @@ export interface Order {
   fourthwall_order_id: string;
   customer_email: string;
   customer_name: string;
+  customer_phone?: string;
   shipping_address_line1: string;
   shipping_address_line2?: string;
   shipping_city: string;

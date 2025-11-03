@@ -21,17 +21,18 @@ export class OrderRepository extends BaseRepository {
 
     await this.executeUpdate(
       `INSERT INTO orders (
-        id, fourthwall_order_id, customer_email, customer_name,
+        id, fourthwall_order_id, customer_email, customer_name, customer_phone,
         shipping_address_line1, shipping_address_line2, shipping_city,
         shipping_state, shipping_postal_code, shipping_country,
         order_total_cents, order_currency, status, fulfillment_provider,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         newOrder.id,
         newOrder.fourthwall_order_id,
         newOrder.customer_email,
         newOrder.customer_name,
+        newOrder.customer_phone ?? null,
         newOrder.shipping_address_line1,
         newOrder.shipping_address_line2 ?? null,
         newOrder.shipping_city,
