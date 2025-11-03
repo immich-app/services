@@ -213,16 +213,18 @@ export class FourthwallService {
    * Upload tracking information via CSV to Fourthwall
    * @param trackingData Array of tracking info for orders
    */
-  async uploadTrackingCsv(trackingData: Array<{
-    orderId: string;
-    variantId: string;
-    sku: string;
-    quantity: number;
-    trackingNumber: string;
-    carrier: string;
-    shippingAddress: string;
-    shippingCountry: string;
-  }>): Promise<{ errors: string[]; fulfilledOrderIds: string[] }> {
+  async uploadTrackingCsv(
+    trackingData: Array<{
+      orderId: string;
+      variantId: string;
+      sku: string;
+      quantity: number;
+      trackingNumber: string;
+      carrier: string;
+      shippingAddress: string;
+      shippingCountry: string;
+    }>,
+  ): Promise<{ errors: string[]; fulfilledOrderIds: string[] }> {
     console.log('[FW-SERVICE] Uploading tracking CSV');
     console.log('[FW-SERVICE] Number of orders:', trackingData.length);
 
@@ -251,7 +253,7 @@ export class FourthwallService {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': authHeader,
+          Authorization: authHeader,
           'Content-Type': `multipart/form-data; boundary=${boundary}`,
         },
         body: formData,
@@ -266,7 +268,7 @@ export class FourthwallService {
         throw new Error(`Failed to upload tracking CSV: ${response.status} - ${errorText}`);
       }
 
-      const result = await response.json() as { errors: string[]; fulfilledOrderIds: string[] };
+      const result = (await response.json()) as { errors: string[]; fulfilledOrderIds: string[] };
       console.log('[FW-SERVICE] Upload successful');
       console.log('[FW-SERVICE] Full response from Fourthwall:');
       console.log(JSON.stringify(result, null, 2));
@@ -299,16 +301,18 @@ export class FourthwallService {
     return value;
   }
 
-  private generateTrackingCsv(trackingData: Array<{
-    orderId: string;
-    variantId: string;
-    sku: string;
-    quantity: number;
-    trackingNumber: string;
-    carrier: string;
-    shippingAddress: string;
-    shippingCountry: string;
-  }>): string {
+  private generateTrackingCsv(
+    trackingData: Array<{
+      orderId: string;
+      variantId: string;
+      sku: string;
+      quantity: number;
+      trackingNumber: string;
+      carrier: string;
+      shippingAddress: string;
+      shippingCountry: string;
+    }>,
+  ): string {
     console.log('[FW-SERVICE] Generating CSV content');
 
     // CSV header - all 32 columns are required
@@ -364,50 +368,54 @@ export class FourthwallService {
 
       // Build row with all columns (most empty)
       const row = [
-        this.escapeCsvField(item.orderId),                 // ORDER ID
-        '',                                                 // ORDER STATUS
-        '',                                                 // FULFILLMENT SERVICE
-        '',                                                 // SHIPPING METHOD
-        '',                                                 // ORDERED BY
-        '',                                                 // SHIPPING NAME
-        this.escapeCsvField(item.shippingAddress),         // SHIPPING ADDRESS 1
-        '',                                                 // SHIPPING ADDRESS 2
-        '',                                                 // SHIPPING CITY
-        '',                                                 // SHIPPING STATE
-        '',                                                 // SHIPPING POSTAL CODE
-        this.escapeCsvField(item.shippingCountry),         // SHIPPING COUNTRY
-        '',                                                 // SHIPPING PHONE NUMBER
-        '',                                                 // ITEM NAME
-        item.quantity.toString(),                           // QUANTITY
-        this.escapeCsvField(item.sku),                     // ITEM CODE/SKU
-        this.escapeCsvField(item.variantId),               // ITEM ID
-        '',                                                 // ITEM PRICE
-        '',                                                 // CURRENCY
-        '',                                                 // ITEM WEIGHT
-        '',                                                 // WEIGHT UNIT
-        '',                                                 // COLOR
-        '',                                                 // SIZE
-        '',                                                 // CUSTOM ATTRIBUTE
-        '',                                                 // IMAGE URL
-        '',                                                 // CONTRIBUTION TIME (UTC)
-        '',                                                 // EMAIL
-        '',                                                 // HS CODE
-        '',                                                 // ORIGIN COUNTRY
-        '',                                                 // TAX ID
-        this.escapeCsvField(item.carrier),                 // CARRIER CODE
-        this.escapeCsvField(item.trackingNumber),          // TRACKING NUMBER
+        this.escapeCsvField(item.orderId), // ORDER ID
+        '', // ORDER STATUS
+        '', // FULFILLMENT SERVICE
+        '', // SHIPPING METHOD
+        '', // ORDERED BY
+        '', // SHIPPING NAME
+        this.escapeCsvField(item.shippingAddress), // SHIPPING ADDRESS 1
+        '', // SHIPPING ADDRESS 2
+        '', // SHIPPING CITY
+        '', // SHIPPING STATE
+        '', // SHIPPING POSTAL CODE
+        this.escapeCsvField(item.shippingCountry), // SHIPPING COUNTRY
+        '', // SHIPPING PHONE NUMBER
+        '', // ITEM NAME
+        item.quantity.toString(), // QUANTITY
+        this.escapeCsvField(item.sku), // ITEM CODE/SKU
+        this.escapeCsvField(item.variantId), // ITEM ID
+        '', // ITEM PRICE
+        '', // CURRENCY
+        '', // ITEM WEIGHT
+        '', // WEIGHT UNIT
+        '', // COLOR
+        '', // SIZE
+        '', // CUSTOM ATTRIBUTE
+        '', // IMAGE URL
+        '', // CONTRIBUTION TIME (UTC)
+        '', // EMAIL
+        '', // HS CODE
+        '', // ORIGIN COUNTRY
+        '', // TAX ID
+        this.escapeCsvField(item.carrier), // CARRIER CODE
+        this.escapeCsvField(item.trackingNumber), // TRACKING NUMBER
       ];
 
       console.log(`[FW-SERVICE] Row ${index + 1} has ${row.length} columns`);
 
       if (row.length !== headers.length) {
-        console.error(`[FW-SERVICE] ERROR: Row ${index + 1} has ${row.length} columns but header has ${headers.length}`);
+        console.error(
+          `[FW-SERVICE] ERROR: Row ${index + 1} has ${row.length} columns but header has ${headers.length}`,
+        );
         console.error('[FW-SERVICE] Row data:', JSON.stringify(item));
       }
 
       const rowString = row.join(',');
       const commaCount = (rowString.match(/,/g) || []).length;
-      console.log(`[FW-SERVICE] Row ${index + 1} joined string has ${commaCount} commas (should be ${headers.length - 1})`);
+      console.log(
+        `[FW-SERVICE] Row ${index + 1} joined string has ${commaCount} commas (should be ${headers.length - 1})`,
+      );
 
       rows.push(rowString);
     }
@@ -422,7 +430,15 @@ export class FourthwallService {
     const parts: string[] = [];
 
     // Add CSV file part
-    parts.push(`--${boundary}\r\n`, 'Content-Disposition: form-data; name="csv"; filename="tracking.csv"\r\n', 'Content-Type: text/csv\r\n', '\r\n', csvContent, '\r\n', `--${boundary}--\r\n`);
+    parts.push(
+      `--${boundary}\r\n`,
+      'Content-Disposition: form-data; name="csv"; filename="tracking.csv"\r\n',
+      'Content-Type: text/csv\r\n',
+      '\r\n',
+      csvContent,
+      '\r\n',
+      `--${boundary}--\r\n`,
+    );
 
     return parts.join('');
   }
