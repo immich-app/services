@@ -70,12 +70,17 @@ export class ApprovalValidator {
 
     // Fetch PR reviews
     const reviews = await this.fetchPullRequestReviews(installationId, owner, repo, prNumber);
+    console.log(`[approval] DEBUG: All reviews fetched for PR #${prNumber}:`, JSON.stringify(reviews, null, 2));
 
     // Process reviews to find valid approvals
     const approvalsByUser = new Map<number, Review>();
 
     // Process reviews in chronological order
     for (const review of reviews) {
+      if (review.state === 'COMMENTED') {
+        continue;
+      }
+
       const existingReview = approvalsByUser.get(review.user.id);
 
       // Only update if this is a newer review or changes the approval state
@@ -104,6 +109,21 @@ export class ApprovalValidator {
         }
       }
     }
+
+    console.log(
+      `[approval] DEBUG: Reviews by valid users (after deduplication):`,
+      JSON.stringify(
+        [...approvalsByUser.entries()].map(([userId, review]) => ({
+          userId,
+          login: review.user.login,
+          state: review.state,
+          submitted_at: review.submitted_at,
+        })),
+        null,
+        2,
+      ),
+    );
+    console.log(`[approval] DEBUG: Valid approvals from authorized users:`, JSON.stringify(validApprovals, null, 2));
 
     // Sort reviews by date (newest first)
     allReviews.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
@@ -172,13 +192,16 @@ export class ApprovalValidator {
     try {
       const octokit = createOctokitForInstallation(this.appId, this.privateKey, installationId);
 
-      const response = await octokit.rest.pulls.listReviews({
+      const reviews = await octokit.paginate(octokit.rest.pulls.listReviews, {
         owner,
         repo,
         pull_number: prNumber,
+        per_page: 100,
       });
 
-      return response.data as Review[];
+      console.log(`[approval] Fetched ${reviews.length} total reviews for PR #${prNumber}`);
+
+      return reviews as Review[];
     } catch (error) {
       console.log(`[approval] Failed to fetch reviews for PR #${prNumber}: ${error}`);
       return [];
