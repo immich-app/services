@@ -6,6 +6,8 @@
 import { createOctokitForInstallation } from './auth.js';
 import { CheckRunManager } from './check-runs.js';
 
+type Role = 'admin' | 'team' | 'contributor' | 'support' | 'futo' | 'yucca';
+
 interface User {
   github: {
     username: string;
@@ -15,8 +17,15 @@ interface User {
     username: string;
     id: number;
   };
-  role: 'admin' | 'team' | 'contributor' | 'support';
+  /** @deprecated Use `roles` instead */
+  role?: Role;
+  roles?: Role[];
   dev?: boolean;
+}
+
+function hasApproverRole(user: User): boolean {
+  const roles = user.roles ?? (user.role ? [user.role] : []);
+  return roles.includes('admin') || roles.includes('team');
 }
 
 interface Review {
@@ -64,9 +73,7 @@ export class ApprovalValidator {
     const allowedUsers = await this.getAllowedUsers();
 
     // Get authorized approvers (admin and team roles)
-    const authorizedApprovers = allowedUsers
-      .filter((user) => user.role === 'admin' || user.role === 'team')
-      .map((user) => user.github);
+    const authorizedApprovers = allowedUsers.filter((user) => hasApproverRole(user)).map((user) => user.github);
 
     // Fetch PR reviews
     const reviews = await this.fetchPullRequestReviews(installationId, owner, repo, prNumber);
@@ -189,6 +196,6 @@ export class ApprovalValidator {
    * Check if a specific user is authorized to approve
    */
   isUserAuthorized(userId: number, users: User[]): boolean {
-    return users.some((user) => user.github.id === userId && (user.role === 'admin' || user.role === 'team'));
+    return users.some((user) => user.github.id === userId && hasApproverRole(user));
   }
 }
