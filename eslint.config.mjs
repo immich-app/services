@@ -28,7 +28,7 @@ export default typescriptEslint.config([
       sourceType: 'module',
 
       parserOptions: {
-        project: 'tsconfig.json',
+        project: ['tsconfig.json', 'apps/discord-bot/tsconfig.json'],
         tsconfigRootDir: __dirname,
       },
     },

@@ -1,0 +1,635 @@
+import type { PullRequestEvent } from '@octokit/webhooks-types';
+import {
+  ActionRowBuilder,
+  ApplicationCommandOptionType,
+  type AutocompleteInteraction,
+  bold,
+  type Channel,
+  channelMention,
+  type CommandInteraction,
+  type GuildMember,
+  inlineCode,
+  MessageFlags,
+  ModalBuilder,
+  type ModalSubmitInteraction,
+  TextInputBuilder,
+  TextInputStyle,
+  ThreadChannel,
+} from 'discord.js';
+import { Discord, ModalComponent, Slash, SlashChoice, SlashOption } from 'discordx';
+import { Constants, DiscordField, DiscordModal } from '../constants.js';
+import { DiscordChannel } from '../interfaces/discord.interface.js';
+import type { DiscordService } from '../services/discord.service.js';
+import type { GithubService } from '../services/github.service.js';
+import type { RSSService } from '../services/rss.service.js';
+import type { ScheduledMessageService } from '../services/scheduled-message.service.js';
+import type { WebhookService } from '../services/webhook.service.js';
+
+const authGuard = async (interaction: CommandInteraction) => {
+  const isValid = [DiscordChannel.BotSpam, DiscordChannel.SupportCrew, DiscordChannel.QQ].includes(
+    interaction.channelId as DiscordChannel,
+  );
+
+  if (!isValid) {
+    await interaction.reply({
+      content: 'This command is not available in this channel',
+      ephemeral: true,
+    });
+  }
+
+  return isValid;
+};
+
+// Service references set by the DO during initialization
+let discordService: DiscordService;
+let rssService: RSSService;
+let scheduledMessageService: ScheduledMessageService;
+let githubService: GithubService;
+let webhookService: WebhookService;
+
+export const setCommandServices = (services: {
+  discord: DiscordService;
+  rss: RSSService;
+  scheduledMessage: ScheduledMessageService;
+  github: GithubService;
+  webhook: WebhookService;
+}) => {
+  discordService = services.discord;
+  rssService = services.rss;
+  scheduledMessageService = services.scheduledMessage;
+  githubService = services.github;
+  webhookService = services.webhook;
+};
+
+@Discord()
+export class DiscordCommands {
+  @Slash({ name: 'link-add', description: 'Add a new link' })
+  async addLink(
+    @SlashOption({
+      description: 'The link name',
+      name: 'name',
+      required: true,
+      type: ApplicationCommandOptionType.String,
+    })
+    name: string,
+    @SlashOption({
+      description: 'The link value',
+      name: 'link',
+      required: true,
+      type: ApplicationCommandOptionType.String,
+    })
+    link: string,
+    interaction: CommandInteraction,
+  ) {
+    if (!(await authGuard(interaction))) {
+      return;
+    }
+
+    const message = discordService.addLink({
+      name,
+      link,
+      author: interaction.user.username,
+    });
+
+    return interaction.reply({ content: message, flags: [MessageFlags.SuppressEmbeds] });
+  }
+
+  @Slash({ name: 'link-remove', description: 'Remove an existing link' })
+  async removeLink(
+    @SlashOption({
+      description: 'The name of the link to remove',
+      name: 'name',
+      required: true,
+      autocomplete: true,
+      type: ApplicationCommandOptionType.String,
+    })
+    name: string,
+    interaction: CommandInteraction | AutocompleteInteraction,
+  ) {
+    if (interaction.isAutocomplete()) {
+      const value = interaction.options.getFocused(true).value;
+      const message = discordService.getLinks(value);
+      return interaction.respond(message);
+    }
+
+    if (!(await authGuard(interaction))) {
+      return;
+    }
+
+    const { message, isPrivate } = discordService.removeLink({ name });
+
+    return interaction.reply({ content: message, ephemeral: isPrivate, flags: [MessageFlags.SuppressEmbeds] });
+  }
+
+  @Slash({ name: 'age', description: 'Immich age' })
+  handleAge(interaction: CommandInteraction) {
+    const message = discordService.getAge();
+    return interaction.reply(message);
+  }
+
+  @Slash({ name: 'forks', description: 'Immich forks' })
+  async handleForks(interaction: CommandInteraction) {
+    const message = await discordService.getForksMessage(interaction.channelId);
+    return interaction.reply(message);
+  }
+
+  @Slash({ name: 'release-notes', description: 'Release notes' })
+  handleReleaseNotes(interaction: CommandInteraction) {
+    const message = discordService.getReleaseNotes();
+    return interaction.reply({ content: message, flags: [MessageFlags.SuppressEmbeds] });
+  }
+
+  @Slash({ name: 'stars', description: 'Immich stars' })
+  async handleStars(interaction: CommandInteraction) {
+    const message = await discordService.getStarsMessage(interaction.channelId);
+    return interaction.reply(message);
+  }
+
+  @Slash({ name: 'link', description: 'Links to Immich pages' })
+  async handleLink(
+    @SlashOption({
+      description: 'Which docs do you need?',
+      name: 'type',
+      required: true,
+      autocomplete: true,
+      type: ApplicationCommandOptionType.String,
+    })
+    name: string,
+    @SlashOption({
+      description: 'Text that will be prepended before the link',
+      name: 'text',
+      required: false,
+      type: ApplicationCommandOptionType.String,
+    })
+    message: string | null,
+    interaction: CommandInteraction | AutocompleteInteraction,
+  ) {
+    if (interaction.isAutocomplete()) {
+      const value = interaction.options.getFocused(true).value;
+      const result = discordService.getLinks(value);
+      return interaction.respond(result);
+    }
+
+    const result = discordService.getLink(name, message);
+    return interaction.reply({
+      content: result.message,
+      ephemeral: result.isPrivate,
+      flags: [MessageFlags.SuppressEmbeds],
+    });
+  }
+
+  @Slash({ name: 'tags', description: 'Returns the currently set tags' })
+  async handleGetTags(interaction: CommandInteraction) {
+    const members = interaction.guild?.members.cache;
+    if (!members?.get(interaction.user.id)?.roles.cache.has(Constants.Discord.Roles.Contributor)) {
+      return;
+    }
+
+    const channel = interaction.channel;
+    if (channel instanceof ThreadChannel) {
+      await interaction.reply(channel.appliedTags.join(', '));
+    }
+  }
+
+  @Slash({ name: 'messages', description: 'Text blocks for reoccurring questions' })
+  async handleMessages(
+    @SlashOption({
+      description: 'Which message do you need?',
+      name: 'type',
+      required: true,
+      autocomplete: true,
+      type: ApplicationCommandOptionType.String,
+    })
+    name: string,
+    @SlashOption({
+      description: 'Text that will be prepended before the message',
+      name: 'text',
+      required: false,
+      type: ApplicationCommandOptionType.String,
+    })
+    preface: string | null,
+    interaction: CommandInteraction | AutocompleteInteraction,
+  ) {
+    if (interaction.isAutocomplete()) {
+      const value = interaction.options.getFocused(true).value;
+      const message = discordService.getMessages(value);
+      return interaction.respond(message);
+    }
+
+    const message = discordService.getMessage(name);
+
+    if (!message) {
+      return interaction.reply({ content: 'Message could not be found', ephemeral: true });
+    }
+
+    return interaction.reply({
+      content: preface ? `${preface} - ${message.content}` : message.content,
+      flags: [MessageFlags.SuppressEmbeds],
+    });
+  }
+
+  @Slash({ name: 'search', description: 'Search for PRs and Issues by title' })
+  async handleSearch(
+    @SlashOption({
+      description: 'Query that applies to title',
+      name: 'query',
+      required: true,
+      type: ApplicationCommandOptionType.String,
+      autocomplete: true,
+    })
+    id: string,
+    interaction: CommandInteraction | AutocompleteInteraction,
+  ) {
+    if (interaction.isAutocomplete()) {
+      const value = interaction.options.getFocused(true).value;
+      const message = await discordService.handleSearchAutocompletion(value);
+      return interaction.respond(message);
+    }
+
+    const content = await discordService.getPrOrIssue(Number(id));
+    return interaction.reply({ content, flags: [MessageFlags.SuppressEmbeds] });
+  }
+
+  @Slash({ name: 'message-add', description: 'Add a new message' })
+  async handleMessageAdd(interaction: CommandInteraction) {
+    if (!(await authGuard(interaction))) {
+      return;
+    }
+
+    const modal = new ModalBuilder({ customId: DiscordModal.Message, title: 'Add message' }).addComponents(
+      new ActionRowBuilder<TextInputBuilder>({
+        components: [
+          new TextInputBuilder({ customId: DiscordField.Name, label: 'Message name', style: TextInputStyle.Short }),
+        ],
+      }),
+      new ActionRowBuilder<TextInputBuilder>({
+        components: [
+          new TextInputBuilder({
+            customId: DiscordField.Message,
+            label: 'Message content',
+            style: TextInputStyle.Paragraph,
+          }),
+        ],
+      }),
+    );
+
+    return interaction.showModal(modal);
+  }
+
+  @Slash({ name: 'message-edit', description: 'Edit a message' })
+  async handleMessageEdit(
+    @SlashOption({
+      name: 'name',
+      description: 'The name of the message to edit',
+      required: true,
+      type: ApplicationCommandOptionType.String,
+      autocomplete: true,
+    })
+    messageName: string,
+    interaction: CommandInteraction | AutocompleteInteraction,
+  ) {
+    if (interaction.isAutocomplete()) {
+      const value = interaction.options.getFocused(true).value;
+      const message = discordService.getMessages(value);
+      return interaction.respond(message);
+    }
+
+    if (!(await authGuard(interaction))) {
+      return;
+    }
+
+    const message = discordService.getMessage(messageName);
+
+    if (!message) {
+      return interaction.reply({ content: 'Message could not be found', ephemeral: true });
+    }
+
+    const modal = new ModalBuilder({ customId: DiscordModal.Message, title: 'Edit message' }).addComponents(
+      new ActionRowBuilder<TextInputBuilder>({
+        components: [
+          new TextInputBuilder({
+            customId: DiscordField.Name,
+            label: 'Message name',
+            style: TextInputStyle.Short,
+            value: message.name,
+          }),
+        ],
+      }),
+      new ActionRowBuilder<TextInputBuilder>({
+        components: [
+          new TextInputBuilder({
+            customId: DiscordField.Message,
+            label: 'Message content',
+            style: TextInputStyle.Paragraph,
+            value: message.content,
+          }),
+        ],
+      }),
+    );
+
+    return interaction.showModal(modal);
+  }
+
+  @Slash({ name: 'message-remove', description: 'Remove an existing message' })
+  async handleMessageRemove(
+    @SlashOption({
+      description: 'The name of the message to remove',
+      name: 'name',
+      required: true,
+      autocomplete: true,
+      type: ApplicationCommandOptionType.String,
+    })
+    name: string,
+    interaction: CommandInteraction | AutocompleteInteraction,
+  ) {
+    if (interaction.isAutocomplete()) {
+      const value = interaction.options.getFocused(true).value;
+      const message = discordService.getMessages(value);
+      return interaction.respond(message);
+    }
+
+    if (!(await authGuard(interaction))) {
+      return;
+    }
+
+    const { message, isPrivate } = discordService.removeMessage(name);
+
+    return interaction.reply({ content: message, ephemeral: isPrivate, flags: [MessageFlags.SuppressEmbeds] });
+  }
+
+  @ModalComponent({ id: DiscordModal.Message })
+  async handleMessageModal(interaction: ModalSubmitInteraction) {
+    const name = interaction.fields.getTextInputValue(DiscordField.Name);
+    const content = interaction.fields.getTextInputValue(DiscordField.Message);
+
+    const message = discordService.addOrUpdateMessage({ name, content, author: interaction.user.id });
+
+    await interaction.reply(message);
+  }
+
+  @Slash({ name: 'emote-add', description: 'Add new emotes to the server' })
+  async handleEmoteAdd(
+    @SlashChoice('emote', '7tv', 'bttv')
+    @SlashOption({
+      name: 'source',
+      description: 'Where the emote is from',
+      type: ApplicationCommandOptionType.String,
+      required: true,
+    })
+    source: '7tv' | 'bttv' | 'emote',
+    @SlashOption({
+      name: 'id',
+      description: 'ID of the emote',
+      type: ApplicationCommandOptionType.String,
+      required: true,
+    })
+    id: string,
+    @SlashOption({
+      name: 'name',
+      description: 'Name of the emote. If unspecified uses the one from 7TV/BTTV',
+      type: ApplicationCommandOptionType.String,
+      required: false,
+    })
+    name: string | null,
+    interaction: CommandInteraction,
+  ) {
+    let emote;
+    switch (source) {
+      case '7tv': {
+        emote = await discordService.create7TvEmote(id, interaction.guildId, name);
+        break;
+      }
+      case 'bttv': {
+        emote = await discordService.createBttvEmote(id, interaction.guildId, name);
+        break;
+      }
+      case 'emote': {
+        emote = await discordService.createEmoteFromExistingOne(id, interaction.guildId, name);
+      }
+    }
+
+    if (!emote) {
+      await interaction.reply({ content: `Could not find ${source.toUpperCase()} emote with id ${id}` });
+      return;
+    }
+
+    await interaction.reply({ content: `Emote \`${emote.toString()}\` successfully added! ${emote.toString()}` });
+  }
+
+  @Slash({ name: 'rss-subscribe', description: 'Subscribe to an RSS feed' })
+  async handleSubscribeRSSFeed(
+    @SlashOption({
+      name: 'url',
+      description: 'URL pointing to an RSS feed',
+      type: ApplicationCommandOptionType.String,
+      required: true,
+    })
+    url: string,
+    interaction: CommandInteraction,
+  ) {
+    try {
+      await rssService.createRSSFeed(url, interaction.channelId);
+      await interaction.reply({ content: `Successfully added ${url}.`, flags: [MessageFlags.SuppressEmbeds] });
+    } catch (error) {
+      await interaction.reply({
+        content: `Could not add ${url}: ${error}`,
+        flags: [MessageFlags.Ephemeral, MessageFlags.SuppressEmbeds],
+      });
+    }
+  }
+
+  @Slash({ name: 'rss-unsubscribe', description: 'Unsubscribe from an existing RSS feed' })
+  async handleUnsubscribeRSSFeed(
+    @SlashOption({
+      description: 'URL of the RSS feed to be removed',
+      name: 'url',
+      required: true,
+      autocomplete: true,
+      type: ApplicationCommandOptionType.String,
+    })
+    url: string,
+    interaction: CommandInteraction | AutocompleteInteraction,
+  ) {
+    if (interaction.isAutocomplete()) {
+      const value = interaction.options.getFocused(true).value;
+      const message = rssService.searchRSSFeeds(value, interaction.channelId);
+      return interaction.respond(message);
+    }
+
+    rssService.removeRSSFeed(url, interaction.channelId);
+
+    return interaction.reply({ content: `Successfully removed ${url}.`, flags: [MessageFlags.SuppressEmbeds] });
+  }
+
+  @Slash({ name: 'fourthwall', description: 'Fourthwall related commmands' })
+  async handleFourthwall(
+    @SlashChoice('update')
+    @SlashOption({
+      name: 'action',
+      description: 'update: Updates Fourthwall orders',
+      required: true,
+      type: ApplicationCommandOptionType.String,
+    })
+    action: 'update',
+    @SlashOption({
+      name: 'id',
+      description: 'Id of a specific order to update',
+      type: ApplicationCommandOptionType.String,
+      required: false,
+    })
+    id: string | null,
+    interaction: CommandInteraction,
+  ) {
+    switch (action) {
+      case 'update': {
+        await discordService.updateFourthwallOrders(id);
+        return interaction.reply({
+          content: 'Successfully updated Fourthwall orders',
+          flags: [MessageFlags.Ephemeral],
+        });
+      }
+    }
+  }
+
+  @Slash({ name: 'emote-sync', description: 'Syncs Discord emotes to Zulip' })
+  async handleEmoteSync(interaction: CommandInteraction) {
+    await discordService.syncEmotes(interaction);
+  }
+
+  @Slash({ name: 'prune', description: 'Deletes all recent messages of a timed out user' })
+  async handleCleanUp(
+    @SlashOption({
+      name: 'user',
+      description: 'The timed out user to delete recent messages of',
+      type: ApplicationCommandOptionType.User,
+      required: true,
+    })
+    member: GuildMember,
+    @SlashOption({
+      name: 'timespan',
+      description: 'Delete all messages in the past x minutes',
+      type: ApplicationCommandOptionType.Number,
+      required: false,
+    })
+    minutes: number = 5,
+    interaction: CommandInteraction,
+  ) {
+    if (!member.isCommunicationDisabled()) {
+      await interaction.reply({
+        content: `${member.user.toString()} must be timeouted first`,
+        flags: [MessageFlags.Ephemeral],
+      });
+    }
+
+    const deferredInteraction = await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
+    await discordService.pruneMessages(interaction, member, minutes);
+
+    await deferredInteraction.edit(`Successfully cleaned up ${member.user.toString()}`);
+  }
+
+  @Slash({ name: 'schedule-add', description: 'Create a recurring scheduled message' })
+  async handleScheduleAdd(
+    @SlashOption({
+      name: 'name',
+      description: 'A unique name for this scheduled message',
+      type: ApplicationCommandOptionType.String,
+      required: true,
+    })
+    name: string,
+    @SlashOption({
+      name: 'cron',
+      description: 'Cron expression (e.g. "0 9 * * 1" for every Monday at 9am UTC)',
+      type: ApplicationCommandOptionType.String,
+      required: true,
+    })
+    cronExpression: string,
+    @SlashOption({
+      name: 'message',
+      description: 'The message to send (supports role pings like <@&roleId>)',
+      type: ApplicationCommandOptionType.String,
+      required: true,
+    })
+    message: string,
+    @SlashOption({
+      name: 'channel',
+      description: 'The channel to send to (defaults to current channel)',
+      type: ApplicationCommandOptionType.Channel,
+      required: false,
+    })
+    channel: Channel | null,
+    interaction: CommandInteraction,
+  ) {
+    const channelId = channel?.id ?? interaction.channelId;
+
+    try {
+      scheduledMessageService.createScheduledMessage({
+        name,
+        cronExpression,
+        message,
+        channelId,
+        createdBy: interaction.user.id,
+      });
+
+      return interaction.reply(
+        `Scheduled message ${inlineCode(name)} created with cron ${inlineCode(cronExpression)} in ${channelMention(channelId)}`,
+      );
+    } catch (error) {
+      return interaction.reply({
+        content: `Failed to create scheduled message: ${error}`,
+        flags: [MessageFlags.Ephemeral],
+      });
+    }
+  }
+
+  @Slash({ name: 'schedule-remove', description: 'Remove a scheduled message' })
+  async handleScheduleRemove(
+    @SlashOption({
+      name: 'name',
+      description: 'The name of the scheduled message to remove',
+      type: ApplicationCommandOptionType.String,
+      required: true,
+      autocomplete: true,
+    })
+    name: string,
+    interaction: CommandInteraction | AutocompleteInteraction,
+  ) {
+    if (interaction.isAutocomplete()) {
+      const value = interaction.options.getFocused(true).value;
+      const results = scheduledMessageService.getScheduledMessages(value);
+      return interaction.respond(results);
+    }
+
+    const message = scheduledMessageService.removeScheduledMessage(name);
+    return interaction.reply(message);
+  }
+
+  @Slash({ name: 'schedule-list', description: 'List all scheduled messages' })
+  async handleScheduleList(interaction: CommandInteraction) {
+    const messages = scheduledMessageService.listScheduledMessages();
+
+    if (messages.length === 0) {
+      return interaction.reply({ content: 'No scheduled messages found.', flags: [MessageFlags.Ephemeral] });
+    }
+
+    const content = messages
+      .map(
+        (message) =>
+          `- ${bold(message.name)}:  ${inlineCode(message.cronExpression)} in ${channelMention(message.channelId)}: ${message.message}`,
+      )
+      .join('\n');
+
+    return interaction.reply({ content, flags: [MessageFlags.Ephemeral] });
+  }
+
+  @Slash({ name: 'backfill-pull-requests', description: 'Backfill pull requests' })
+  async backfillPullRequests(interaction: CommandInteraction) {
+    const deferredReply = await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+    const pullRequests = await githubService.getOpenPullRequests();
+    for (const pullRequest of pullRequests) {
+      await webhookService.handlePullRequestTeamUpdate({ ...pullRequest, action: 'opened' } as PullRequestEvent);
+    }
+
+    return deferredReply.edit('Successfully backfilled pull requests');
+  }
+}

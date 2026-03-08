@@ -1,0 +1,23 @@
+name = "discord-bot-immich-app"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[durable_objects.bindings]]
+name = "DISCORD_BOT"
+class_name = "DiscordBotDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DiscordBotDO"]
+
+[triggers]
+crons = [
+  "*/15 * * * *",  # RSS feed updates
+  "36 4 3 2 *",    # Immich birthday
+  "0 12 * * *",    # Daily report
+  "0 12 * * 4",    # Weekly report
+  "0 12 19 * *",   # Monthly report
+  "0 22 * * *",    # Holiday notification
+  "0 0 * * *",     # Midnight tasks (monthly summary creation)
+]

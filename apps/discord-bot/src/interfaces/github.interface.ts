@@ -1,0 +1,67 @@
+import type { GithubOrg, GithubRepo } from '../constants.js';
+
+export interface SearchOptions {
+  query: string;
+  per_page?: number;
+  page: number;
+  sort: 'updated';
+  order: 'desc' | 'asc';
+}
+
+export interface SearchResult {
+  total_count: number;
+  incomplete_results: boolean;
+  items: Array<{
+    number: number;
+    title: string;
+    pull_request: boolean;
+  }>;
+}
+
+export type PullRequest = {
+  fullDatabaseId: string;
+  number: number;
+  title: string;
+  body: string;
+  url: string;
+  repository: { nameWithOwner: string };
+  author: { __typename: 'Bot' | 'User' | 'Organization' };
+};
+
+export type PullRequestBaseEvent = {
+  repository: { full_name: string };
+  sender: { type: 'Bot' | 'User' | 'Organization' };
+  pull_request: {
+    number: number;
+    id: number;
+    title: string;
+    body: string;
+    html_url: string;
+  };
+};
+
+export interface IGithubInterface {
+  init(appId: string, privateKey: string, installationId: string): Promise<void>;
+  getIssueOrPr(org: GithubOrg | string, repo: GithubRepo | string, id: number): Promise<string | undefined>;
+  getDiscussion(org: GithubOrg | string, repo: GithubRepo | string, id: number): Promise<string | undefined>;
+  getForkCount(org: GithubOrg | string, repo: GithubRepo | string): Promise<number>;
+  getStarCount(org: GithubOrg | string, repo: GithubRepo | string): Promise<number>;
+  search(options: SearchOptions): Promise<SearchResult>;
+  getRepositoryFileContent(
+    org: GithubOrg | string,
+    repo: GithubRepo | string,
+    ref: string,
+    path: string,
+  ): Promise<string[] | undefined>;
+  getCheckSuiteTriggerCommit(
+    org: GithubOrg | string,
+    repo: GithubRepo | string,
+    checkSuiteNodeId: string,
+  ): Promise<string>;
+  getLatestReleaseTag(org: GithubOrg | string, repo: GithubRepo | string): Promise<string>;
+  isCollaborator(dto: { org: string; repo: string; userLogin: string }): Promise<boolean>;
+  getPullRequests(
+    location: { org: string; repo: string },
+    options: { states?: Array<'OPEN' | 'CLOSED' | 'MERGED'> },
+  ): AsyncGenerator<PullRequest[]>;
+}
