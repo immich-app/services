@@ -76,7 +76,7 @@ importers:
 
   apps/hello: {}
 
-  packages/peerjs-reconnect:
+  packages/slopnet:
     devDependencies:
       peerjs:
         specifier: ^1.5.4

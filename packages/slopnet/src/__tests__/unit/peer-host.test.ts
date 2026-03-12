@@ -152,8 +152,7 @@ describe('PeerHost', () => {
       const conn = client.connect('host-1');
       await connP;
 
-      // Wait for client's connection to open
-      await new Promise<void>((resolve) => conn.on('open', resolve));
+      await flushMicrotasks();
 
       const dataPromise = waitForEvent(host, 'data');
       conn.send({ action: 'move', x: 10, y: 20 });
@@ -176,7 +175,7 @@ describe('PeerHost', () => {
       const connP = waitForEvent(host, 'clientConnected');
       const conn = client.connect('host-1');
       await connP;
-      await new Promise<void>((resolve) => conn.on('open', resolve));
+      await flushMicrotasks();
 
       const dataListener = vi.fn();
       host.on('data', dataListener);
@@ -202,7 +201,7 @@ describe('PeerHost', () => {
       const connP = waitForEvent(host, 'clientConnected');
       const conn = client.connect('host-1');
       await connP;
-      await new Promise<void>((resolve) => conn.on('open', resolve));
+      await flushMicrotasks();
 
       const received: unknown[] = [];
       conn.on('data', (data: unknown) => received.push(data));
@@ -239,12 +238,12 @@ describe('PeerHost', () => {
       const p1 = waitForEvent(host, 'clientConnected');
       const conn1 = client1.connect('host-1');
       await p1;
-      await new Promise<void>((resolve) => conn1.on('open', resolve));
+      await flushMicrotasks();
 
       const p2 = waitForEvent(host, 'clientConnected');
       const conn2 = client2.connect('host-1');
       await p2;
-      await new Promise<void>((resolve) => conn2.on('open', resolve));
+      await flushMicrotasks();
 
       const received1: unknown[] = [];
       const received2: unknown[] = [];
@@ -275,7 +274,7 @@ describe('PeerHost', () => {
       const connP = waitForEvent(host, 'clientConnected');
       const conn = client.connect('host-1');
       await connP;
-      await new Promise<void>((resolve) => conn.on('open', resolve));
+      await flushMicrotasks();
 
       const disconnectedPromise = waitForEvent(host, 'clientDisconnected');
       conn.close();
@@ -301,16 +300,18 @@ describe('PeerHost', () => {
       const connP = waitForEvent(host, 'clientConnected');
       const conn = client.connect('host-1');
       await connP;
-      await new Promise<void>((resolve) => conn.on('open', resolve));
+      await flushMicrotasks();
 
-      const removedPromise = waitForEvent(host, 'clientRemoved');
+      const removedListener = vi.fn();
+      host.on('clientRemoved', removedListener);
       conn.close();
+      await flushMicrotasks();
 
       // Advance time past the reconnect window
       vi.advanceTimersByTime(5001);
-      const event = await removedPromise;
+      await flushMicrotasks();
 
-      expect(event).toEqual({ clientId: 'client-1' });
+      expect(removedListener).toHaveBeenCalledWith({ clientId: 'client-1' });
       expect(host.getDisconnectedClients()).not.toContain('client-1');
     });
 
@@ -329,7 +330,7 @@ describe('PeerHost', () => {
       const connP = waitForEvent(host, 'clientConnected');
       const conn = client.connect('host-1');
       await connP;
-      await new Promise<void>((resolve) => conn.on('open', resolve));
+      await flushMicrotasks();
 
       const removedListener = vi.fn();
       host.on('clientRemoved', removedListener);
@@ -358,7 +359,7 @@ describe('PeerHost', () => {
       const connP = waitForEvent(host, 'clientConnected');
       const conn = client.connect('host-1');
       await connP;
-      await new Promise<void>((resolve) => conn.on('open', resolve));
+      await flushMicrotasks();
 
       // Disconnect
       const disconnectedP = waitForEvent(host, 'clientDisconnected');
@@ -417,7 +418,7 @@ describe('PeerHost', () => {
       const connP = waitForEvent(host, 'clientConnected');
       const conn = client.connect('host-1');
       await connP;
-      await new Promise<void>((resolve) => conn.on('open', resolve));
+      await flushMicrotasks();
 
       const discP = waitForEvent(host, 'clientDisconnected');
       conn.close();
@@ -449,7 +450,7 @@ describe('PeerHost', () => {
       const connP = waitForEvent(host, 'clientConnected');
       const conn = client.connect('host-1');
       await connP;
-      await new Promise<void>((resolve) => conn.on('open', resolve));
+      await flushMicrotasks();
 
       // Prevent client from responding to heartbeats
       conn.removeAllListeners('data');

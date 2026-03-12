@@ -1,5 +1,5 @@
 {
-  "name": "@immich-services/peerjs-reconnect",
+  "name": "slopnet",
   "version": "0.1.0",
   "description": "PeerJS connection management library with automatic reconnection, heartbeat, and host/client coordination",
   "type": "module",
