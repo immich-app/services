@@ -10,8 +10,10 @@
     "src/**/*.ts",
     "apps/*/src/**/*.ts",
     "apps/*/worker-configuration.d.ts",
+    "packages/*/src/**/*.ts",
     "*.config.ts",
-    "apps/*/*.config.ts"
+    "apps/*/*.config.ts",
+    "packages/*/*.config.ts"
   ],
   "exclude": ["node_modules", "**/dist", "**/.wrangler"]
 }
