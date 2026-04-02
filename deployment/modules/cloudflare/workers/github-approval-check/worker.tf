@@ -95,6 +95,10 @@ module "domain" {
   domain   = "immich.app"
 }
 
+output "preview_url" {
+  value = "https://${module.domain.fqdn}"
+}
+
 output "webhook_url" {
   value = "https://${module.domain.fqdn}/webhook"
 }
