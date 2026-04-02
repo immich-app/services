@@ -70,3 +70,7 @@ module "domain" {
   env      = var.env
   domain   = "immich.cloud"
 }
+
+output "preview_url" {
+  value = "https://${module.domain.fqdn}"
+}

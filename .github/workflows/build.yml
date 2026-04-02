@@ -66,18 +66,38 @@ jobs:
       - name: Deploy All
         working-directory: ${{ github.workspace }}/deployment
         run: mise run tf:apply
-#      - name: Deploy Output
-#        id: deploy-output
-#        working-directory: ${{ github.workspace }}/deployment/modules/cloudflare/static-pages
-#        run: |
-#          echo "output=$(op run --no-masking --env-file='../../../.env' -- terragrunt output -json | jq -c .)" >> $GITHUB_OUTPUT
-#
-#      - name: Comment
-#        uses: actions-cool/maintain-one-comment@4b2dbf086015f892dcb5e8c1106f5fccd6c1476b # v3
-#        if: ${{ github.event_name == 'pull_request' }}
-#        with:
-#          number: ${{ github.event.number }}
-#          body: |
-#            📖 Preview of ${{ matrix.app_name }}.immich.app deployed to [${{ fromJson(steps.deploy-output.outputs.output).immich_subdomain.value }}](https://${{ fromJson(steps.deploy-output.outputs.output).immich_subdomain.value }})
-#          emojis: 'rocket'
-#          body-include: '<!-- ${{ matrix.app_name }} PR URL -->'
+
+      - name: Collect preview URLs
+        if: ${{ github.event_name == 'pull_request' }}
+        id: preview-urls
+        working-directory: ${{ github.workspace }}/deployment
+        run: |
+          BODY="<!-- preview-urls -->"$'\n'
+          SHORT_SHA="${{ github.event.pull_request.head.sha }}"
+          SHORT_SHA="${SHORT_SHA:0:7}"
+          BODY+="### Preview Deployments ([${SHORT_SHA}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${{ github.event.pull_request.head.sha }}))"$'\n\n'
+          BODY+="| Worker | Preview URL |"$'\n'
+          BODY+="|--------|-------------|"$'\n'
+          for dir in modules/cloudflare/workers/*/; do
+            worker_name=$(basename "$dir")
+            cd "${{ github.workspace }}/deployment/${dir}"
+            url=$(mise run tg output -raw preview_url 2>/dev/null) || true
+            cd "${{ github.workspace }}/deployment"
+            if [ -n "$url" ]; then
+              BODY+="| ${worker_name} | [${url}](${url}) |"$'\n'
+            fi
+          done
+          {
+            echo "body<<COMMENT_EOF"
+            echo "$BODY"
+            echo "COMMENT_EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Comment preview URLs
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions-cool/maintain-one-comment@4b2dbf086015f892dcb5e8c1106f5fccd6c1476b # v3.2.0
+        with:
+          number: ${{ github.event.number }}
+          body: ${{ steps.preview-urls.outputs.body }}
+          emojis: 'rocket'
+          body-include: '<!-- preview-urls -->'
