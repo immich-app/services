@@ -45,7 +45,8 @@ jobs:
     needs: [build]
     env:
       TF_VAR_stage: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || '' }}
-      TF_VAR_dist_dir: ${{github.workspace}}/dist
+      TF_VAR_dist_dir: ${{ github.workspace }}/dist
+      TF_VAR_migrations_dir: ${{ github.workspace }}/apps/version/migrations
       OP_SERVICE_ACCOUNT_TOKEN: ${{ github.ref == 'refs/heads/main' && secrets.OP_TF_PROD_ENV || secrets.OP_TF_DEV_ENV }}
     steps:
       - name: Checkout code

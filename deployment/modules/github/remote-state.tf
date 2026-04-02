@@ -15,3 +15,12 @@ data "terraform_remote_state" "github_approval_check" {
     schema_name = "services_cf_workers_github-approval-check_${var.env}${var.stage}"
   }
 }
+
+data "terraform_remote_state" "version" {
+  backend = "pg"
+
+  config = {
+    conn_str    = var.tf_state_postgres_conn_str
+    schema_name = "services_cf_workers_version_${var.env}${var.stage}"
+  }
+}

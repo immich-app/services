@@ -1,0 +1,17 @@
+{
+  "name": "@immich-services/version",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir ../../dist/version",
+    "tail": "wrangler tail",
+    "test": "vitest",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@influxdata/influxdb-client": "^1.34.0",
+    "@octokit/auth-app": "^7.2.2"
+  }
+}
