@@ -11,7 +11,7 @@ include "root" {
 }
 
 dependencies {
-  paths = ["../cloudflare/workers/github-approval-check"]
+  paths = ["../cloudflare/workers/github-approval-check", "../cloudflare/workers/version"]
 }
 
 locals {

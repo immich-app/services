@@ -1,0 +1,293 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Unique Servers (24h)", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "noValue": "0", "decimals": 0, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "Total Requests (24h)", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "sum(count_over_time(version_handle_request_invocation[24h]))", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "noValue": "0", "decimals": 0, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "Cache Hit Rate (24h)", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "sum(count_over_time(version_memory_cache_hit_count[24h])) / (sum(count_over_time(version_memory_cache_hit_count[24h])) + sum(count_over_time(version_memory_cache_miss_count[24h])))", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "noValue": "-", "decimals": 1, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 0.5 }, { "color": "green", "value": 0.9 }] }, "unit": "percentunit" }, "overrides": [] }
+    },
+    {
+      "title": "Servers Up-to-date (24h)", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) and on(user_agent) version_latest_version_count) / count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "noValue": "-", "decimals": 1, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 0.5 }, { "color": "green", "value": 0.8 }] }, "unit": "percentunit" }, "overrides": [] }
+    },
+    {
+      "title": "Releases Stored", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "max(version_d1_release_count_count)", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "noValue": "-", "decimals": 0, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "purple", "value": null }] }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "Errors (24h)", "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "sum(count_over_time(version_handle_request_errors[24h])) or vector(0)", "refId": "A" }],
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "noValue": "0", "decimals": 0, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }, { "color": "red", "value": 10 }] }, "unit": "short" }, "overrides": [] }
+    },
+
+    { "title": "Immich Servers", "type": "row", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 4 }, "collapsed": false, "panels": [] },
+
+    {
+      "title": "Unique Servers Over Time", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[1h])))", "legendFormat": "unique servers (1h)", "refId": "A" },
+        { "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))", "legendFormat": "unique servers (24h)", "refId": "B" },
+        { "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d])))", "legendFormat": "unique servers (30d)", "refId": "C" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "Version Distribution (24h)", "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "label_replace(count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h]))) by (user_agent), \"version\", \"$1\", \"user_agent\", \"immich-server/(.*)\")", "legendFormat": "{{version}}", "refId": "A" }],
+      "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "pieType": "donut", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "Version Adoption Over Time", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "label_replace(count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]))) by (user_agent), \"version\", \"$1\", \"user_agent\", \"immich-server/(.*)\")", "legendFormat": "{{version}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 30, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true, "stacking": { "group": "A", "mode": "normal" } }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "New Servers (not seen in last 30d)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 24h) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 24h)))", "legendFormat": "new servers", "refId": "A" }],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 50, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0 }, "color": { "fixedColor": "green", "mode": "fixed" }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "Servers by Continent (24h)", "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 21 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "count(count by (client_ip, continent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h]))) by (continent)", "legendFormat": "{{continent}}", "refId": "A" }],
+      "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "pieType": "donut", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "Traffic Source (24h)", "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 21 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "(sum(count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) or vector(0)) + (sum(count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) or vector(0))", "legendFormat": "Immich servers", "refId": "A" },
+        { "expr": "(sum(count_over_time(version_version_request_invocation{user_agent!~\"immich-server/.*\",user_agent!=\"\"}[24h])) or vector(0)) + (sum(count_over_time(version_changelog_request_invocation{user_agent!~\"immich-server/.*\",user_agent!=\"\"}[24h])) or vector(0))", "legendFormat": "Other", "refId": "B" }
+      ],
+      "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "pieType": "donut", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [ { "matcher": { "id": "byName", "options": "Immich servers" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] }, { "matcher": { "id": "byName", "options": "Other" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] } ] }
+    },
+    {
+      "title": "Top Cloudflare Edge Locations (24h)", "type": "bargauge",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 21 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "topk(15, sum(count_over_time(version_handle_request_invocation{colo!=\"\"}[24h])) by (colo))", "legendFormat": "{{colo}}", "refId": "A" }],
+      "options": { "orientation": "horizontal", "displayMode": "gradient", "reduceOptions": { "calcs": ["lastNotNull"] }, "showUnfilled": true, "minVizWidth": 0, "minVizHeight": 10 },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "continuous-blues" } }, "overrides": [] }
+    },
+
+    { "title": "Worker Performance", "type": "row", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 }, "collapsed": false, "panels": [] },
+
+    {
+      "title": "Request Duration (p95)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "quantile_over_time(0.95, version_handle_request_duration[5m])", "legendFormat": "handle_request p95", "refId": "A" },
+        { "expr": "quantile_over_time(0.95, version_version_request_duration[5m])", "legendFormat": "/version p95", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "decimals": 0, "unit": "ms" }, "overrides": [] }
+    },
+    {
+      "title": "Cache Hit Rate", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "sum(count_over_time(version_changelog_request_invocation{cache=\"cdn\"}[5m]))", "legendFormat": "CDN hit (/changelog)", "refId": "A" },
+        { "expr": "sum(count_over_time(version_changelog_request_invocation{cache=\"miss\"}[5m]))", "legendFormat": "CDN miss (/changelog)", "refId": "B" },
+        { "expr": "sum(count_over_time(version_memory_cache_hit_count[5m]))", "legendFormat": "memory hit (/version)", "refId": "C" },
+        { "expr": "sum(count_over_time(version_memory_cache_miss_count[5m]))", "legendFormat": "memory miss (/version)", "refId": "D" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 50, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "stacking": { "group": "A", "mode": "normal" } }, "unit": "short" }, "overrides": [ { "matcher": { "id": "byName", "options": "CDN hit (/changelog)" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] }, { "matcher": { "id": "byName", "options": "CDN miss (/changelog)" }, "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] }, { "matcher": { "id": "byName", "options": "memory hit (/version)" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] }, { "matcher": { "id": "byName", "options": "memory miss (/version)" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] } ] }
+    },
+    {
+      "title": "Requests by Region", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 38 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "sum(count_over_time(version_handle_request_invocation[5m])) by (continent)", "legendFormat": "{{continent}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true, "stacking": { "group": "A", "mode": "normal" } }, "unit": "short" }, "overrides": [] }
+    },
+
+    { "title": "D1 Database", "type": "row", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 46 }, "collapsed": false, "panels": [] },
+
+    {
+      "title": "D1 Query Duration (p95)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 47 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "quantile_over_time(0.95, version_d1_get_latest_duration[5m])", "legendFormat": "get_latest p95", "refId": "A" },
+        { "expr": "quantile_over_time(0.95, version_d1_get_changelog_duration[5m])", "legendFormat": "get_changelog p95", "refId": "B" },
+        { "expr": "quantile_over_time(0.95, version_d1_upsert_duration[5m])", "legendFormat": "upsert p95", "refId": "C" },
+        { "expr": "quantile_over_time(0.95, version_d1_bulk_upsert_duration[5m])", "legendFormat": "bulk_upsert p95", "refId": "D" },
+        { "expr": "quantile_over_time(0.95, version_webhook_upsert_duration[5m])", "legendFormat": "webhook_upsert p95", "refId": "E" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "decimals": 0, "unit": "ms" }, "overrides": [] }
+    },
+    {
+      "title": "D1 Query Rate", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 47 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "sum(count_over_time(version_d1_get_latest_invocation[5m]))", "legendFormat": "get_latest", "refId": "A" },
+        { "expr": "sum(count_over_time(version_d1_get_changelog_invocation[5m]))", "legendFormat": "get_changelog", "refId": "B" },
+        { "expr": "sum(count_over_time(version_d1_upsert_invocation[5m]))", "legendFormat": "upsert", "refId": "C" },
+        { "expr": "sum(count_over_time(version_d1_bulk_upsert_invocation[5m]))", "legendFormat": "bulk_upsert", "refId": "D" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "D1 Error Rate", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 55 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "sum(count_over_time(version_d1_get_latest_errors[5m]))", "legendFormat": "get_latest errors", "refId": "A" },
+        { "expr": "sum(count_over_time(version_d1_get_changelog_errors[5m]))", "legendFormat": "get_changelog errors", "refId": "B" },
+        { "expr": "sum(count_over_time(version_d1_upsert_errors[5m]))", "legendFormat": "upsert errors", "refId": "C" },
+        { "expr": "sum(count_over_time(version_d1_bulk_upsert_errors[5m]))", "legendFormat": "bulk_upsert errors", "refId": "D" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never" }, "color": { "mode": "palette-classic" }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "Releases Stored Over Time", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 55 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [{ "expr": "max(version_d1_release_count_count)", "legendFormat": "releases", "refId": "A" }],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "color": { "fixedColor": "purple", "mode": "fixed" }, "unit": "short" }, "overrides": [] }
+    },
+
+    { "title": "Data Pipeline", "type": "row", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 63 }, "collapsed": false, "panels": [] },
+
+    {
+      "title": "Webhook Events", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 64 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "sum(count_over_time(version_webhook_received_count[5m])) by (event)", "legendFormat": "received ({{event}})", "refId": "A" },
+        { "expr": "sum(count_over_time(version_webhook_release_upserted_count[5m]))", "legendFormat": "upserted", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "Cron Sync", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 64 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "sum(count_over_time(version_cron_sync_invocation[5m]))", "legendFormat": "cron runs", "refId": "A" },
+        { "expr": "sum(sum_over_time(version_cron_releases_synced_count[5m]))", "legendFormat": "releases synced", "refId": "B" },
+        { "expr": "sum(count_over_time(version_cron_release_updated_count[5m]))", "legendFormat": "releases updated", "refId": "C" },
+        { "expr": "sum(sum_over_time(version_cron_full_sync_count[5m]))", "legendFormat": "nightly full sync", "refId": "D" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "GitHub API Duration", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 72 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "quantile_over_time(0.95, version_github_fetch_latest_duration[5m])", "legendFormat": "fetch latest p95", "refId": "A" },
+        { "expr": "quantile_over_time(0.95, version_github_fetch_all_duration[5m])", "legendFormat": "fetch all p95", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "decimals": 0, "unit": "ms" }, "overrides": [] }
+    },
+    {
+      "title": "Data Source (Webhook vs Cron, 24h)", "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 12, "y": 72 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "sum(count_over_time(version_webhook_upsert_invocation[24h]))", "legendFormat": "webhook", "refId": "A" },
+        { "expr": "sum(sum_over_time(version_cron_releases_synced_count[24h]))", "legendFormat": "cron (new release)", "refId": "B" },
+        { "expr": "sum(count_over_time(version_cron_release_updated_count[24h]))", "legendFormat": "cron (content update)", "refId": "C" },
+        { "expr": "sum(sum_over_time(version_cron_full_sync_count[24h]))", "legendFormat": "cron (nightly full sync)", "refId": "D" }
+      ],
+      "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "pieType": "donut", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+
+    { "title": "HTTP", "type": "row", "gridPos": { "h": 1, "w": 24, "x": 0, "y": 80 }, "collapsed": false, "panels": [] },
+
+    {
+      "title": "Requests by Path (non-POST)", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 81 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "sum(count_over_time(version_http_response_count{method!=\"POST\"}[5m])) by (path)", "legendFormat": "{{path}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "unit": "short" }, "overrides": [] }
+    },
+    {
+      "title": "Response Status Codes", "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 81 },
+      "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
+      "targets": [
+        { "expr": "sum(count_over_time(version_http_response_count[5m])) by (status)", "legendFormat": "{{status}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "unit": "short" }, "overrides": [
+        { "matcher": { "id": "byRegexp", "options": "^2" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+        { "matcher": { "id": "byRegexp", "options": "^4" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
+        { "matcher": { "id": "byRegexp", "options": "^5" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }
+      ] }
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["cloudflare-workers", "version"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Version Worker Overview",
+  "uid": "version-worker-overview"
+}
