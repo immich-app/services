@@ -10,7 +10,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
   TG_NON_INTERACTIVE: 'true'
 
 jobs:
@@ -39,15 +38,16 @@ jobs:
           path: 'dist'
           retention-days: 7
 
-  deploy:
-    name: Deploy
+  deploy-dev:
+    name: Deploy (dev)
     runs-on: ubuntu-latest
     needs: [build]
     env:
+      ENVIRONMENT: dev
       TF_VAR_stage: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || '' }}
       TF_VAR_dist_dir: ${{ github.workspace }}/dist
       TF_VAR_migrations_dir: ${{ github.workspace }}/apps/version/migrations
-      OP_SERVICE_ACCOUNT_TOKEN: ${{ github.ref == 'refs/heads/main' && secrets.OP_TF_PROD_ENV || secrets.OP_TF_DEV_ENV }}
+      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_TF_DEV_ENV }}
     steps:
       - name: Checkout code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -102,3 +102,34 @@ jobs:
           body: ${{ steps.preview-urls.outputs.body }}
           emojis: 'rocket'
           body-include: '<!-- preview-urls -->'
+
+  deploy-prod:
+    name: Deploy (prod)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    needs: [build]
+    env:
+      ENVIRONMENT: prod
+      TF_VAR_stage: ''
+      TF_VAR_dist_dir: ${{ github.workspace }}/dist
+      TF_VAR_migrations_dir: ${{ github.workspace }}/apps/version/migrations
+      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_TF_PROD_ENV }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Get build artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: 'build-output'
+          path: '${{ github.workspace }}/dist'
+
+      - name: Install 1Password CLI
+        uses: 1password/install-cli-action@707af61a6c8b4fa7f9476328c035208fba6b54d7 # v2
+
+      - name: Setup Mise
+        uses: immich-app/devtools/actions/use-mise@697a75e2c3186d3c037c2c159855cf2d566542ba # use-mise-action-0.0.1
+
+      - name: Deploy All
+        working-directory: ${{ github.workspace }}/deployment
+        run: mise run tf:apply
