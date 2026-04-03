@@ -107,7 +107,7 @@ export default {
                     .addTag('cache', 'cdn')
                     .intField('invocation', 1),
                 );
-                return cached;
+                return new Response(cached.body, cached);
               }
             }
 
