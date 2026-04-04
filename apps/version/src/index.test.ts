@@ -596,3 +596,32 @@ describe('Cron sync', () => {
     expect(body.published_at).toBe('2025-03-01T00:00:00Z');
   });
 });
+
+describe('CDN cache immutable headers fix', () => {
+  it('cached responses must be wrapped to allow header mutation', async () => {
+    const cache = caches.default;
+    const key = new Request('https://example.com/test-immutable-headers');
+
+    const original = new Response(JSON.stringify({ data: 'test' }), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
+    });
+    await cache.put(key, original.clone());
+
+    const cached = await cache.match(key);
+    expect(cached).not.toBeNull();
+
+    // Cached responses have immutable headers - setting directly would throw
+    expect(() => cached!.headers.set('Server-Timing', 'test;dur=1')).toThrow();
+
+    // The fix: wrapping in new Response() creates mutable headers
+    const mutable = new Response(cached!.body, cached!);
+    expect(() => mutable.headers.set('Server-Timing', 'test;dur=1')).not.toThrow();
+    expect(mutable.headers.get('Server-Timing')).toBe('test;dur=1');
+
+    // Verify body is preserved
+    const body = (await mutable.json()) as any;
+    expect(body.data).toBe('test');
+
+    await cache.delete(key);
+  });
+});
