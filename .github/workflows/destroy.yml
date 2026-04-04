@@ -1,11 +1,9 @@
-name: Docs destroy
+name: Destroy PR environment
 on:
   pull_request_target:
     types: [closed]
 
 env:
-  TF_VAR_dist_dir: ${{ github.workspace }}/dist
-  TF_VAR_stage: pr-${{ github.event.number }}
   TG_NON_INTERACTIVE: 'true'
 
 jobs:
@@ -16,14 +14,27 @@ jobs:
       matrix:
         environment: ['dev', 'prod']
     env:
-      OP_SERVICE_ACCOUNT_TOKEN: ${{ matrix.environment == 'prod' && secrets.OP_TF_PROD_ENV || secrets.OP_TF_DEV_ENV }}
       ENVIRONMENT: ${{ matrix.environment }}
+      TF_VAR_stage: pr-${{ github.event.number }}
+      TF_VAR_dist_dir: ${{ github.workspace }}/dist
+      TF_VAR_migrations_dir: ${{ github.workspace }}/apps/version/migrations
+      OP_SERVICE_ACCOUNT_TOKEN: ${{ matrix.environment == 'prod' && secrets.OP_TF_PROD_ENV || secrets.OP_TF_DEV_ENV }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Create dummy dist for terraform evaluation
+        run: |
+          for worker in apps/*/; do
+            name=$(basename "$worker")
+            mkdir -p "dist/${name}"
+            echo "" > "dist/${name}/index.js"
+          done
 
       - name: Install 1Password CLI
-        uses: 1password/install-cli-action@707af61a6c8b4fa7f9476328c035208fba6b54d7 # v2
+        uses: 1password/install-cli-action@9a0c9dd934086b7ab1d90115d455bda1c53c2bdb # v2.0.2
 
       - name: Setup Mise
         uses: immich-app/devtools/actions/use-mise@697a75e2c3186d3c037c2c159855cf2d566542ba # use-mise-action-0.0.1
@@ -31,9 +42,3 @@ jobs:
       - name: Destroy All
         working-directory: ${{ github.workspace }}/deployment
         run: mise run tf:destroy
-#      - name: Comment
-#        uses: actions-cool/maintain-one-comment@4b2dbf086015f892dcb5e8c1106f5fccd6c1476b # v3
-#        with:
-#          number: ${{ github.event.number }}
-#          delete: true
-#          body-include: '<!-- Docs PR URL -->'
