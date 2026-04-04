@@ -60,6 +60,7 @@ resource "cloudflare_workers_custom_domain" "worker" {
   hostname    = module.domain.fqdn
   service     = cloudflare_worker.worker.name
   zone_id     = data.cloudflare_zone.immich_app.zone_id
+  depends_on  = [cloudflare_workers_deployment.worker]
 }
 
 module "domain" {
