@@ -137,8 +137,8 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 30 },
       "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
       "targets": [
-        { "expr": "quantile_over_time(0.95, version_handle_request_duration[5m])", "legendFormat": "handle_request p95", "refId": "A" },
-        { "expr": "quantile_over_time(0.95, version_version_request_duration[5m])", "legendFormat": "/version p95", "refId": "B" }
+        { "expr": "quantile(0.95, version_handle_request_duration)", "legendFormat": "handle_request p95", "refId": "A" },
+        { "expr": "quantile(0.95, version_version_request_duration)", "legendFormat": "/version p95", "refId": "B" }
       ],
       "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "decimals": 0, "unit": "ms" }, "overrides": [] }
     },
@@ -169,11 +169,11 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 47 },
       "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
       "targets": [
-        { "expr": "quantile_over_time(0.95, version_d1_get_latest_duration[5m])", "legendFormat": "get_latest p95", "refId": "A" },
-        { "expr": "quantile_over_time(0.95, version_d1_get_changelog_duration[5m])", "legendFormat": "get_changelog p95", "refId": "B" },
-        { "expr": "quantile_over_time(0.95, version_d1_upsert_duration[5m])", "legendFormat": "upsert p95", "refId": "C" },
-        { "expr": "quantile_over_time(0.95, version_d1_bulk_upsert_duration[5m])", "legendFormat": "bulk_upsert p95", "refId": "D" },
-        { "expr": "quantile_over_time(0.95, version_webhook_upsert_duration[5m])", "legendFormat": "webhook_upsert p95", "refId": "E" }
+        { "expr": "quantile(0.95, version_d1_get_latest_duration)", "legendFormat": "get_latest p95", "refId": "A" },
+        { "expr": "quantile(0.95, version_d1_get_changelog_duration)", "legendFormat": "get_changelog p95", "refId": "B" },
+        { "expr": "quantile(0.95, version_d1_upsert_duration)", "legendFormat": "upsert p95", "refId": "C" },
+        { "expr": "quantile(0.95, version_d1_bulk_upsert_duration)", "legendFormat": "bulk_upsert p95", "refId": "D" },
+        { "expr": "quantile(0.95, version_webhook_upsert_duration)", "legendFormat": "webhook_upsert p95", "refId": "E" }
       ],
       "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "decimals": 0, "unit": "ms" }, "overrides": [] }
     },
@@ -194,10 +194,10 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 55 },
       "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
       "targets": [
-        { "expr": "sum(count_over_time(version_d1_get_latest_errors[5m]))", "legendFormat": "get_latest errors", "refId": "A" },
-        { "expr": "sum(count_over_time(version_d1_get_changelog_errors[5m]))", "legendFormat": "get_changelog errors", "refId": "B" },
-        { "expr": "sum(count_over_time(version_d1_upsert_errors[5m]))", "legendFormat": "upsert errors", "refId": "C" },
-        { "expr": "sum(count_over_time(version_d1_bulk_upsert_errors[5m]))", "legendFormat": "bulk_upsert errors", "refId": "D" }
+        { "expr": "sum(count_over_time(version_d1_get_latest_errors[5m])) or vector(0)", "legendFormat": "get_latest errors", "refId": "A" },
+        { "expr": "sum(count_over_time(version_d1_get_changelog_errors[5m])) or vector(0)", "legendFormat": "get_changelog errors", "refId": "B" },
+        { "expr": "sum(count_over_time(version_d1_upsert_errors[5m])) or vector(0)", "legendFormat": "upsert errors", "refId": "C" },
+        { "expr": "sum(count_over_time(version_d1_bulk_upsert_errors[5m])) or vector(0)", "legendFormat": "bulk_upsert errors", "refId": "D" }
       ],
       "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never" }, "color": { "mode": "palette-classic" }, "unit": "short" }, "overrides": [] }
     },
@@ -238,8 +238,8 @@
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 72 },
       "datasource": { "type": "prometheus", "uid": "36979063-5384-4eb9-8679-565a727cbc13" },
       "targets": [
-        { "expr": "quantile_over_time(0.95, version_github_fetch_latest_duration[5m])", "legendFormat": "fetch latest p95", "refId": "A" },
-        { "expr": "quantile_over_time(0.95, version_github_fetch_all_duration[5m])", "legendFormat": "fetch all p95", "refId": "B" }
+        { "expr": "quantile(0.95, version_github_fetch_latest_duration)", "legendFormat": "fetch latest p95", "refId": "A" },
+        { "expr": "quantile(0.95, version_github_fetch_all_duration)", "legendFormat": "fetch all p95", "refId": "B" }
       ],
       "fieldConfig": { "defaults": { "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 1, "pointSize": 5, "showPoints": "never", "axisSoftMin": 0, "spanNulls": true }, "decimals": 0, "unit": "ms" }, "overrides": [] }
     },
