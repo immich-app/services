@@ -678,13 +678,21 @@ export class FulfillmentService {
       // Mark successfully uploaded orders with status 1
       if (successfulFulfillmentIds.length > 0) {
         await this.fulfillmentRepository.markTrackingAsUploaded(successfulFulfillmentIds, 1);
-        console.log('[FULFILLMENT] Marked', successfulFulfillmentIds.length, 'orders as successfully uploaded (status 1)');
+        console.log(
+          '[FULFILLMENT] Marked',
+          successfulFulfillmentIds.length,
+          'orders as successfully uploaded (status 1)',
+        );
       }
 
       // Mark already-uploaded orders with status 2
       if (alreadyUploadedFulfillmentIds.length > 0) {
         await this.fulfillmentRepository.markTrackingAsUploaded(alreadyUploadedFulfillmentIds, 2);
-        console.log('[FULFILLMENT] Marked', alreadyUploadedFulfillmentIds.length, 'orders as already uploaded (status 2)');
+        console.log(
+          '[FULFILLMENT] Marked',
+          alreadyUploadedFulfillmentIds.length,
+          'orders as already uploaded (status 2)',
+        );
       }
 
       console.log('[FULFILLMENT] Tracking upload to Fourthwall completed successfully');

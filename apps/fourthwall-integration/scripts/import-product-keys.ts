@@ -35,7 +35,7 @@ function parseCSV(filePath: string, keyType: 'client' | 'server'): ProductKey[] 
       continue;
     }
 
-    const [keyValue, activationKey] = line.split(',').map(s => s.trim());
+    const [keyValue, activationKey] = line.split(',').map((s) => s.trim());
 
     if (!keyValue || !activationKey) {
       console.error(`[WARN] Skipping invalid line ${i + 1}: ${line}`);

@@ -259,7 +259,7 @@ async function handleFourthwallWebhook(request: Request, env: Env): Promise<Resp
     env.FOURTHWALL_PASSWORD,
     orderRepository,
     env.FOURTHWALL_USER_USERNAME,
-    env.FOURTHWALL_USER_PASSWORD
+    env.FOURTHWALL_USER_PASSWORD,
   );
 
   const isValidSignature = await fourthwallService.validateWebhookSignature(body, signature, env.WEBHOOK_SECRET);
@@ -448,7 +448,7 @@ async function processQueueMessage(message: QueueMessage, env: Env): Promise<voi
             env.FOURTHWALL_PASSWORD,
             orderRepository,
             env.FOURTHWALL_USER_USERNAME,
-            env.FOURTHWALL_USER_PASSWORD
+            env.FOURTHWALL_USER_PASSWORD,
           );
           await fourthwallService.processWebhook(payload);
           console.log('[PROCESS-QUEUE] Fourthwall webhook processed successfully');

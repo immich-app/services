@@ -85,9 +85,7 @@ export class KunakiService {
         const skus = [...skuQuantityMap.keys()].join(', ');
         console.error('[KUNAKI] Multiple different SKUs detected - this is unexpected behavior');
         console.error(`[KUNAKI] SKUs: ${skus}`);
-        throw new Error(
-          `Multiple different Kunaki SKUs in order (${skus}) - this behavior is not currently supported`,
-        );
+        throw new Error(`Multiple different Kunaki SKUs in order (${skus}) - this behavior is not currently supported`);
       }
 
       // Submit the single order (we validated there's only one SKU above)

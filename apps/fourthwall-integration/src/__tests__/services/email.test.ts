@@ -95,7 +95,7 @@ describe('EmailService', () => {
 
     it('should send email with WorkerMailer', async () => {
       const { WorkerMailer } = await import('worker-mailer');
-      
+
       const emailData: EmailData = {
         to: 'test@example.com',
         subject: 'Test',
