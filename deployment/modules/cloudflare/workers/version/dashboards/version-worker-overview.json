@@ -206,7 +206,7 @@
       "pluginVersion": "10.4.3",
       "targets": [
         {
-          "expr": "sum(count_over_time(version_memory_cache_hit_count[24h])) / (sum(count_over_time(version_memory_cache_hit_count[24h])) + sum(count_over_time(version_memory_cache_miss_count[24h])))",
+          "expr": "(sum(count_over_time(version_memory_cache_hit_count[24h])) + sum(count_over_time(version_memory_cache_stale_count[24h]))) / (sum(count_over_time(version_memory_cache_hit_count[24h])) + sum(count_over_time(version_memory_cache_stale_count[24h])) + sum(count_over_time(version_memory_cache_miss_count[24h])))",
           "refId": "A",
           "instant": true,
           "range": false
@@ -792,7 +792,7 @@
       },
       "targets": [
         {
-          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 24h) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 24h)))",
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[5m]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[5m])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 5m) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 5m)))",
           "legendFormat": "new servers",
           "refId": "A",
           "interval": "5m"
@@ -816,16 +816,17 @@
       },
       "targets": [
         {
-          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1d]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[1d])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1d) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1d)))",
-          "legendFormat": "new servers / day",
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[1h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+          "legendFormat": "new servers / 1h",
           "refId": "A",
           "interval": "5m"
         },
         {
-          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[2h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[2h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 2h) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 2h)))",
-          "legendFormat": "new servers / 2h",
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1d]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[1d])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1d) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1d)))",
+          "legendFormat": "new servers / day",
           "refId": "B",
-          "interval": "5m"
+          "interval": "5m",
+          "hide": true
         }
       ],
       "fieldConfig": {
@@ -1300,6 +1301,21 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "memory stale (/version)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "light-blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "memory miss (/version)"
             },
             "properties": [
@@ -1353,9 +1369,15 @@
           "interval": "1m"
         },
         {
+          "expr": "sum(count_over_time(version_memory_cache_stale_count[$__interval]))",
+          "legendFormat": "memory stale (/version)",
+          "refId": "D",
+          "interval": "1m"
+        },
+        {
           "expr": "sum(count_over_time(version_memory_cache_miss_count[$__interval]))",
           "legendFormat": "memory miss (/version)",
-          "refId": "D",
+          "refId": "E",
           "interval": "1m"
         }
       ],
