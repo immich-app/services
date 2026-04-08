@@ -1,3 +1,4 @@
+import type { DeferredRepository } from './deferred.js';
 import type { IGitHubRepository } from './github-repository.js';
 import { MemoryCache } from './memory-cache.js';
 import { type IMetricsRepository, Metric } from './metrics.js';
@@ -7,8 +8,9 @@ import { parseSemVer } from './version.js';
 
 const VERSION_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-// Module-level cache - persists across requests within the same isolate
+// Module-level state - persists across requests within the same isolate
 export const versionCache = new MemoryCache<VersionResponse>(VERSION_CACHE_TTL_MS);
+export const revalidationState = { inFlight: false };
 
 export class VersionService {
   constructor(
@@ -16,15 +18,34 @@ export class VersionService {
     private metrics: IMetricsRepository,
   ) {}
 
-  async getLatestVersion(): Promise<VersionResponse | null> {
+  async getLatestVersion(deferred: DeferredRepository): Promise<VersionResponse | null> {
     const cached = versionCache.get();
-    if (cached) {
+
+    if (cached && !cached.stale) {
       this.metrics.push(Metric.create('memory_cache_hit').intField('count', 1));
-      return cached;
+      return cached.value;
+    }
+
+    if (cached?.stale) {
+      this.metrics.push(Metric.create('memory_cache_stale').intField('count', 1));
+      if (!revalidationState.inFlight) {
+        revalidationState.inFlight = true;
+        deferred.defer(async () => {
+          try {
+            await this.refreshVersionCache();
+          } finally {
+            revalidationState.inFlight = false;
+          }
+        });
+      }
+      return cached.value;
     }
 
     this.metrics.push(Metric.create('memory_cache_miss').intField('count', 1));
+    return this.refreshVersionCache();
+  }
 
+  private async refreshVersionCache(): Promise<VersionResponse | null> {
     const latest = await this.metrics.monitorAsyncFunction({ name: 'd1_get_latest' }, () =>
       this.releaseRepository.getLatest(),
     )();

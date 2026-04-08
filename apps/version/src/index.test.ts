@@ -1,7 +1,7 @@
 import { env, fetchMock, SELF } from 'cloudflare:test';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { MemoryCache } from './memory-cache.js';
-import { versionCache } from './version-service.js';
+import { revalidationState, versionCache } from './version-service.js';
 import { compareSemVer, isGreaterThan, parseSemVer } from './version.js';
 import { verifyWebhookSignature } from './webhook.js';
 
@@ -86,10 +86,22 @@ describe('MemoryCache', () => {
     expect(cache.get()).toBeNull();
   });
 
-  it('stores and retrieves a value', () => {
+  it('stores and retrieves a fresh value', () => {
     const cache = new MemoryCache<string>(1000);
     cache.set('hello');
-    expect(cache.get()).toBe('hello');
+    const result = cache.get();
+    expect(result).not.toBeNull();
+    expect(result!.value).toBe('hello');
+    expect(result!.stale).toBe(false);
+  });
+
+  it('returns stale after TTL expires', () => {
+    const cache = new MemoryCache<string>(0); // 0ms TTL = immediately stale
+    cache.set('hello');
+    const result = cache.get();
+    expect(result).not.toBeNull();
+    expect(result!.value).toBe('hello');
+    expect(result!.stale).toBe(true);
   });
 
   it('invalidates the cache', () => {
@@ -195,6 +207,7 @@ describe('Version Worker', () => {
 
   beforeEach(async () => {
     versionCache.invalidate();
+    revalidationState.inFlight = false;
     await env.VERSION_DB.exec('DELETE FROM releases');
     await seedReleases();
   });
@@ -228,6 +241,23 @@ describe('Version Worker', () => {
       expect(body.published_at).toBe('2025-03-01T00:00:00Z');
     });
 
+    it('awaits D1 on cold start rather than deferring', async () => {
+      // Cache is empty (invalidated in beforeEach), D1 has data
+      // The first request must return real data, not 404 or empty
+      const response = await SELF.fetch('https://example.com/version');
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as any;
+      expect(body.version).toBe('v1.120.0');
+
+      // Now delete D1 data — second request should come from cache, proving
+      // the first request populated the cache synchronously
+      await env.VERSION_DB.exec('DELETE FROM releases');
+      const second = await SELF.fetch('https://example.com/version');
+      expect(second.status).toBe(200);
+      const secondBody = (await second.json()) as any;
+      expect(secondBody.version).toBe('v1.120.0');
+    });
+
     it('does not include Cache-Control header (memory cached, not CDN)', async () => {
       const response = await SELF.fetch('https://example.com/version');
       expect(response.headers.get('Cache-Control')).toBeNull();
@@ -255,6 +285,76 @@ describe('Version Worker', () => {
     it('includes CORS header', async () => {
       const response = await SELF.fetch('https://example.com/version');
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    });
+
+    it('serves stale data while revalidating in the background', async () => {
+      // Prime the cache
+      const first = await SELF.fetch('https://example.com/version');
+      expect(first.status).toBe(200);
+
+      // Expire the cache by invalidating and setting with 0 TTL
+      versionCache.invalidate();
+      versionCache.set({ version: 'v1.120.0', published_at: '2025-03-01T00:00:00Z' });
+      // Manually expire it
+      Object.assign(versionCache, { expiresAt: 0 });
+
+      // Update D1 with a new version
+      const semver = parseSemVer('v1.130.0')!;
+      await env.VERSION_DB.prepare(
+        `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(
+          4,
+          'v1.130.0',
+          'v1.130.0',
+          '',
+          '',
+          '2025-04-01T00:00:00Z',
+          '2025-04-01T00:00:00Z',
+          semver.major,
+          semver.minor,
+          semver.patch,
+        )
+        .run();
+
+      // This request should get stale v1.120.0 while triggering background refresh
+      const stale = await SELF.fetch('https://example.com/version');
+      expect(stale.status).toBe(200);
+      const staleBody = (await stale.json()) as any;
+      expect(staleBody.version).toBe('v1.120.0');
+
+      // Wait for background refresh to complete
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Next request should get the updated version from refreshed cache
+      const fresh = await SELF.fetch('https://example.com/version');
+      expect(fresh.status).toBe(200);
+      const freshBody = (await fresh.json()) as any;
+      expect(freshBody.version).toBe('v1.130.0');
+    });
+
+    it('deduplicates concurrent revalidation requests', async () => {
+      // Set up stale cache
+      versionCache.set({ version: 'v1.120.0', published_at: '2025-03-01T00:00:00Z' });
+      Object.assign(versionCache, { expiresAt: 0 });
+
+      expect(revalidationState.inFlight).toBe(false);
+
+      // Fire two concurrent requests while stale
+      const [r1, r2] = await Promise.all([
+        SELF.fetch('https://example.com/version'),
+        SELF.fetch('https://example.com/version'),
+      ]);
+
+      expect(r1.status).toBe(200);
+      expect(r2.status).toBe(200);
+
+      // Both should return stale data immediately
+      const b1 = (await r1.json()) as any;
+      const b2 = (await r2.json()) as any;
+      expect(b1.version).toBe('v1.120.0');
+      expect(b2.version).toBe('v1.120.0');
     });
   });
 
@@ -540,6 +640,7 @@ describe('Cron sync', () => {
 
   beforeEach(async () => {
     versionCache.invalidate();
+    revalidationState.inFlight = false;
     await env.VERSION_DB.exec('DELETE FROM releases');
     fetchMock.activate();
     fetchMock.disableNetConnect();

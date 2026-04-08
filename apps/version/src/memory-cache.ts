@@ -1,14 +1,23 @@
+export interface CacheResult<T> {
+  value: T;
+  stale: boolean;
+}
+
 export class MemoryCache<T> {
   private data: T | null = null;
   private expiresAt = 0;
 
   constructor(private ttlMs: number) {}
 
-  get(): T | null {
-    if (this.data !== null && Date.now() < this.expiresAt) {
-      return this.data;
+  get(): CacheResult<T> | null {
+    if (this.data === null) {
+      return null;
     }
-    return null;
+
+    return {
+      value: this.data,
+      stale: Date.now() >= this.expiresAt,
+    };
   }
 
   set(value: T): void {
