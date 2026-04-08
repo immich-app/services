@@ -206,7 +206,6 @@ export default {
           .addTag('method', request.method)
           .addTag('path', new URL(request.url).pathname)
           .addTag('status', '500')
-          .addTag('error', error instanceof Error ? error.message : 'unknown')
           .intField('count', 1),
       );
       deferredRepository.runDeferred();
