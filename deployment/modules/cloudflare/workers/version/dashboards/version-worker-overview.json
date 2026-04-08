@@ -76,7 +76,8 @@
           "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
           "refId": "A",
           "instant": true,
-          "range": false
+          "range": false,
+          "interval": "5m"
         }
       ],
       "title": "Unique Servers (24h)",
@@ -279,7 +280,8 @@
           "expr": "count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) and on(user_agent) version_latest_version_count) / count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
           "refId": "A",
           "instant": true,
-          "range": false
+          "range": false,
+          "interval": "5m"
         }
       ],
       "title": "Servers Up-to-date (24h)",
@@ -603,7 +605,8 @@
           "legendFormat": "{{version}}",
           "refId": "A",
           "instant": true,
-          "range": false
+          "range": false,
+          "interval": "5m"
         }
       ],
       "title": "Version Distribution (24h)",
@@ -856,7 +859,8 @@
           "legendFormat": "{{continent}}",
           "refId": "A",
           "instant": true,
-          "range": false
+          "range": false,
+          "interval": "5m"
         }
       ],
       "title": "Servers by Continent (24h)",
@@ -1128,12 +1132,14 @@
         {
           "expr": "quantile_over_time(0.95, version_handle_request_duration[$__interval])",
           "legendFormat": "handle_request p95",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         },
         {
           "expr": "quantile_over_time(0.95, version_version_request_duration[$__interval])",
           "legendFormat": "/version p95",
-          "refId": "B"
+          "refId": "B",
+          "interval": "1m"
         }
       ],
       "title": "Request Duration (p95)",
@@ -1284,22 +1290,26 @@
         {
           "expr": "sum(count_over_time(version_changelog_request_invocation{cache=\"cdn\"}[$__interval]))",
           "legendFormat": "CDN hit (/changelog)",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         },
         {
           "expr": "sum(count_over_time(version_changelog_request_invocation{cache=\"miss\"}[$__interval]))",
           "legendFormat": "CDN miss (/changelog)",
-          "refId": "B"
+          "refId": "B",
+          "interval": "1m"
         },
         {
           "expr": "sum(count_over_time(version_memory_cache_hit_count[$__interval]))",
           "legendFormat": "memory hit (/version)",
-          "refId": "C"
+          "refId": "C",
+          "interval": "1m"
         },
         {
           "expr": "sum(count_over_time(version_memory_cache_miss_count[$__interval]))",
           "legendFormat": "memory miss (/version)",
-          "refId": "D"
+          "refId": "D",
+          "interval": "1m"
         }
       ],
       "title": "Cache Hit Rate",
@@ -1389,7 +1399,8 @@
         {
           "expr": "sum(count_over_time(version_handle_request_invocation[$__interval])) by (continent)",
           "legendFormat": "{{continent}}",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         }
       ],
       "title": "Requests by Region",
@@ -1492,27 +1503,32 @@
         {
           "expr": "quantile_over_time(0.95, version_d1_get_latest_duration[$__interval])",
           "legendFormat": "get_latest p95",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         },
         {
           "expr": "quantile_over_time(0.95, version_d1_get_changelog_duration[$__interval])",
           "legendFormat": "get_changelog p95",
-          "refId": "B"
+          "refId": "B",
+          "interval": "1m"
         },
         {
           "expr": "quantile_over_time(0.95, version_d1_upsert_duration[$__interval])",
           "legendFormat": "upsert p95",
-          "refId": "C"
+          "refId": "C",
+          "interval": "1m"
         },
         {
           "expr": "quantile_over_time(0.95, version_d1_bulk_upsert_duration[$__interval])",
           "legendFormat": "bulk_upsert p95",
-          "refId": "D"
+          "refId": "D",
+          "interval": "1m"
         },
         {
           "expr": "quantile_over_time(0.95, version_webhook_upsert_duration[$__interval])",
           "legendFormat": "webhook_upsert p95",
-          "refId": "E"
+          "refId": "E",
+          "interval": "1m"
         }
       ],
       "title": "D1 Query Duration (p95)",
@@ -1601,22 +1617,26 @@
         {
           "expr": "sum(count_over_time(version_d1_get_latest_invocation[$__interval]))",
           "legendFormat": "get_latest",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         },
         {
           "expr": "sum(count_over_time(version_d1_get_changelog_invocation[$__interval]))",
           "legendFormat": "get_changelog",
-          "refId": "B"
+          "refId": "B",
+          "interval": "1m"
         },
         {
           "expr": "sum(count_over_time(version_d1_upsert_invocation[$__interval]))",
           "legendFormat": "upsert",
-          "refId": "C"
+          "refId": "C",
+          "interval": "1m"
         },
         {
           "expr": "sum(count_over_time(version_d1_bulk_upsert_invocation[$__interval]))",
           "legendFormat": "bulk_upsert",
-          "refId": "D"
+          "refId": "D",
+          "interval": "1m"
         }
       ],
       "title": "D1 Query Rate",
@@ -1704,22 +1724,26 @@
         {
           "expr": "sum(count_over_time(version_d1_get_latest_errors[$__interval])) or vector(0)",
           "legendFormat": "get_latest errors",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         },
         {
           "expr": "sum(count_over_time(version_d1_get_changelog_errors[$__interval])) or vector(0)",
           "legendFormat": "get_changelog errors",
-          "refId": "B"
+          "refId": "B",
+          "interval": "1m"
         },
         {
           "expr": "sum(count_over_time(version_d1_upsert_errors[$__interval])) or vector(0)",
           "legendFormat": "upsert errors",
-          "refId": "C"
+          "refId": "C",
+          "interval": "1m"
         },
         {
           "expr": "sum(count_over_time(version_d1_bulk_upsert_errors[$__interval])) or vector(0)",
           "legendFormat": "bulk_upsert errors",
-          "refId": "D"
+          "refId": "D",
+          "interval": "1m"
         }
       ],
       "title": "D1 Error Rate",
@@ -1809,7 +1833,8 @@
         {
           "expr": "max(version_d1_release_count_count)",
           "legendFormat": "releases",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         }
       ],
       "title": "Releases Stored Over Time",
@@ -1911,12 +1936,14 @@
         {
           "expr": "sum(count_over_time(version_webhook_received_count[$__interval])) by (event)",
           "legendFormat": "received ({{event}})",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         },
         {
           "expr": "sum(count_over_time(version_webhook_release_upserted_count[$__interval]))",
           "legendFormat": "upserted",
-          "refId": "B"
+          "refId": "B",
+          "interval": "1m"
         }
       ],
       "title": "Webhook Events",
@@ -2005,22 +2032,26 @@
         {
           "expr": "sum(count_over_time(version_cron_sync_invocation[$__interval]))",
           "legendFormat": "cron runs",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         },
         {
           "expr": "sum(sum_over_time(version_cron_releases_synced_count[$__interval]))",
           "legendFormat": "releases synced",
-          "refId": "B"
+          "refId": "B",
+          "interval": "1m"
         },
         {
           "expr": "sum(count_over_time(version_cron_release_updated_count[$__interval]))",
           "legendFormat": "releases updated",
-          "refId": "C"
+          "refId": "C",
+          "interval": "1m"
         },
         {
           "expr": "sum(sum_over_time(version_cron_full_sync_count[$__interval]))",
           "legendFormat": "nightly full sync",
-          "refId": "D"
+          "refId": "D",
+          "interval": "1m"
         }
       ],
       "title": "Cron Sync",
@@ -2110,12 +2141,14 @@
         {
           "expr": "quantile_over_time(0.95, version_github_fetch_latest_duration[$__interval])",
           "legendFormat": "fetch latest p95",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         },
         {
           "expr": "quantile_over_time(0.95, version_github_fetch_all_duration[$__interval])",
           "legendFormat": "fetch all p95",
-          "refId": "B"
+          "refId": "B",
+          "interval": "1m"
         }
       ],
       "title": "GitHub API Duration",
@@ -2302,7 +2335,8 @@
         {
           "expr": "sum(count_over_time(version_http_response_count{method!=\"POST\"}[$__interval])) by (path)",
           "legendFormat": "{{path}}",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         }
       ],
       "title": "Requests by Path (non-POST)",
@@ -2437,7 +2471,8 @@
         {
           "expr": "sum(count_over_time(version_http_response_count[$__interval])) by (status)",
           "legendFormat": "{{status}}",
-          "refId": "A"
+          "refId": "A",
+          "interval": "1m"
         }
       ],
       "title": "Response Status Codes",
