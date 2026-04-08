@@ -206,7 +206,7 @@
       "pluginVersion": "10.4.3",
       "targets": [
         {
-          "expr": "sum(count_over_time(version_memory_cache_hit_count[24h])) / (sum(count_over_time(version_memory_cache_hit_count[24h])) + sum(count_over_time(version_memory_cache_miss_count[24h])))",
+          "expr": "(sum(count_over_time(version_memory_cache_hit_count[24h])) + sum(count_over_time(version_memory_cache_stale_count[24h]))) / (sum(count_over_time(version_memory_cache_hit_count[24h])) + sum(count_over_time(version_memory_cache_stale_count[24h])) + sum(count_over_time(version_memory_cache_miss_count[24h])))",
           "refId": "A",
           "instant": true,
           "range": false
@@ -1300,6 +1300,21 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "memory stale (/version)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "light-blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "memory miss (/version)"
             },
             "properties": [
@@ -1353,9 +1368,15 @@
           "interval": "1m"
         },
         {
+          "expr": "sum(count_over_time(version_memory_cache_stale_count[$__interval]))",
+          "legendFormat": "memory stale (/version)",
+          "refId": "D",
+          "interval": "1m"
+        },
+        {
           "expr": "sum(count_over_time(version_memory_cache_miss_count[$__interval]))",
           "legendFormat": "memory miss (/version)",
-          "refId": "D",
+          "refId": "E",
           "interval": "1m"
         }
       ],
