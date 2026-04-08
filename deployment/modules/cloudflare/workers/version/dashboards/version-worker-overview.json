@@ -1177,13 +1177,13 @@
       },
       "targets": [
         {
-          "expr": "quantile_over_time(0.95, version_handle_request_duration[$__interval])",
+          "expr": "quantile(0.95, last_over_time(version_handle_request_duration[$__interval]))",
           "legendFormat": "handle_request p95",
           "refId": "A",
           "interval": "1m"
         },
         {
-          "expr": "quantile_over_time(0.95, version_version_request_duration[$__interval])",
+          "expr": "quantile(0.95, last_over_time(version_version_request_duration[$__interval]))",
           "legendFormat": "/version p95",
           "refId": "B",
           "interval": "1m"
@@ -1548,31 +1548,31 @@
       },
       "targets": [
         {
-          "expr": "quantile_over_time(0.95, version_d1_get_latest_duration[$__interval])",
+          "expr": "quantile(0.95, last_over_time(version_d1_get_latest_duration[$__interval]))",
           "legendFormat": "get_latest p95",
           "refId": "A",
           "interval": "1m"
         },
         {
-          "expr": "quantile_over_time(0.95, version_d1_get_changelog_duration[$__interval])",
+          "expr": "quantile(0.95, last_over_time(version_d1_get_changelog_duration[$__interval]))",
           "legendFormat": "get_changelog p95",
           "refId": "B",
           "interval": "1m"
         },
         {
-          "expr": "quantile_over_time(0.95, version_d1_upsert_duration[$__interval])",
+          "expr": "quantile(0.95, last_over_time(version_d1_upsert_duration[$__interval]))",
           "legendFormat": "upsert p95",
           "refId": "C",
           "interval": "1m"
         },
         {
-          "expr": "quantile_over_time(0.95, version_d1_bulk_upsert_duration[$__interval])",
+          "expr": "quantile(0.95, last_over_time(version_d1_bulk_upsert_duration[$__interval]))",
           "legendFormat": "bulk_upsert p95",
           "refId": "D",
           "interval": "1m"
         },
         {
-          "expr": "quantile_over_time(0.95, version_webhook_upsert_duration[$__interval])",
+          "expr": "quantile(0.95, last_over_time(version_webhook_upsert_duration[$__interval]))",
           "legendFormat": "webhook_upsert p95",
           "refId": "E",
           "interval": "1m"
@@ -2186,13 +2186,13 @@
       },
       "targets": [
         {
-          "expr": "quantile_over_time(0.95, version_github_fetch_latest_duration[$__interval])",
+          "expr": "quantile(0.95, last_over_time(version_github_fetch_latest_duration[$__interval]))",
           "legendFormat": "fetch latest p95",
           "refId": "A",
           "interval": "1m"
         },
         {
-          "expr": "quantile_over_time(0.95, version_github_fetch_all_duration[$__interval])",
+          "expr": "quantile(0.95, last_over_time(version_github_fetch_all_duration[$__interval]))",
           "legendFormat": "fetch all p95",
           "refId": "B",
           "interval": "1m"
