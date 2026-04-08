@@ -70,7 +70,7 @@ export default {
                 },
               },
               async (): Promise<Response> => {
-                const latest = await versionService.getLatestVersion();
+                const latest = await versionService.getLatestVersion(deferredRepository);
                 if (!latest) {
                   return errorResponse('No releases found', 404);
                 }
