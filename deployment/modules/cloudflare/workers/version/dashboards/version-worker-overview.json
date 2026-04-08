@@ -74,7 +74,9 @@
       "targets": [
         {
           "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Unique Servers (24h)",
@@ -133,7 +135,9 @@
       "targets": [
         {
           "expr": "sum(count_over_time(version_handle_request_invocation[24h]))",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Total Requests (24h)",
@@ -202,7 +206,9 @@
       "targets": [
         {
           "expr": "sum(count_over_time(version_memory_cache_hit_count[24h])) / (sum(count_over_time(version_memory_cache_hit_count[24h])) + sum(count_over_time(version_memory_cache_miss_count[24h])))",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Cache Hit Rate (24h)",
@@ -271,7 +277,9 @@
       "targets": [
         {
           "expr": "count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) and on(user_agent) version_latest_version_count) / count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Servers Up-to-date (24h)",
@@ -330,7 +338,9 @@
       "targets": [
         {
           "expr": "max(version_d1_release_count_count)",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Releases Stored",
@@ -397,7 +407,9 @@
       "targets": [
         {
           "expr": "sum(count_over_time(version_handle_request_errors[24h])) or vector(0)",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Errors (24h)",
@@ -505,7 +517,9 @@
           "editorMode": "code",
           "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[2h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[2h])))",
           "legendFormat": "unique servers (2h)",
-          "refId": "A"
+          "range": true,
+          "refId": "A",
+          "interval": "5m"
         },
         {
           "datasource": {
@@ -514,7 +528,8 @@
           },
           "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
           "legendFormat": "unique servers (24h)",
-          "refId": "B"
+          "refId": "B",
+          "interval": "5m"
         },
         {
           "datasource": {
@@ -523,7 +538,8 @@
           },
           "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d])))",
           "legendFormat": "unique servers (30d)",
-          "refId": "C"
+          "refId": "C",
+          "interval": "5m"
         }
       ],
       "title": "Unique Servers Over Time",
@@ -585,7 +601,9 @@
         {
           "expr": "label_replace(count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h]))) by (user_agent), \"version\", \"$1\", \"user_agent\", \"immich-server/(.*)\")",
           "legendFormat": "{{version}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Version Distribution (24h)",
@@ -680,7 +698,9 @@
           "editorMode": "code",
           "expr": "label_replace(count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[2h]))) by (user_agent), \"version\", \"$1\", \"user_agent\", \"immich-server/(.*)\")",
           "legendFormat": "{{version}}",
-          "refId": "A"
+          "range": true,
+          "refId": "A",
+          "interval": "5m"
         }
       ],
       "title": "Version Adoption Over Time",
@@ -771,7 +791,8 @@
         {
           "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 24h) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 24h)))",
           "legendFormat": "new servers",
-          "refId": "A"
+          "refId": "A",
+          "interval": "5m"
         }
       ],
       "title": "New Servers (not seen in last 30d)",
@@ -833,7 +854,9 @@
         {
           "expr": "count(count by (client_ip, continent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h]))) by (continent)",
           "legendFormat": "{{continent}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Servers by Continent (24h)",
@@ -926,12 +949,16 @@
         {
           "expr": "(sum(count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) or vector(0)) + (sum(count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) or vector(0))",
           "legendFormat": "Immich servers",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         },
         {
           "expr": "(sum(count_over_time(version_version_request_invocation{user_agent!~\"immich-server/.*\",user_agent!=\"\"}[24h])) or vector(0)) + (sum(count_over_time(version_changelog_request_invocation{user_agent!~\"immich-server/.*\",user_agent!=\"\"}[24h])) or vector(0))",
           "legendFormat": "Other",
-          "refId": "B"
+          "refId": "B",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Traffic Source (24h)",
@@ -995,7 +1022,9 @@
         {
           "expr": "topk(15, sum(count_over_time(version_handle_request_invocation{colo!=\"\"}[24h])) by (colo))",
           "legendFormat": "{{colo}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Top Cloudflare Edge Locations (24h)",
@@ -2148,22 +2177,30 @@
         {
           "expr": "sum(count_over_time(version_webhook_upsert_invocation[24h]))",
           "legendFormat": "webhook",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         },
         {
           "expr": "sum(sum_over_time(version_cron_releases_synced_count[24h]))",
           "legendFormat": "cron (new release)",
-          "refId": "B"
+          "refId": "B",
+          "instant": true,
+          "range": false
         },
         {
           "expr": "sum(count_over_time(version_cron_release_updated_count[24h]))",
           "legendFormat": "cron (content update)",
-          "refId": "C"
+          "refId": "C",
+          "instant": true,
+          "range": false
         },
         {
           "expr": "sum(sum_over_time(version_cron_full_sync_count[24h]))",
           "legendFormat": "cron (nightly full sync)",
-          "refId": "D"
+          "refId": "D",
+          "instant": true,
+          "range": false
         }
       ],
       "title": "Data Source (Webhook vs Cron, 24h)",
