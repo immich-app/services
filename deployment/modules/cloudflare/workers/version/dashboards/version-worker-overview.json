@@ -802,7 +802,7 @@
       "type": "timeseries"
     },
     {
-      "title": "New Server Rate (per day)",
+      "title": "New Server Rate",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -819,6 +819,12 @@
           "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1d]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[1d])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1d) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1d)))",
           "legendFormat": "new servers / day",
           "refId": "A",
+          "interval": "5m"
+        },
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[2h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[2h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 2h) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 2h)))",
+          "legendFormat": "new servers / 2h",
+          "refId": "B",
           "interval": "5m"
         }
       ],
