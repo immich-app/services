@@ -277,7 +277,7 @@
       "pluginVersion": "10.4.3",
       "targets": [
         {
-          "expr": "count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) and on(user_agent) version_latest_version_count) / count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
+          "expr": "count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) and on(user_agent) last_over_time(version_latest_version_count[3h])) / count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -339,7 +339,7 @@
       "pluginVersion": "10.4.3",
       "targets": [
         {
-          "expr": "max(version_d1_release_count_count)",
+          "expr": "max(last_over_time(version_d1_release_count_count[3h]))",
           "refId": "A",
           "instant": true,
           "range": false
@@ -710,6 +710,84 @@
       "type": "timeseries"
     },
     {
+      "title": "Latest Version: Upgrades vs New Installs",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "targets": [
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) last_over_time(version_latest_version_count[3h])) and count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+          "legendFormat": "upgrades (seen before)",
+          "refId": "A",
+          "interval": "5m"
+        },
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) last_over_time(version_latest_version_count[3h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+          "legendFormat": "new installs",
+          "refId": "B",
+          "interval": "5m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "axisSoftMin": 0,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upgrades (seen before)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "new installs"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -808,7 +886,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 29
       },
       "datasource": {
         "type": "prometheus",
@@ -875,7 +953,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 29
+        "y": 37
       },
       "id": 12,
       "options": {
@@ -971,7 +1049,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 29
+        "y": 37
       },
       "id": 13,
       "options": {
@@ -1048,7 +1126,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 29
+        "y": 37
       },
       "id": 14,
       "options": {
@@ -1088,7 +1166,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 45
       },
       "id": 15,
       "panels": [],
@@ -1161,7 +1239,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 38
+        "y": 46
       },
       "id": 16,
       "options": {
@@ -1334,7 +1412,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 38
+        "y": 46
       },
       "id": 17,
       "options": {
@@ -1449,7 +1527,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 54
       },
       "id": 18,
       "options": {
@@ -1481,7 +1559,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 54
+        "y": 62
       },
       "id": 19,
       "panels": [],
@@ -1553,7 +1631,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 55
+        "y": 63
       },
       "id": 20,
       "options": {
@@ -1667,7 +1745,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 55
+        "y": 63
       },
       "id": 21,
       "options": {
@@ -1774,7 +1852,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 63
+        "y": 71
       },
       "id": 22,
       "options": {
@@ -1883,7 +1961,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 63
+        "y": 71
       },
       "id": 23,
       "options": {
@@ -1900,7 +1978,7 @@
       },
       "targets": [
         {
-          "expr": "max(version_d1_release_count_count)",
+          "expr": "max(last_over_time(version_d1_release_count_count[$__interval]))",
           "legendFormat": "releases",
           "refId": "A",
           "interval": "1m"
@@ -1915,7 +1993,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 71
+        "y": 79
       },
       "id": 24,
       "panels": [],
@@ -1986,7 +2064,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 72
+        "y": 80
       },
       "id": 25,
       "options": {
@@ -2082,7 +2160,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 72
+        "y": 80
       },
       "id": 26,
       "options": {
@@ -2191,7 +2269,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 80
+        "y": 88
       },
       "id": 27,
       "options": {
@@ -2249,7 +2327,7 @@
         "h": 8,
         "w": 8,
         "x": 12,
-        "y": 80
+        "y": 88
       },
       "id": 28,
       "options": {
@@ -2314,7 +2392,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 88
+        "y": 96
       },
       "id": 29,
       "panels": [],
@@ -2385,7 +2463,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 89
+        "y": 97
       },
       "id": 30,
       "options": {
@@ -2521,7 +2599,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 89
+        "y": 97
       },
       "id": 31,
       "options": {
