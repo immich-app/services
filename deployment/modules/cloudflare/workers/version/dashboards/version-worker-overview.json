@@ -277,7 +277,7 @@
       "pluginVersion": "10.4.3",
       "targets": [
         {
-          "expr": "count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) and on(user_agent) version_latest_version_count) / count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
+          "expr": "count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) and on(user_agent) last_over_time(version_latest_version_count[3h])) / count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
           "refId": "A",
           "instant": true,
           "range": false,
@@ -339,7 +339,7 @@
       "pluginVersion": "10.4.3",
       "targets": [
         {
-          "expr": "max(version_d1_release_count_count)",
+          "expr": "max(last_over_time(version_d1_release_count_count[3h]))",
           "refId": "A",
           "instant": true,
           "range": false
@@ -724,13 +724,13 @@
       },
       "targets": [
         {
-          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) version_latest_version_count) and count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) last_over_time(version_latest_version_count[3h])) and count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
           "legendFormat": "upgrades (seen before)",
           "refId": "A",
           "interval": "5m"
         },
         {
-          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) version_latest_version_count) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) last_over_time(version_latest_version_count[3h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
           "legendFormat": "new installs",
           "refId": "B",
           "interval": "5m"
@@ -1978,7 +1978,7 @@
       },
       "targets": [
         {
-          "expr": "max(version_d1_release_count_count)",
+          "expr": "max(last_over_time(version_d1_release_count_count[$__interval]))",
           "legendFormat": "releases",
           "refId": "A",
           "interval": "1m"
