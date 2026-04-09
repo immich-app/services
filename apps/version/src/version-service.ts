@@ -77,6 +77,7 @@ export class VersionService {
     this.metrics.push(Metric.create('webhook_release_upserted').addTag('tag', release.tag_name).intField('count', 1));
     versionCache.invalidate();
     await this.emitLatestVersion();
+    await this.emitReleaseCount();
   }
 
   async syncFromGitHub(githubRepository: IGitHubRepository): Promise<{ synced: number; full: boolean }> {
