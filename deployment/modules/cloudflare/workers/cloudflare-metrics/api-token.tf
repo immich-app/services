@@ -15,7 +15,14 @@ locals {
 resource "cloudflare_api_token" "analytics_read" {
   provider = cloudflare.bootstrap
 
-  name = "cloudflare-metrics-analytics-read${local.resource_suffix}"
+  # The `-gen-N` suffix lets us force recreation by bumping the generation.
+  # Cloudflare provider v5 has an ongoing bug where `cloudflare_api_token.value`
+  # is only populated in state immediately after creation; on any subsequent
+  # refresh the provider wipes it (see
+  # cloudflare/terraform-provider-cloudflare#5045). The worker binding reads
+  # the value via a `terraform_data` capture keyed to the token id, so both
+  # resources need to be recreated together to re-capture a fresh value.
+  name = "cloudflare-metrics-analytics-read${local.resource_suffix}-gen-1"
 
   policies = [
     {
@@ -32,15 +39,16 @@ resource "cloudflare_api_token" "analytics_read" {
   ]
 }
 
-# Cloudflare provider v5 has an ongoing issue where `cloudflare_api_token.value`
-# is re-read from the API on refresh and the API returns it empty after creation
-# (see cloudflare/terraform-provider-cloudflare#5045). To keep the worker
-# binding populated across future applies, we capture the token value once at
-# creation time into a `terraform_data` resource and reference that value in
-# the worker binding. The `ignore_changes = [input]` guard prevents the stored
-# value from being clobbered on subsequent runs.
+# Captures the token value at creation time so the worker binding survives
+# state refreshes that null out `cloudflare_api_token.value`. The
+# `triggers_replace` binding ties this resource's lifecycle to the
+# `cloudflare_api_token` id — whenever the token is recreated, this capture
+# is too, refreshing the stored value. The `ignore_changes = [input]` guard
+# protects the captured value between recreations.
 resource "terraform_data" "analytics_token_value" {
   input = cloudflare_api_token.analytics_read.value
+
+  triggers_replace = [cloudflare_api_token.analytics_read.id]
 
   lifecycle {
     ignore_changes = [input]
