@@ -22,7 +22,7 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
   constructor(
     private readonly apiToken: string,
     private readonly endpoint: string = CLOUDFLARE_GRAPHQL_ENDPOINT,
-    private readonly fetchImpl: typeof fetch = fetch,
+    private readonly fetchImpl?: typeof fetch,
   ) {}
 
   async fetchDataset(
@@ -42,7 +42,14 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
   }
 
   async execute<T>(query: string, variables: Record<string, unknown>): Promise<GraphQLResponse<T>> {
-    const response = await this.fetchImpl(this.endpoint, {
+    // Look up `fetch` lazily at call time rather than capturing it in a
+    // constructor default, so we always get the current Worker runtime's
+    // global even if this instance was constructed in a weird scope.
+    const doFetch = this.fetchImpl ?? globalThis.fetch;
+    if (typeof doFetch !== 'function') {
+      throw new TypeError(`fetch is not a function (typeof=${typeof doFetch})`);
+    }
+    const response = await doFetch(this.endpoint, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${this.apiToken}`,
