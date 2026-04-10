@@ -1608,6 +1608,220 @@ export const SIPPY_OPERATIONS: DatasetQuery = {
   },
 };
 
+// =============================================================================
+// Additional zone-scope datasets. These are iterated per-zone by the collector
+// (one subrequest per zone per tick each), so conservative dimensions are
+// especially important here.
+// =============================================================================
+
+export const API_GATEWAY_SESSIONS: DatasetQuery = {
+  key: 'api_gateway_sessions',
+  measurement: 'cf_api_gateway_sessions',
+  field: 'apiGatewayMatchedSessionIDsAdaptiveGroups',
+  scope: 'zone',
+  dimensions: ['datetimeMinute', 'apiGatewayMatchedSessionIdentifierType'],
+  topLevelFields: ['count'],
+  blocks: { avg: ['sampleInterval'] },
+  tags: [{ source: 'apiGatewayMatchedSessionIdentifierType', as: 'identifier_type' }],
+  fields: {
+    matched_sessions: { type: 'int', source: ['_top', 'count'] },
+    sample_interval: { type: 'float', source: ['avg', 'sampleInterval'] },
+  },
+};
+
+export const CACHE_RESERVE_OPERATIONS: DatasetQuery = {
+  key: 'cache_reserve_operations',
+  measurement: 'cf_cache_reserve_operations',
+  field: 'cacheReserveOperationsAdaptiveGroups',
+  scope: 'zone',
+  dimensions: ['datetimeMinute', 'actionStatus', 'operationClass'],
+  blocks: { sum: ['requests'] },
+  tags: [
+    { source: 'actionStatus', as: 'action_status' },
+    { source: 'operationClass', as: 'operation_class' },
+  ],
+  fields: {
+    requests: { type: 'int', source: ['sum', 'requests'] },
+  },
+};
+
+export const CACHE_RESERVE_STORAGE: DatasetQuery = {
+  key: 'cache_reserve_storage',
+  measurement: 'cf_cache_reserve_storage',
+  field: 'cacheReserveStorageAdaptiveGroups',
+  scope: 'zone',
+  dimensions: ['datetimeMinute', 'bucketName'],
+  blocks: { max: ['objectCount', 'storedBytes'] },
+  tags: [{ source: 'bucketName', as: 'bucket_name' }],
+  fields: {
+    object_count: { type: 'int', source: ['max', 'objectCount'] },
+    stored_bytes: { type: 'int', source: ['max', 'storedBytes'] },
+  },
+};
+
+export const DMARC_REPORTS: DatasetQuery = {
+  key: 'dmarc_reports',
+  measurement: 'cf_dmarc_reports',
+  field: 'dmarcReportsSourcesAdaptiveGroups',
+  scope: 'zone',
+  dimensions: ['datetimeMinute', 'disposition', 'dkim', 'spf'],
+  blocks: {
+    sum: ['dkimPass', 'dmarc', 'spfPass', 'totalMatchingMessages'],
+    uniq: ['ipCount'],
+  },
+  tags: [
+    { source: 'disposition', as: 'disposition' },
+    { source: 'dkim', as: 'dkim' },
+    { source: 'spf', as: 'spf' },
+  ],
+  fields: {
+    messages: { type: 'int', source: ['sum', 'totalMatchingMessages'] },
+    dmarc_pass: { type: 'int', source: ['sum', 'dmarc'] },
+    dkim_pass: { type: 'int', source: ['sum', 'dkimPass'] },
+    spf_pass: { type: 'int', source: ['sum', 'spfPass'] },
+    unique_ips: { type: 'int', source: ['uniq', 'ipCount'] },
+  },
+};
+
+export const DNS_ANALYTICS: DatasetQuery = {
+  key: 'dns_analytics',
+  measurement: 'cf_dns_analytics',
+  field: 'dnsAnalyticsAdaptiveGroups',
+  scope: 'zone',
+  dimensions: ['datetimeMinute', 'queryType', 'responseCode', 'responseCached'],
+  topLevelFields: ['count'],
+  blocks: {
+    sum: ['countNotCachedAndNotStale', 'countStale'],
+    avg: ['processingTimeUs', 'sampleInterval'],
+  },
+  tags: [
+    { source: 'queryType', as: 'query_type' },
+    { source: 'responseCode', as: 'response_code' },
+    { source: 'responseCached', as: 'response_cached' },
+  ],
+  fields: {
+    queries: { type: 'int', source: ['_top', 'count'] },
+    queries_uncached: { type: 'int', source: ['sum', 'countNotCachedAndNotStale'] },
+    queries_stale: { type: 'int', source: ['sum', 'countStale'] },
+    processing_time_us_avg: { type: 'float', source: ['avg', 'processingTimeUs'] },
+    sample_interval: { type: 'float', source: ['avg', 'sampleInterval'] },
+  },
+};
+
+export const EMAIL_ROUTING: DatasetQuery = {
+  key: 'email_routing',
+  measurement: 'cf_email_routing',
+  field: 'emailRoutingAdaptiveGroups',
+  scope: 'zone',
+  dimensions: ['datetimeMinute', 'action', 'status', 'dkim', 'dmarc', 'spf'],
+  topLevelFields: ['count'],
+  blocks: {},
+  tags: [
+    { source: 'action', as: 'action' },
+    { source: 'status', as: 'status' },
+    { source: 'dkim', as: 'dkim' },
+    { source: 'dmarc', as: 'dmarc' },
+    { source: 'spf', as: 'spf' },
+  ],
+  fields: {
+    messages: { type: 'int', source: ['_top', 'count'] },
+  },
+};
+
+export const EMAIL_SENDING: DatasetQuery = {
+  key: 'email_sending',
+  measurement: 'cf_email_sending',
+  field: 'emailSendingAdaptiveGroups',
+  scope: 'zone',
+  dimensions: ['datetimeMinute', 'eventType', 'status', 'dkim', 'dmarc', 'spf'],
+  topLevelFields: ['count'],
+  blocks: {},
+  tags: [
+    { source: 'eventType', as: 'event_type' },
+    { source: 'status', as: 'status' },
+    { source: 'dkim', as: 'dkim' },
+    { source: 'dmarc', as: 'dmarc' },
+    { source: 'spf', as: 'spf' },
+  ],
+  fields: {
+    messages: { type: 'int', source: ['_top', 'count'] },
+  },
+};
+
+export const LOGPUSH_HEALTH: DatasetQuery = {
+  key: 'logpush_health',
+  measurement: 'cf_logpush_health',
+  field: 'logpushHealthAdaptiveGroups',
+  scope: 'zone',
+  dimensions: ['datetimeMinute', 'destinationType', 'status', 'final', 'success', 'jobId'],
+  topLevelFields: ['count'],
+  blocks: {
+    sum: ['bytes', 'bytesCompressed', 'records', 'uploads'],
+    avg: ['uploadDuration', 'sampleInterval'],
+  },
+  tags: [
+    { source: 'destinationType', as: 'destination_type' },
+    { source: 'status', as: 'status' },
+    { source: 'final', as: 'final' },
+    { source: 'success', as: 'success' },
+    { source: 'jobId', as: 'job_id' },
+  ],
+  fields: {
+    events: { type: 'int', source: ['_top', 'count'] },
+    bytes: { type: 'int', source: ['sum', 'bytes'] },
+    bytes_compressed: { type: 'int', source: ['sum', 'bytesCompressed'] },
+    records: { type: 'int', source: ['sum', 'records'] },
+    uploads: { type: 'int', source: ['sum', 'uploads'] },
+    upload_duration_avg: { type: 'float', source: ['avg', 'uploadDuration'] },
+    sample_interval: { type: 'float', source: ['avg', 'sampleInterval'] },
+  },
+};
+
+export const WORKERS_ZONE_INVOCATIONS: DatasetQuery = {
+  key: 'workers_zone_invocations',
+  measurement: 'cf_workers_zone_invocations',
+  field: 'workersZoneInvocationsAdaptiveGroups',
+  scope: 'zone',
+  dimensions: ['datetimeMinute', 'constantScriptId', 'httpResponseStatus', 'status'],
+  blocks: {
+    sum: ['requests', 'responseBodySize', 'subrequests', 'totalCpuTime'],
+    avg: ['avgCpuTime'],
+  },
+  tags: [
+    { source: 'constantScriptId', as: 'script_id' },
+    { source: 'httpResponseStatus', as: 'http_status' },
+    { source: 'status', as: 'status' },
+  ],
+  fields: {
+    requests: { type: 'int', source: ['sum', 'requests'] },
+    response_body_size: { type: 'int', source: ['sum', 'responseBodySize'] },
+    subrequests: { type: 'int', source: ['sum', 'subrequests'] },
+    total_cpu_time_us: { type: 'float', source: ['sum', 'totalCpuTime'] },
+    avg_cpu_time_us: { type: 'float', source: ['avg', 'avgCpuTime'] },
+  },
+};
+
+export const WORKERS_ZONE_SUBREQUESTS: DatasetQuery = {
+  key: 'workers_zone_subrequests',
+  measurement: 'cf_workers_zone_subrequests',
+  field: 'workersZoneSubrequestsAdaptiveGroups',
+  scope: 'zone',
+  dimensions: ['datetimeMinute', 'cacheStatus', 'httpResponseStatus'],
+  blocks: {
+    sum: ['requestBodySize', 'requestBodySizeUncached', 'responseBodySize', 'subrequests'],
+  },
+  tags: [
+    { source: 'cacheStatus', as: 'cache_status' },
+    { source: 'httpResponseStatus', as: 'http_status' },
+  ],
+  fields: {
+    subrequests: { type: 'int', source: ['sum', 'subrequests'] },
+    request_body_size: { type: 'int', source: ['sum', 'requestBodySize'] },
+    request_body_size_uncached: { type: 'int', source: ['sum', 'requestBodySizeUncached'] },
+    response_body_size: { type: 'int', source: ['sum', 'responseBodySize'] },
+  },
+};
+
 // Note: `cdnNetworkAnalyticsAdaptiveGroups` (network-layer CDN analytics) is
 // plan-gated on Enterprise and returns `authz` on our plan. Zaraz (`zarazTrack*`,
 // `zarazTriggers*`) uses a different filter input shape (`datetimeMinute_geq`
@@ -1615,6 +1829,12 @@ export const SIPPY_OPERATIONS: DatasetQuery = {
 // pattern — skipped pending either adoption of Zaraz or the product being EOL'd.
 // `cloudchamberMetricsAdaptiveGroups` is a duplicate schema of `containersMetrics`
 // — we wire up containers only.
+//
+// Zone-scope datasets skipped as plan-gated on our account (return `does not
+// have access to the path`): `cacheReserveRequestsAdaptiveGroups`,
+// `healthCheckEventsAdaptiveGroups`, `loadBalancingRequestsAdaptiveGroups`,
+// `nelReportsAdaptiveGroups`, `pageShieldReportsAdaptiveGroups`,
+// `waitingRoomAnalyticsAdaptiveGroups`, `firewallEventsAdaptiveGroups`.
 
 export const ALL_DATASETS: DatasetQuery[] = [
   WORKERS_INVOCATIONS,
@@ -1645,6 +1865,16 @@ export const ALL_DATASETS: DatasetQuery[] = [
   HYPERDRIVE_POOL,
   HTTP_REQUESTS_OVERVIEW,
   HTTP_REQUESTS_DETAIL,
+  API_GATEWAY_SESSIONS,
+  CACHE_RESERVE_OPERATIONS,
+  CACHE_RESERVE_STORAGE,
+  DMARC_REPORTS,
+  DNS_ANALYTICS,
+  EMAIL_ROUTING,
+  EMAIL_SENDING,
+  LOGPUSH_HEALTH,
+  WORKERS_ZONE_INVOCATIONS,
+  WORKERS_ZONE_SUBREQUESTS,
   PAGES_FUNCTIONS_INVOCATIONS,
   AI_GATEWAY_REQUESTS,
   AI_GATEWAY_CACHE,
