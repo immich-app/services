@@ -12,14 +12,14 @@ locals {
   cloudflare_permission_group_account_analytics_read = "b89a480218d04ceb98b4fe57ca29dc1f"
 }
 
-# Bumping the `input` on this resource forces the analytics_read token to be
-# destroyed and recreated on the next apply. We use this to work around
-# Cloudflare provider v5 issue #5045: the provider only reports
-# `cloudflare_api_token.value` in state immediately after creation, and state
-# refreshes wipe the attribute to empty. Every time we need a fresh, non-empty
-# `.value`, bump `generation` below.
+# Bumping this forces the analytics_read token to be destroyed and recreated
+# on the next apply. Cloudflare provider v5 has a bug where
+# `cloudflare_api_token.value` is only populated immediately after creation
+# (see cloudflare/terraform-provider-cloudflare#5045), so we intentionally
+# recreate the token whenever we need the value to be freshly available to
+# downstream resources.
 resource "terraform_data" "analytics_token_generation" {
-  input = "3"
+  input = "4"
 }
 
 resource "cloudflare_api_token" "analytics_read" {
@@ -46,17 +46,8 @@ resource "cloudflare_api_token" "analytics_read" {
   }
 }
 
-# Captures the fresh `.value` each time the api_token is recreated and pins it
-# in state, so the worker binding keeps a populated token even after future
-# state refreshes wipe `cloudflare_api_token.value`. `triggers_replace` is
-# keyed on the token id so this resource gets rebuilt alongside every token
-# rotation.
-resource "terraform_data" "analytics_token_value" {
-  input = cloudflare_api_token.analytics_read.value
-
-  triggers_replace = [cloudflare_api_token.analytics_read.id]
-
-  lifecycle {
-    ignore_changes = [input]
-  }
+# Diagnostic output so we can tell whether the token value was successfully
+# captured. Never logs the actual value.
+output "analytics_token_value_length" {
+  value = length(cloudflare_api_token.analytics_read.value)
 }
