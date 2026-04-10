@@ -106,39 +106,9 @@ export default {
       env.ENVIRONMENT ?? '',
     );
 
-    const tokenLen = env.CLOUDFLARE_API_TOKEN?.length ?? 0;
-    const accountLen = env.CLOUDFLARE_ACCOUNT_ID?.length ?? 0;
-    const vmLen = env.VMETRICS_API_TOKEN?.length ?? 0;
-    console.log(
-      `[cron] binding probe: CLOUDFLARE_API_TOKEN.len=${tokenLen} CLOUDFLARE_ACCOUNT_ID.len=${accountLen} VMETRICS_API_TOKEN.len=${vmLen} ENVIRONMENT="${env.ENVIRONMENT ?? ''}"`,
-    );
-
-    // Diagnostic beacon: fire a subrequest to a dummy hostname that encodes
-    // the binding lengths. The subrequest is visible via
-    // `workersSubrequestsAdaptiveGroups.dimensions.hostname` without needing
-    // read access to the worker. The request itself will fail DNS, which is
-    // fine — we only care that Cloudflare records the attempt.
-    ctx.waitUntil(
-      fetch(`https://cfmdiag-tl${tokenLen}-al${accountLen}-vl${vmLen}.invalid/probe`).catch(() => {}),
-    );
-
     if (!env.CLOUDFLARE_API_TOKEN || !env.CLOUDFLARE_ACCOUNT_ID) {
-      let reason: string;
-      if (env.CLOUDFLARE_API_TOKEN) {
-        reason = 'missing_account';
-      } else if (env.CLOUDFLARE_ACCOUNT_ID) {
-        reason = 'missing_token';
-      } else {
-        reason = 'missing_token_and_account';
-      }
-      console.error(`[cron] skipping collection — reason=${reason}`);
-      metrics.push(
-        Metric.create('cron_error')
-          .addTag('reason', reason)
-          .intField('token_len', tokenLen)
-          .intField('account_len', accountLen)
-          .intField('count', 1),
-      );
+      console.error('[cron] Missing CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID — skipping collection');
+      metrics.push(Metric.create('cron_error').addTag('reason', 'missing_config').intField('count', 1));
       ctx.waitUntil(influxProvider.flush());
       return;
     }

@@ -46,20 +46,6 @@ resource "cloudflare_api_token" "analytics_read" {
   }
 }
 
-# Diagnostic output so we can tell whether the token value was successfully
-# captured. Only prints the length, never the value itself.
-output "analytics_token_value_length" {
-  value = nonsensitive(length(cloudflare_api_token.analytics_read.value))
-}
-
 output "analytics_token_id" {
   value = cloudflare_api_token.analytics_read.id
-}
-
-output "debug_account_id_length" {
-  value = length(var.cloudflare_account_id)
-}
-
-output "debug_env" {
-  value = var.env
 }
