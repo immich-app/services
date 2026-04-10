@@ -4,6 +4,7 @@ import { CloudflareMetricsCollector } from './collector.js';
 import { ALL_DATASETS } from './datasets.js';
 import { CloudflareGraphQLClient } from './graphql-client.js';
 import { CloudflareMetricsRepository, type IMetricsProviderRepository, Metric } from './metrics.js';
+import type { DatasetRow } from './types.js';
 
 /**
  * Integration tests: these hit the real Cloudflare GraphQL Analytics API.
@@ -54,22 +55,45 @@ const INTEGRATION_TIMEOUT_MS = 60_000;
 describe.skipIf(!hasCredentials)('Cloudflare GraphQL integration', () => {
   const client = buildClient();
 
-  for (const dataset of ALL_DATASETS) {
-    it(
-      `fetches ${dataset.key} without GraphQL errors`,
-      async () => {
-        const rows = await client.fetchDataset(env.CLOUDFLARE_ACCOUNT_ID ?? '', dataset, wideRange());
-        expect(Array.isArray(rows)).toBe(true);
-        // Validate that every returned row matches the shape our parser expects.
+  // Account-scoped datasets are fetched in a single batched request per
+  // filter granularity, then iterated individually so we can assert on the
+  // shape per dataset. Zone-scoped datasets are tested separately below.
+  const accountDatasets = ALL_DATASETS.filter((d) => (d.scope ?? 'account') === 'account');
+
+  it(
+    'fetches every account-scope dataset in a single batched request',
+    async () => {
+      const datetimeDatasets = accountDatasets.filter((d) => (d.filterGranularity ?? 'datetime') === 'datetime');
+      const dateDatasets = accountDatasets.filter((d) => d.filterGranularity === 'date');
+      const range = wideRange();
+
+      const datetimeResult = await client.fetchAccountBatch(env.CLOUDFLARE_ACCOUNT_ID ?? '', datetimeDatasets, range, {
+        includeScheduledInvocations: true,
+      });
+      const dateResult = await client.fetchAccountBatch(env.CLOUDFLARE_ACCOUNT_ID ?? '', dateDatasets, range);
+
+      for (const dataset of accountDatasets) {
+        const rows = (datetimeResult.rows[dataset.key] ?? dateResult.rows[dataset.key]) as DatasetRow[] | undefined;
+        const err = datetimeResult.errors[dataset.key] ?? dateResult.errors[dataset.key];
+        if (err) {
+          // Plan-gated datasets (e.g. firewallEventsAdaptiveGroups) return an
+          // authz error; we don't include those in the registry but if they
+          // ever get added we want a clear failure here.
+          throw new Error(`Dataset ${dataset.key} returned error: ${err}`);
+        }
+        expect(Array.isArray(rows), `rows for ${dataset.key} should be an array`).toBe(true);
+        if (!rows) {
+          continue;
+        }
         for (const row of rows) {
           expect(row.dimensions).toBeDefined();
-          const timestampDim = dataset.timestampDimension ?? 'datetimeFiveMinutes';
-          // Either the dimension is present or the row came back empty (filter
-          // mismatches have historically produced `null` dimensions — we want
-          // to see that loudly if it happens).
+          const timestampDim = dataset.timestampDimension ?? 'datetimeMinute';
           expect(row.dimensions[timestampDim]).toBeDefined();
           for (const [, spec] of Object.entries(dataset.fields)) {
             const [block, key] = spec.source;
+            if (block === '_top') {
+              continue;
+            }
             const blockData = (row as unknown as Record<string, Record<string, unknown> | undefined>)[block];
             if (blockData && key in blockData) {
               const value = blockData[key];
@@ -77,10 +101,11 @@ describe.skipIf(!hasCredentials)('Cloudflare GraphQL integration', () => {
             }
           }
         }
-      },
-      INTEGRATION_TIMEOUT_MS,
-    );
-  }
+      }
+      expect(datetimeResult.scheduledInvocations).toBeDefined();
+    },
+    INTEGRATION_TIMEOUT_MS,
+  );
 
   it(
     'runs the full collector against the live account and emits measurements',

@@ -95,20 +95,15 @@ export interface GraphQLResponse<T> {
   data: T | null;
   errors?: Array<{
     message: string;
-    path?: string[];
+    /** GraphQL `path` segments can be strings (field names) or numbers (list indices). */
+    path?: Array<string | number>;
     extensions?: Record<string, unknown>;
   }> | null;
 }
 
 export interface AccountQueryResult {
   viewer: {
-    accounts: Array<Record<string, DatasetRow[]>>;
-  };
-}
-
-export interface ZoneQueryResult {
-  viewer: {
-    zones: Array<Record<string, DatasetRow[]>>;
+    accounts: Array<Record<string, unknown>>;
   };
 }
 

@@ -1,4 +1,4 @@
-import type { AccountQueryResult, DatasetQuery, DatasetRow, GraphQLResponse, ZoneQueryResult } from './types.js';
+import type { AccountQueryResult, DatasetQuery, DatasetRow, GraphQLResponse } from './types.js';
 
 const CLOUDFLARE_GRAPHQL_ENDPOINT = 'https://api.cloudflare.com/client/v4/graphql';
 const DEFAULT_DATASET_LIMIT = 9999;
@@ -22,18 +22,45 @@ export interface ScheduledWorkerInvocation {
   cpuTimeUs: number;
 }
 
+export interface BatchedDatasetResult {
+  /** Rows keyed by dataset.key (or 'workers_scheduled' for the special feed). */
+  rows: Record<string, DatasetRow[]>;
+  /** Per-alias error messages for fields that the server rejected. */
+  errors: Record<string, string>;
+  /** Raw scheduled-invocation feed when the batch requested it. */
+  scheduledInvocations?: ScheduledWorkerInvocation[];
+}
+
+export interface BatchedZoneDatasetResult {
+  /** Rows keyed by zoneTag. */
+  rows: Record<string, DatasetRow[]>;
+  /** Per-zone error messages for zones the server rejected. */
+  errors: Record<string, string>;
+}
+
 export interface ICloudflareGraphQLClient {
-  fetchDataset(accountTag: string, dataset: DatasetQuery, range: { start: Date; end: Date }): Promise<DatasetRow[]>;
-  fetchZoneDataset(zoneTag: string, dataset: DatasetQuery, range: { start: Date; end: Date }): Promise<DatasetRow[]>;
   /**
-   * `workersInvocationsScheduled` is a flat event list with no aggregation
-   * block structure, so it lives outside the `DatasetQuery` model and has
-   * its own fetch method.
+   * Batched account-scope dataset fetch. All datasets passed in must share
+   * the same filter granularity (datetime vs date). The special
+   * `workersInvocationsScheduled` feed can be requested alongside the
+   * datetime batch via `options.includeScheduledInvocations`.
    */
-  fetchScheduledInvocations(
+  fetchAccountBatch(
     accountTag: string,
+    datasets: readonly DatasetQuery[],
     range: { start: Date; end: Date },
-  ): Promise<ScheduledWorkerInvocation[]>;
+    options?: { includeScheduledInvocations?: boolean },
+  ): Promise<BatchedDatasetResult>;
+  /**
+   * Batched zone-scope fetch for a single dataset across multiple zones.
+   * Each zoneTag becomes an aliased `zones(filter: {...})` block in one
+   * GraphQL operation.
+   */
+  fetchZoneBatch(
+    zoneTags: readonly string[],
+    dataset: DatasetQuery,
+    range: { start: Date; end: Date },
+  ): Promise<BatchedZoneDatasetResult>;
 }
 
 export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
@@ -43,77 +70,98 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     private readonly fetchImpl?: typeof fetch,
   ) {}
 
-  async fetchDataset(
+  async fetchAccountBatch(
     accountTag: string,
-    dataset: DatasetQuery,
+    datasets: readonly DatasetQuery[],
     range: { start: Date; end: Date },
-  ): Promise<DatasetRow[]> {
-    const query = buildDatasetQuery(dataset);
-    const variables = buildDatasetVariables(accountTag, dataset, range);
-    const response = await this.execute<AccountQueryResult>(query, variables);
-    const accounts = response.data?.viewer.accounts ?? [];
-    if (accounts.length === 0) {
-      return [];
-    }
-    const rows = accounts[0][dataset.field];
-    return rows ?? [];
-  }
-
-  async fetchZoneDataset(
-    zoneTag: string,
-    dataset: DatasetQuery,
-    range: { start: Date; end: Date },
-  ): Promise<DatasetRow[]> {
-    const query = buildDatasetQuery(dataset);
-    const variables = buildDatasetVariables(zoneTag, dataset, range);
-    const response = await this.execute<ZoneQueryResult>(query, variables);
-    const zones = response.data?.viewer.zones ?? [];
-    if (zones.length === 0) {
-      return [];
-    }
-    const rows = zones[0][dataset.field];
-    return rows ?? [];
-  }
-
-  async fetchScheduledInvocations(
-    accountTag: string,
-    range: { start: Date; end: Date },
-  ): Promise<ScheduledWorkerInvocation[]> {
-    const query = `query ScheduledInvocations($accountTag: String!, $filter: JSON!, $limit: Int!) {
-  viewer {
-    accounts(filter: { accountTag: $accountTag }) {
-      workersInvocationsScheduled(limit: $limit, filter: $filter) {
-        scriptName
-        cron
-        status
-        datetime
-        cpuTimeUs
-      }
-    }
-  }
-}`;
+    options: { includeScheduledInvocations?: boolean } = {},
+  ): Promise<BatchedDatasetResult> {
+    const query = buildBatchedAccountQuery(datasets, options.includeScheduledInvocations ?? false);
     const variables = {
       accountTag,
-      filter: {
-        datetime_geq: range.start.toISOString(),
-        datetime_leq: range.end.toISOString(),
-      },
-      limit: DEFAULT_DATASET_LIMIT,
+      filter: buildFilterObject(datasets[0] ?? null, range),
     };
-    const response = await this.execute<{
-      viewer: { accounts: Array<{ workersInvocationsScheduled: ScheduledWorkerInvocation[] }> };
-    }>(query, variables);
-    const accounts = response.data?.viewer.accounts ?? [];
-    if (accounts.length === 0) {
-      return [];
+    const { data, errors } = await this.executeAllowPartial<AccountQueryResult>(query, variables);
+    const result: BatchedDatasetResult = { rows: {}, errors: {} };
+
+    const errorsByAlias = groupErrorsByAlias(errors);
+    const account = data?.viewer.accounts[0];
+    for (const dataset of datasets) {
+      if (errorsByAlias[dataset.key]) {
+        result.errors[dataset.key] = errorsByAlias[dataset.key];
+        continue;
+      }
+      const rows = account?.[dataset.key] as unknown as DatasetRow[] | undefined;
+      result.rows[dataset.key] = rows ?? [];
     }
-    return accounts[0].workersInvocationsScheduled ?? [];
+
+    if (options.includeScheduledInvocations) {
+      if (errorsByAlias.workers_scheduled) {
+        result.errors.workers_scheduled = errorsByAlias.workers_scheduled;
+      } else {
+        result.scheduledInvocations = (account?.workers_scheduled as unknown as ScheduledWorkerInvocation[]) ?? [];
+      }
+    }
+
+    // If the query returned no data and no aliased errors, surface a single
+    // top-level error so callers can report it uniformly.
+    if (!account && errors && errors.length > 0 && Object.keys(result.errors).length === 0) {
+      const message = errors.map((e) => e.message).join('; ');
+      for (const dataset of datasets) {
+        result.errors[dataset.key] = message;
+      }
+      if (options.includeScheduledInvocations) {
+        result.errors.workers_scheduled = message;
+      }
+    }
+
+    return result;
   }
 
-  async execute<T>(query: string, variables: Record<string, unknown>): Promise<GraphQLResponse<T>> {
-    // Look up `fetch` lazily at call time rather than capturing it in a
-    // constructor default, so we always get the current Worker runtime's
-    // global even if this instance was constructed in a weird scope.
+  async fetchZoneBatch(
+    zoneTags: readonly string[],
+    dataset: DatasetQuery,
+    range: { start: Date; end: Date },
+  ): Promise<BatchedZoneDatasetResult> {
+    if (zoneTags.length === 0) {
+      return { rows: {}, errors: {} };
+    }
+    const query = buildBatchedZoneQuery(zoneTags, dataset);
+    const variables = {
+      filter: buildFilterObject(dataset, range),
+    };
+    const { data, errors } = await this.executeAllowPartial<{
+      viewer: Record<string, Array<Record<string, DatasetRow[]>>>;
+    }>(query, variables);
+
+    const result: BatchedZoneDatasetResult = { rows: {}, errors: {} };
+    const errorsByAlias = groupErrorsByAlias(errors);
+    const viewer = data?.viewer ?? {};
+    for (const [index, zoneTag] of zoneTags.entries()) {
+      const alias = `z${index}`;
+      if (errorsByAlias[alias]) {
+        result.errors[zoneTag] = errorsByAlias[alias];
+        continue;
+      }
+      const zoneBlock = viewer[alias]?.[0];
+      const rows = zoneBlock?.[dataset.field] ?? [];
+      result.rows[zoneTag] = rows;
+    }
+    if (errors && errors.length > 0 && Object.keys(result.errors).length === 0) {
+      const message = errors.map((e) => e.message).join('; ');
+      for (const zoneTag of zoneTags) {
+        result.errors[zoneTag] = message;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Executes a GraphQL query and returns both data and errors, tolerating
+   * partial responses. Used by the batched fetch paths where one field
+   * failing shouldn't kill the whole batch.
+   */
+  async executeAllowPartial<T>(query: string, variables: Record<string, unknown>): Promise<GraphQLResponse<T>> {
     const doFetch = this.fetchImpl ?? globalThis.fetch;
     if (typeof doFetch !== 'function') {
       throw new TypeError(`fetch is not a function (typeof=${typeof doFetch})`);
@@ -126,21 +174,11 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
       },
       body: JSON.stringify({ query, variables }),
     });
-
     if (!response.ok) {
       const body = await safeReadText(response);
       throw new CloudflareGraphQLError(`Cloudflare GraphQL HTTP error (${response.status})`, response.status, body);
     }
-
-    const payload = (await response.json()) as GraphQLResponse<T>;
-    if (payload.errors && payload.errors.length > 0) {
-      throw new CloudflareGraphQLError(
-        `Cloudflare GraphQL errors: ${payload.errors.map((e) => e.message).join('; ')}`,
-        response.status,
-        JSON.stringify(payload.errors),
-      );
-    }
-    return payload;
+    return (await response.json()) as GraphQLResponse<T>;
   }
 }
 
@@ -152,58 +190,148 @@ async function safeReadText(response: Response): Promise<string | undefined> {
   }
 }
 
-export function buildDatasetQuery(dataset: DatasetQuery): string {
+/**
+ * Emits the inner selection for a single dataset — the aliased field, its
+ * arguments, and the selection set — without the surrounding
+ * `viewer.accounts { ... }` wrapper. Used by the batched query builders so
+ * one query can carry many dataset selections.
+ */
+export function buildDatasetSelection(dataset: DatasetQuery, alias?: string): string {
   const dimensionSelection = dataset.dimensions.join(' ');
   const blockSelections = (Object.entries(dataset.blocks) as Array<[string, readonly string[] | undefined]>)
     .filter(([, fields]) => fields && fields.length > 0)
     .map(([block, fields]) => `${block} { ${(fields ?? []).join(' ')} }`)
     .join(' ');
   const topLevelSelection = (dataset.topLevelFields ?? []).join(' ');
-  const scope = dataset.scope ?? 'account';
-  const rootFilterArg = scope === 'zone' ? 'zoneTag' : 'accountTag';
-  const rootField = scope === 'zone' ? 'zones' : 'accounts';
-
-  return `query CloudflareMetrics($${rootFilterArg}: String!, $filter: ${filterInputTypeFor(dataset)}!, $limit: Int!) {
-  viewer {
-    ${rootField}(filter: { ${rootFilterArg}: $${rootFilterArg} }) {
-      ${dataset.field}(limit: $limit, filter: $filter${orderByClause(dataset)}) {
+  const limit = dataset.limit ?? DEFAULT_DATASET_LIMIT;
+  const aliasPrefix = alias && alias !== dataset.field ? `${alias}: ` : '';
+  return `${aliasPrefix}${dataset.field}(limit: ${limit}, filter: $filter${orderByClause(dataset)}) {
         dimensions { ${dimensionSelection} }
         ${topLevelSelection}
         ${blockSelections}
-      }
+      }`;
+}
+
+const SCHEDULED_INVOCATIONS_SELECTION = `workers_scheduled: workersInvocationsScheduled(limit: ${DEFAULT_DATASET_LIMIT}, filter: $filter) {
+        scriptName
+        cron
+        status
+        datetime
+        cpuTimeUs
+      }`;
+
+/**
+ * Builds a single GraphQL query that pulls many account-scope datasets in
+ * one HTTP request by aliasing each dataset. All datasets in the batch must
+ * share the same filter granularity (datetime or date) because they share
+ * the `$filter` variable.
+ */
+export function buildBatchedAccountQuery(
+  datasets: readonly DatasetQuery[],
+  includeScheduledInvocations = false,
+): string {
+  const selections = datasets.map((d) => buildDatasetSelection(d, d.key));
+  if (includeScheduledInvocations) {
+    selections.push(SCHEDULED_INVOCATIONS_SELECTION);
+  }
+  return `query CloudflareMetricsAccountBatch($accountTag: String!, $filter: JSON!) {
+  viewer {
+    accounts(filter: { accountTag: $accountTag }) {
+      ${selections.join('\n      ')}
     }
   }
 }`;
 }
 
-export function buildDatasetVariables(
-  contextTag: string,
-  dataset: DatasetQuery,
+/**
+ * Builds a single GraphQL query that fetches one dataset across many
+ * zones. Each zoneTag becomes its own aliased `zones(...)` block.
+ */
+export function buildBatchedZoneQuery(zoneTags: readonly string[], dataset: DatasetQuery): string {
+  const safeZoneTags = zoneTags.map((tag) => {
+    if (!/^[a-zA-Z0-9_-]+$/.test(tag)) {
+      throw new Error(`Invalid zoneTag for batched query: ${tag}`);
+    }
+    return tag;
+  });
+  const selections = safeZoneTags
+    .map(
+      (tag, index) => `    z${index}: zones(filter: { zoneTag: "${tag}" }) {
+      ${buildDatasetSelection(dataset, dataset.field)}
+    }`,
+    )
+    .join('\n');
+  return `query CloudflareMetricsZoneBatch($filter: JSON!) {
+  viewer {
+${selections}
+  }
+}`;
+}
+
+/**
+ * Builds the filter JSON object passed via `$filter` in both batched and
+ * unbatched queries. Picks date-vs-datetime fields based on the dataset's
+ * declared filter granularity; all datasets in a batch must agree on this.
+ */
+export function buildFilterObject(
+  dataset: DatasetQuery | null,
   range: { start: Date; end: Date },
 ): Record<string, unknown> {
-  const filter: Record<string, unknown> = dataset.extraFilter ? { ...dataset.extraFilter } : {};
-  if ((dataset.filterGranularity ?? 'datetime') === 'date') {
+  const filter: Record<string, unknown> = dataset?.extraFilter ? { ...dataset.extraFilter } : {};
+  if ((dataset?.filterGranularity ?? 'datetime') === 'date') {
     filter.date_geq = formatDateOnly(range.start);
     filter.date_leq = formatDateOnly(range.end);
   } else {
     filter.datetime_geq = range.start.toISOString();
     filter.datetime_leq = range.end.toISOString();
   }
-  const rootFilterArg = dataset.scope === 'zone' ? 'zoneTag' : 'accountTag';
-  return {
-    [rootFilterArg]: contextTag,
-    filter,
-    limit: dataset.limit ?? DEFAULT_DATASET_LIMIT,
-  };
+  return filter;
 }
 
-function filterInputTypeFor(_dataset: DatasetQuery): string {
-  // We use `JSON` here because the Cloudflare schema has a distinct input
-  // object type per dataset (e.g. `AccountD1AnalyticsAdaptiveGroupsFilter_InputObject`)
-  // which would force us to maintain a mapping for every dataset. Sending a
-  // JSON value is accepted by the Cloudflare GraphQL API and keeps the
-  // registry compact.
-  return 'JSON';
+/**
+ * Converts the GraphQL `errors[]` array into a map from alias → message.
+ * Cloudflare's error payloads include a `path` that begins with the
+ * viewer → accounts/zones → aliased field; we walk it until we find an
+ * alias we recognise. Errors without a resolvable alias are grouped under
+ * an empty key and handled by the caller.
+ */
+export function groupErrorsByAlias(
+  errors: GraphQLResponse<unknown>['errors'] | null | undefined,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  if (!errors) {
+    return result;
+  }
+  for (const error of errors) {
+    const alias = findAliasInPath(error.path);
+    if (alias) {
+      const existing = result[alias];
+      result[alias] = existing ? `${existing}; ${error.message}` : error.message;
+    }
+  }
+  return result;
+}
+
+function findAliasInPath(path: readonly (string | number)[] | undefined): string | undefined {
+  if (!path) {
+    return undefined;
+  }
+  // Typical path shape:
+  //   ['viewer', 'accounts', 0, '<alias>']
+  //   ['viewer', '<alias>', 0, '<innerField>']   (zone batches)
+  // Return the first path segment after a list index that isn't part of
+  // the `dimensions` / `sum` / etc. internals.
+  for (let i = 0; i < path.length; i++) {
+    const segment = path[i];
+    if (typeof segment !== 'string') {
+      continue;
+    }
+    if (segment === 'viewer' || segment === 'accounts' || segment === 'zones') {
+      continue;
+    }
+    return segment;
+  }
+  return undefined;
 }
 
 function orderByClause(dataset: DatasetQuery): string {

@@ -50,13 +50,14 @@ export interface CollectorOptions {
 const DEFAULT_LAG_MS = 5 * 60 * 1000;
 const DEFAULT_WINDOW_MS = 12 * 60 * 1000;
 /**
- * Cap on the number of individual `/zones/{id}` lookups we'll issue per
- * cron tick. Cloudflare Workers caps subrequests at 50/invocation on most
- * plans; between our datasets, bulk REST lookups, zone-scoped queries and
- * the metric flush we're already close to the ceiling. Cold start resolves
- * 8 Pages zones per run, subsequent invocations hit the module-level cache.
+ * Upper bound on individual `/zones/{id}` lookups per cron tick. Each
+ * lookup is one subrequest, and Cloudflare Workers caps subrequests at
+ * 50/invocation. Batching the GraphQL queries frees up most of the
+ * budget, but keeping a safety cap here means a one-off spike of new
+ * Pages projects can't still blow us over. The module-level
+ * `globalZoneNameCache` absorbs the rest over the next couple of ticks.
  */
-const MAX_INDIVIDUAL_ZONE_LOOKUPS_PER_RUN = 8;
+const MAX_INDIVIDUAL_ZONE_LOOKUPS_PER_RUN = 20;
 
 interface ResourceCache {
   d1Databases: Map<string, string>;
@@ -110,110 +111,198 @@ export class CloudflareMetricsCollector {
     await this.populateResourceCache();
     const range = this.getRange();
     const results: CollectionResult[] = [];
-    for (const dataset of datasets) {
-      results.push(await this.collectDataset(dataset, range));
+
+    // Group account-scope datasets by filter granularity so each group can
+    // share a single `$filter` variable in a batched query.
+    const accountDatasets = datasets.filter((d) => (d.scope ?? 'account') === 'account');
+    const datetimeDatasets = accountDatasets.filter((d) => (d.filterGranularity ?? 'datetime') === 'datetime');
+    const dateDatasets = accountDatasets.filter((d) => d.filterGranularity === 'date');
+    const zoneDatasets = datasets.filter((d) => d.scope === 'zone');
+
+    results.push(...(await this.collectAccountBatch(datetimeDatasets, range, { includeScheduledInvocations: true })));
+    if (dateDatasets.length > 0) {
+      results.push(...(await this.collectAccountBatch(dateDatasets, range, { includeScheduledInvocations: false })));
     }
-    results.push(await this.collectScheduledInvocations(range));
+    for (const dataset of zoneDatasets) {
+      results.push(await this.collectZoneBatch(dataset, range));
+    }
+
     return results;
   }
 
   /**
-   * `workersInvocationsScheduled` is a raw event feed rather than a
-   * `*AdaptiveGroups` dataset, so it doesn't fit the general dataset
-   * pipeline. Each event is a single scheduled (cron) worker invocation;
-   * we bucket them client-side by `(script, cron, status, minute)` and emit
-   * one `cf_workers_scheduled` point per bucket.
+   * Runs a batched `fetchAccountBatch` and emits metrics for each dataset in
+   * the response. Per-dataset errors surfaced in the GraphQL `errors` array
+   * don't abort the whole batch — other datasets still land in VictoriaMetrics.
    */
-  private async collectScheduledInvocations(range: { start: Date; end: Date }): Promise<CollectionResult> {
-    const key = 'workers_scheduled';
+  private async collectAccountBatch(
+    datasets: readonly DatasetQuery[],
+    range: { start: Date; end: Date },
+    options: { includeScheduledInvocations: boolean },
+  ): Promise<CollectionResult[]> {
+    if (datasets.length === 0 && !options.includeScheduledInvocations) {
+      return [];
+    }
+    const results: CollectionResult[] = [];
     const startedAt = performance.now();
+    let batchResult: Awaited<ReturnType<ICloudflareGraphQLClient['fetchAccountBatch']>>;
     try {
-      const events = await this.client.fetchScheduledInvocations(this.accountTag, range);
-      type Bucket = {
-        scriptName: string;
-        cron: string;
-        status: string;
-        minute: string;
-        count: number;
-        cpuTimeUs: number;
-        cpuTimeMax: number;
-      };
-      const buckets = new Map<string, Bucket>();
-      for (const event of events) {
-        if (!event.datetime) {
-          continue;
-        }
-        const minute = event.datetime.slice(0, 16) + ':00Z';
-        const bucketKey = `${event.scriptName}|${event.cron}|${event.status}|${minute}`;
-        let bucket = buckets.get(bucketKey);
-        if (!bucket) {
-          bucket = {
-            scriptName: event.scriptName,
-            cron: event.cron,
-            status: event.status,
-            minute,
-            count: 0,
-            cpuTimeUs: 0,
-            cpuTimeMax: 0,
-          };
-          buckets.set(bucketKey, bucket);
-        }
-        bucket.count++;
-        bucket.cpuTimeUs += event.cpuTimeUs ?? 0;
-        bucket.cpuTimeMax = Math.max(bucket.cpuTimeMax, event.cpuTimeUs ?? 0);
-      }
-
-      let points = 0;
-      for (const bucket of buckets.values()) {
-        const timestamp = new Date(bucket.minute);
-        if (Number.isNaN(timestamp.getTime())) {
-          continue;
-        }
-        const metric = Metric.create('cf_workers_scheduled');
-        metric.addTag('account_id', this.accountTag);
-        if (bucket.scriptName) {
-          metric.addTag('script_name', bucket.scriptName);
-        }
-        if (bucket.cron) {
-          metric.addTag('cron', bucket.cron);
-        }
-        if (bucket.status) {
-          metric.addTag('status', bucket.status);
-        }
-        metric
-          .intField('invocations', bucket.count)
-          .intField('cpu_time_us_sum', Math.round(bucket.cpuTimeUs))
-          .intField('cpu_time_us_avg', Math.round(bucket.cpuTimeUs / bucket.count))
-          .intField('cpu_time_us_max', Math.round(bucket.cpuTimeMax))
-          .setExportTimestamp(timestamp);
-        this.metrics.pushRaw(metric);
-        points++;
-      }
-
-      const durationMs = performance.now() - startedAt;
-      this.metrics.push(
-        Metric.create('collector_dataset')
-          .addTag('dataset', key)
-          .addTag('status', 'success')
-          .intField('rows', events.length)
-          .intField('points', points)
-          .durationField('duration', durationMs),
-      );
-      return { dataset: key, rows: events.length, points, durationMs };
+      batchResult = await this.client.fetchAccountBatch(this.accountTag, datasets, range, options);
     } catch (error) {
       const durationMs = performance.now() - startedAt;
       const message = errorMessage(error);
-      console.error(`[collector] ${key} failed:`, message);
+      console.error('[collector] account batch fetch failed:', message);
+      for (const dataset of datasets) {
+        this.pushDatasetErrorMetric(dataset.key, error, durationMs);
+        results.push({ dataset: dataset.key, rows: 0, points: 0, durationMs, error: message });
+      }
+      if (options.includeScheduledInvocations) {
+        this.pushDatasetErrorMetric('workers_scheduled', error, durationMs);
+        results.push({ dataset: 'workers_scheduled', rows: 0, points: 0, durationMs, error: message });
+      }
+      return results;
+    }
+
+    for (const dataset of datasets) {
+      const perStart = performance.now();
+      if (batchResult.errors[dataset.key]) {
+        const msg = batchResult.errors[dataset.key];
+        console.error(`[collector] ${dataset.key} field error:`, msg);
+        this.pushDatasetErrorMetric(dataset.key, new Error(msg), performance.now() - perStart);
+        results.push({
+          dataset: dataset.key,
+          rows: 0,
+          points: 0,
+          durationMs: performance.now() - perStart,
+          error: msg,
+        });
+        continue;
+      }
+      const rows = batchResult.rows[dataset.key] ?? [];
+      if (dataset.field === 'httpRequestsOverviewAdaptiveGroups') {
+        // Pages projects get their own zone tag in analytics but are not
+        // returned by `/zones?account.id=...`; resolve them individually
+        // before emitting so the metric tags carry a human-readable name.
+        await this.resolveMissingZones(rows);
+      }
+      const points = this.emitRows(dataset, rows);
+      const durationMs = performance.now() - perStart;
       this.metrics.push(
         Metric.create('collector_dataset')
-          .addTag('dataset', key)
-          .addTag('status', 'error')
-          .addTag('error', errorTag(error))
-          .intField('errors', 1)
+          .addTag('dataset', dataset.key)
+          .addTag('status', 'success')
+          .intField('rows', rows.length)
+          .intField('points', points)
           .durationField('duration', durationMs),
       );
-      return { dataset: key, rows: 0, points: 0, durationMs, error: message };
+      results.push({ dataset: dataset.key, rows: rows.length, points, durationMs });
     }
+
+    if (options.includeScheduledInvocations) {
+      results.push(this.emitScheduledInvocations(batchResult));
+    }
+    return results;
+  }
+
+  /**
+   * Walks the bucketed scheduled-invocation events from a batch result and
+   * emits `cf_workers_scheduled` metric points. Returns a CollectionResult
+   * describing the per-dataset outcome for dashboards.
+   */
+  private emitScheduledInvocations(
+    batchResult: Awaited<ReturnType<ICloudflareGraphQLClient['fetchAccountBatch']>>,
+  ): CollectionResult {
+    const key = 'workers_scheduled';
+    const startedAt = performance.now();
+    if (batchResult.errors[key]) {
+      const msg = batchResult.errors[key];
+      console.error(`[collector] ${key} field error:`, msg);
+      this.pushDatasetErrorMetric(key, new Error(msg), performance.now() - startedAt);
+      return { dataset: key, rows: 0, points: 0, durationMs: performance.now() - startedAt, error: msg };
+    }
+    const events = batchResult.scheduledInvocations ?? [];
+    type Bucket = {
+      scriptName: string;
+      cron: string;
+      status: string;
+      minute: string;
+      count: number;
+      cpuTimeUs: number;
+      cpuTimeMax: number;
+    };
+    const buckets = new Map<string, Bucket>();
+    for (const event of events) {
+      if (!event.datetime) {
+        continue;
+      }
+      const minute = event.datetime.slice(0, 16) + ':00Z';
+      const bucketKey = `${event.scriptName}|${event.cron}|${event.status}|${minute}`;
+      let bucket = buckets.get(bucketKey);
+      if (!bucket) {
+        bucket = {
+          scriptName: event.scriptName,
+          cron: event.cron,
+          status: event.status,
+          minute,
+          count: 0,
+          cpuTimeUs: 0,
+          cpuTimeMax: 0,
+        };
+        buckets.set(bucketKey, bucket);
+      }
+      bucket.count++;
+      bucket.cpuTimeUs += event.cpuTimeUs ?? 0;
+      bucket.cpuTimeMax = Math.max(bucket.cpuTimeMax, event.cpuTimeUs ?? 0);
+    }
+
+    let points = 0;
+    for (const bucket of buckets.values()) {
+      const timestamp = new Date(bucket.minute);
+      if (Number.isNaN(timestamp.getTime())) {
+        continue;
+      }
+      const metric = Metric.create('cf_workers_scheduled');
+      metric.addTag('account_id', this.accountTag);
+      if (bucket.scriptName) {
+        metric.addTag('script_name', bucket.scriptName);
+      }
+      if (bucket.cron) {
+        metric.addTag('cron', bucket.cron);
+      }
+      if (bucket.status) {
+        metric.addTag('status', bucket.status);
+      }
+      metric
+        .intField('invocations', bucket.count)
+        .intField('cpu_time_us_sum', Math.round(bucket.cpuTimeUs))
+        .intField('cpu_time_us_avg', Math.round(bucket.cpuTimeUs / bucket.count))
+        .intField('cpu_time_us_max', Math.round(bucket.cpuTimeMax))
+        .setExportTimestamp(timestamp);
+      this.metrics.pushRaw(metric);
+      points++;
+    }
+
+    const durationMs = performance.now() - startedAt;
+    this.metrics.push(
+      Metric.create('collector_dataset')
+        .addTag('dataset', key)
+        .addTag('status', 'success')
+        .intField('rows', events.length)
+        .intField('points', points)
+        .durationField('duration', durationMs),
+    );
+    return { dataset: key, rows: events.length, points, durationMs };
+  }
+
+  private pushDatasetErrorMetric(datasetKey: string, error: unknown, durationMs: number): void {
+    this.metrics.push(
+      Metric.create('collector_dataset')
+        .addTag('dataset', datasetKey)
+        .addTag('status', 'error')
+        .addTag('error', errorTag(error))
+        .intField('errors', 1)
+        .durationField('duration', durationMs),
+    );
   }
 
   private async populateResourceCache(): Promise<void> {
@@ -283,60 +372,17 @@ export class CloudflareMetricsCollector {
     }
   }
 
-  async collectDataset(dataset: DatasetQuery, range: { start: Date; end: Date }): Promise<CollectionResult> {
-    if ((dataset.scope ?? 'account') === 'zone') {
-      return this.collectZoneScopedDataset(dataset, range);
-    }
-    const startedAt = performance.now();
-    try {
-      const rows = await this.client.fetchDataset(this.accountTag, dataset, range);
-      if (dataset.field === 'httpRequestsOverviewAdaptiveGroups') {
-        // Pages projects get their own zone tag in analytics but are not
-        // returned by `/zones?account.id=...`; resolve them individually
-        // before emitting so the metric tags carry a human-readable name.
-        await this.resolveMissingZones(rows);
-      }
-      const points = this.emitRows(dataset, rows);
-      const durationMs = performance.now() - startedAt;
-      this.metrics.push(
-        Metric.create('collector_dataset')
-          .addTag('dataset', dataset.key)
-          .addTag('status', 'success')
-          .intField('rows', rows.length)
-          .intField('points', points)
-          .durationField('duration', durationMs),
-      );
-      return { dataset: dataset.key, rows: rows.length, points, durationMs };
-    } catch (error) {
-      const durationMs = performance.now() - startedAt;
-      const message = errorMessage(error);
-      console.error(`[collector] ${dataset.key} failed:`, message);
-      this.metrics.push(
-        Metric.create('collector_dataset')
-          .addTag('dataset', dataset.key)
-          .addTag('status', 'error')
-          .addTag('error', errorTag(error))
-          .intField('errors', 1)
-          .durationField('duration', durationMs),
-      );
-      return { dataset: dataset.key, rows: 0, points: 0, durationMs, error: message };
-    }
-  }
-
   /**
-   * Runs a zone-scoped dataset query once per cached zone in parallel.
-   * Injects `zoneTag` + `zoneName` into each row before emission so tagging
-   * works the same as account-scoped datasets. Individual zone failures are
-   * counted per-zone but don't abort the whole dataset.
+   * Fetches a zone-scoped dataset across every bulk-listed zone in ONE
+   * batched GraphQL request. Per-zone errors in the response don't fail
+   * the whole batch; they're surfaced in a `partial` status.
    */
-  private async collectZoneScopedDataset(
-    dataset: DatasetQuery,
-    range: { start: Date; end: Date },
-  ): Promise<CollectionResult> {
+  private async collectZoneBatch(dataset: DatasetQuery, range: { start: Date; end: Date }): Promise<CollectionResult> {
     const startedAt = performance.now();
-    // Only iterate bulk-listed zones (the 6 real account zones), not the
-    // dozens of lazily-resolved Cloudflare Pages project zones. We'd blow
-    // through the 50-subrequest Workers limit otherwise.
+    // Only iterate bulk-listed zones (the real account zones), not the
+    // dozens of lazily-resolved Cloudflare Pages project zones. Batching
+    // into a single query makes the subrequest cost constant regardless of
+    // how many zones we have.
     const zones = [...this.resourceCache.zones].filter(([tag]) => this.resourceCache.bulkZoneTags.has(tag));
     if (zones.length === 0) {
       this.metrics.push(
@@ -351,25 +397,28 @@ export class CloudflareMetricsCollector {
       return { dataset: dataset.key, rows: 0, points: 0, durationMs: 0 };
     }
 
-    const results = await Promise.allSettled(
-      zones.map(async ([zoneTag, zoneName]) => {
-        const rows = await this.client.fetchZoneDataset(zoneTag, dataset, range);
-        return { zoneTag, zoneName, rows };
-      }),
-    );
+    const zoneTags = zones.map(([tag]) => tag);
+    let batchResult: Awaited<ReturnType<ICloudflareGraphQLClient['fetchZoneBatch']>>;
+    try {
+      batchResult = await this.client.fetchZoneBatch(zoneTags, dataset, range);
+    } catch (error) {
+      const durationMs = performance.now() - startedAt;
+      const message = errorMessage(error);
+      console.error(`[collector] ${dataset.key} zone batch fetch failed:`, message);
+      this.pushDatasetErrorMetric(dataset.key, error, durationMs);
+      return { dataset: dataset.key, rows: 0, points: 0, durationMs, error: message };
+    }
 
     let totalRows = 0;
     let totalPoints = 0;
     let zoneErrors = 0;
-    let lastError: unknown;
-    for (const result of results) {
-      if (result.status === 'rejected') {
+    for (const [zoneTag, zoneName] of zones) {
+      if (batchResult.errors[zoneTag]) {
         zoneErrors++;
-        lastError = result.reason;
-        console.error(`[collector] ${dataset.key} zone failed:`, errorMessage(result.reason));
+        console.error(`[collector] ${dataset.key} zone ${zoneTag} error:`, batchResult.errors[zoneTag]);
         continue;
       }
-      const { zoneTag, zoneName, rows } = result.value;
+      const rows = batchResult.rows[zoneTag] ?? [];
       totalRows += rows.length;
       for (const row of rows) {
         row.dimensions = { ...row.dimensions, zoneTag };
@@ -400,7 +449,7 @@ export class CloudflareMetricsCollector {
       rows: totalRows,
       points: totalPoints,
       durationMs,
-      error: zoneErrors === zones.length ? errorMessage(lastError) : undefined,
+      error: zoneErrors === zones.length ? 'all zones errored' : undefined,
     };
   }
 

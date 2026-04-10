@@ -15,10 +15,13 @@ import {
   WORKERS_INVOCATIONS,
 } from './datasets.js';
 import {
-  buildDatasetQuery,
-  buildDatasetVariables,
+  buildBatchedAccountQuery,
+  buildBatchedZoneQuery,
+  buildDatasetSelection,
+  buildFilterObject,
   CloudflareGraphQLClient,
   CloudflareGraphQLError,
+  groupErrorsByAlias,
 } from './graphql-client.js';
 import {
   CloudflareMetricsRepository,
@@ -102,18 +105,26 @@ describe('InfluxMetricsProvider line protocol', () => {
   });
 });
 
-describe('buildDatasetQuery', () => {
-  it('includes dimensions, sum, avg, max, and quantiles blocks', () => {
-    const query = buildDatasetQuery(WORKERS_INVOCATIONS);
-    expect(query).toContain('workersInvocationsAdaptive');
-    expect(query).toContain('dimensions { datetimeMinute scriptName status scriptVersion usageModel }');
-    expect(query).toContain('sum { requests errors');
-    expect(query).toContain('max { cpuTime duration');
-    expect(query).toContain('quantiles { cpuTimeP50 cpuTimeP99');
-    expect(query).toContain('orderBy: [datetimeMinute_ASC]');
+describe('buildDatasetSelection', () => {
+  it('produces an aliased field selection with dimensions and blocks', () => {
+    const selection = buildDatasetSelection(WORKERS_INVOCATIONS, 'workers_invocations');
+    expect(selection).toContain('workers_invocations: workersInvocationsAdaptive(limit: 9999, filter: $filter');
+    expect(selection).toContain('dimensions { datetimeMinute scriptName status scriptVersion usageModel }');
+    expect(selection).toContain('sum { requests errors');
+    expect(selection).toContain('quantiles { cpuTimeP50 cpuTimeP99');
+    expect(selection).toContain('orderBy: [datetimeMinute_ASC]');
   });
 
-  it('includes top-level scalar fields when specified', () => {
+  it('omits the alias prefix when the alias matches the field name', () => {
+    const selection = buildDatasetSelection(WORKERS_INVOCATIONS);
+    expect(selection.startsWith('workersInvocationsAdaptive(')).toBe(true);
+    // The GraphQL `filter: $filter` argument also uses `: ` so we can't
+    // test absence of the colon globally — just assert the alias prefix
+    // isn't present at the start.
+    expect(selection).not.toMatch(/^workers_invocations: workersInvocationsAdaptive/);
+  });
+
+  it('includes top-level scalar fields between dimensions and blocks', () => {
     const dataset: DatasetQuery = {
       key: 'x',
       measurement: 'cf_x',
@@ -124,88 +135,116 @@ describe('buildDatasetQuery', () => {
       tags: [],
       fields: { count: { type: 'int', source: ['_top', 'count'] } },
     };
-    const query = buildDatasetQuery(dataset);
-    expect(query).toMatch(/dimensions \{ datetimeMinute \}\s+count/);
-  });
-
-  it('targets viewer.zones when the dataset is zone-scoped', () => {
-    const dataset: DatasetQuery = {
-      key: 'z',
-      measurement: 'cf_z',
-      field: 'zGroups',
-      scope: 'zone',
-      dimensions: ['datetimeMinute'],
-      blocks: { sum: ['requests'] },
-      tags: [],
-      fields: { requests: { type: 'int', source: ['sum', 'requests'] } },
-    };
-    const query = buildDatasetQuery(dataset);
-    expect(query).toContain('$zoneTag: String!');
-    expect(query).toContain('zones(filter: { zoneTag: $zoneTag })');
-    expect(query).not.toContain('accountTag');
-  });
-
-  it('builds a valid query for every dataset in the registry', () => {
-    for (const dataset of ALL_DATASETS) {
-      const query = buildDatasetQuery(dataset);
-      expect(query).toContain(dataset.field);
-      expect(query).toContain('viewer');
-      expect(query).toContain('dimensions { ');
-    }
+    const selection = buildDatasetSelection(dataset, 'x');
+    expect(selection).toMatch(/dimensions \{ datetimeMinute \}\s+count/);
   });
 
   it('omits orderBy when the timestamp dimension is not selected', () => {
     const dataset: DatasetQuery = { ...WORKERS_INVOCATIONS, dimensions: ['scriptName'] };
-    const query = buildDatasetQuery(dataset);
-    expect(query).not.toContain('orderBy');
+    const selection = buildDatasetSelection(dataset, 'x');
+    expect(selection).not.toContain('orderBy');
   });
 });
 
-describe('buildDatasetVariables', () => {
+describe('buildBatchedAccountQuery', () => {
+  it('wraps multiple aliased selections in a single viewer.accounts query', () => {
+    const query = buildBatchedAccountQuery([WORKERS_INVOCATIONS, D1_QUERIES]);
+    expect(query).toContain('$accountTag: String!');
+    expect(query).toContain('$filter: JSON!');
+    expect(query).toContain('accounts(filter: { accountTag: $accountTag })');
+    expect(query).toContain('workers_invocations: workersInvocationsAdaptive(');
+    expect(query).toContain('d1_queries: d1AnalyticsAdaptiveGroups(');
+  });
+
+  it('appends a workersInvocationsScheduled selection when requested', () => {
+    const query = buildBatchedAccountQuery([WORKERS_INVOCATIONS], true);
+    expect(query).toContain('workers_scheduled: workersInvocationsScheduled(');
+    expect(query).toContain('scriptName');
+    expect(query).toContain('cpuTimeUs');
+  });
+
+  it('builds a query for every account-scope dataset in the registry', () => {
+    const accountDatasets = ALL_DATASETS.filter((d) => (d.scope ?? 'account') === 'account');
+    const query = buildBatchedAccountQuery(accountDatasets, true);
+    for (const dataset of accountDatasets) {
+      expect(query).toContain(`${dataset.key}: ${dataset.field}(`);
+    }
+  });
+});
+
+describe('buildBatchedZoneQuery', () => {
+  const dataset: DatasetQuery = {
+    key: 'zone_detail',
+    measurement: 'cf_zone_detail',
+    field: 'httpRequestsAdaptiveGroups',
+    scope: 'zone',
+    dimensions: ['datetimeMinute'],
+    blocks: { sum: ['edgeResponseBytes'] },
+    tags: [],
+    fields: { bytes: { type: 'int', source: ['sum', 'edgeResponseBytes'] } },
+  };
+
+  it('aliases each zone with an inlined zoneTag literal', () => {
+    const query = buildBatchedZoneQuery(['zone-a', 'zone-b'], dataset);
+    expect(query).toContain('z0: zones(filter: { zoneTag: "zone-a" })');
+    expect(query).toContain('z1: zones(filter: { zoneTag: "zone-b" })');
+    expect(query).toContain('httpRequestsAdaptiveGroups(');
+  });
+
+  it('rejects zone tags with unsafe characters', () => {
+    expect(() => buildBatchedZoneQuery(['zone-a"; evil'], dataset)).toThrow(/Invalid zoneTag/);
+  });
+});
+
+describe('buildFilterObject', () => {
   const range = {
     start: new Date('2026-04-10T12:00:00Z'),
     end: new Date('2026-04-10T12:10:00Z'),
   };
 
   it('uses datetime_geq / datetime_leq by default', () => {
-    const vars = buildDatasetVariables('acct', WORKERS_INVOCATIONS, range);
-    expect(vars).toEqual({
-      accountTag: 'acct',
-      filter: {
-        datetime_geq: '2026-04-10T12:00:00.000Z',
-        datetime_leq: '2026-04-10T12:10:00.000Z',
-      },
-      limit: 9999,
+    expect(buildFilterObject(WORKERS_INVOCATIONS, range)).toEqual({
+      datetime_geq: '2026-04-10T12:00:00.000Z',
+      datetime_leq: '2026-04-10T12:10:00.000Z',
     });
   });
 
   it('uses date_geq / date_leq for date-granularity datasets', () => {
-    const vars = buildDatasetVariables('acct', DURABLE_OBJECTS_STORAGE, range);
-    expect(vars.filter).toEqual({
+    expect(buildFilterObject(DURABLE_OBJECTS_STORAGE, range)).toEqual({
       date_geq: '2026-04-10',
       date_leq: '2026-04-10',
     });
   });
 
-  it('respects the dataset limit override', () => {
-    const dataset: DatasetQuery = { ...WORKERS_INVOCATIONS, limit: 7 };
-    const vars = buildDatasetVariables('acct', dataset, range);
-    expect(vars.limit).toBe(7);
+  it('falls back to datetime filters when no dataset is supplied', () => {
+    expect(buildFilterObject(null, range)).toEqual({
+      datetime_geq: '2026-04-10T12:00:00.000Z',
+      datetime_leq: '2026-04-10T12:10:00.000Z',
+    });
+  });
+});
+
+describe('groupErrorsByAlias', () => {
+  it('maps GraphQL error paths to aliased field names', () => {
+    const errors = [
+      { message: 'boom', path: ['viewer', 'accounts', 0, 'workers_invocations'] },
+      { message: 'bang', path: ['viewer', 'accounts', 0, 'd1_queries'] },
+    ];
+    expect(groupErrorsByAlias(errors)).toEqual({
+      workers_invocations: 'boom',
+      d1_queries: 'bang',
+    });
   });
 
-  it('merges extra filter clauses', () => {
-    const dataset: DatasetQuery = {
-      ...WORKERS_INVOCATIONS,
-      extraFilter: { scriptName: 'version-api-prod' },
-    };
-    const vars = buildDatasetVariables('acct', dataset, range) as { filter: Record<string, unknown> };
-    expect(vars.filter).toMatchObject({ scriptName: 'version-api-prod' });
-    expect(vars.filter).toMatchObject({ datetime_geq: '2026-04-10T12:00:00.000Z' });
+  it('returns an empty map when errors is null or undefined', () => {
+    expect(groupErrorsByAlias(null)).toEqual({});
+    // eslint-disable-next-line unicorn/no-useless-undefined
+    expect(groupErrorsByAlias(undefined)).toEqual({});
   });
 });
 
 describe('CloudflareGraphQLClient', () => {
-  it('sends the bearer token and parses dataset rows', async () => {
+  it('sends the bearer token and parses batched dataset rows', async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(
         new Response(
@@ -214,7 +253,7 @@ describe('CloudflareGraphQLClient', () => {
               viewer: {
                 accounts: [
                   {
-                    workersInvocationsAdaptive: [
+                    workers_invocations: [
                       {
                         dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', scriptName: 'a' },
                         sum: { requests: 10 },
@@ -236,19 +275,19 @@ describe('CloudflareGraphQLClient', () => {
       'https://example.com/graphql',
       fetchMock as unknown as typeof fetch,
     );
-    const rows = await client.fetchDataset('acct', WORKERS_INVOCATIONS, {
+    const result = await client.fetchAccountBatch('acct', [WORKERS_INVOCATIONS], {
       start: new Date('2026-04-10T12:00:00Z'),
       end: new Date('2026-04-10T12:10:00Z'),
     });
 
-    expect(rows).toHaveLength(1);
-    expect(rows[0].dimensions.scriptName).toBe('a');
+    expect(result.rows.workers_invocations).toHaveLength(1);
+    expect(result.rows.workers_invocations?.[0].dimensions.scriptName).toBe('a');
     const call = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     const init = call[1];
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer tok');
     const body = JSON.parse(init.body as string);
     expect(body.variables.accountTag).toBe('acct');
-    expect(body.query).toContain('workersInvocationsAdaptive');
+    expect(body.query).toContain('workers_invocations: workersInvocationsAdaptive');
   });
 
   it('throws a CloudflareGraphQLError on HTTP failure', async () => {
@@ -259,14 +298,34 @@ describe('CloudflareGraphQLClient', () => {
       fetchMock as unknown as typeof fetch,
     );
     await expect(
-      client.fetchDataset('acct', WORKERS_INVOCATIONS, { start: new Date(0), end: new Date(1) }),
+      client.fetchAccountBatch('acct', [WORKERS_INVOCATIONS], { start: new Date(0), end: new Date(1) }),
     ).rejects.toBeInstanceOf(CloudflareGraphQLError);
   });
 
-  it('throws a CloudflareGraphQLError on GraphQL errors', async () => {
+  it('surfaces per-field errors from a partial GraphQL response', async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(
-        new Response(JSON.stringify({ data: null, errors: [{ message: 'bad filter' }] }), { status: 200 }),
+        new Response(
+          JSON.stringify({
+            data: {
+              viewer: {
+                accounts: [
+                  {
+                    workers_invocations: [
+                      {
+                        dimensions: { datetimeMinute: '2026-04-10T12:00:00Z' },
+                        sum: { requests: 1 },
+                      },
+                    ],
+                    d1_queries: null,
+                  },
+                ],
+              },
+            },
+            errors: [{ message: 'no access', path: ['viewer', 'accounts', 0, 'd1_queries'] }],
+          }),
+          { status: 200 },
+        ),
       ),
     );
     const client = new CloudflareGraphQLClient(
@@ -274,16 +333,72 @@ describe('CloudflareGraphQLClient', () => {
       'https://example.com/graphql',
       fetchMock as unknown as typeof fetch,
     );
-    await expect(
-      client.fetchDataset('acct', WORKERS_INVOCATIONS, { start: new Date(0), end: new Date(1) }),
-    ).rejects.toThrow(/bad filter/);
+    const result = await client.fetchAccountBatch('acct', [WORKERS_INVOCATIONS, D1_QUERIES], {
+      start: new Date(0),
+      end: new Date(1),
+    });
+    expect(result.rows.workers_invocations).toHaveLength(1);
+    expect(result.errors.d1_queries).toBe('no access');
+  });
+
+  it('batches multiple zones into a single request', async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            data: {
+              viewer: {
+                z0: [
+                  {
+                    httpRequestsAdaptiveGroups: [{ dimensions: { datetimeMinute: '2026-04-10T12:00:00Z' }, count: 10 }],
+                  },
+                ],
+                z1: [
+                  {
+                    httpRequestsAdaptiveGroups: [{ dimensions: { datetimeMinute: '2026-04-10T12:00:00Z' }, count: 20 }],
+                  },
+                ],
+              },
+            },
+            errors: null,
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    const zoneScoped: DatasetQuery = {
+      key: 'zone_detail',
+      measurement: 'cf_zone_detail',
+      field: 'httpRequestsAdaptiveGroups',
+      scope: 'zone',
+      dimensions: ['datetimeMinute'],
+      topLevelFields: ['count'],
+      blocks: {},
+      tags: [],
+      fields: { requests: { type: 'int', source: ['_top', 'count'] } },
+    };
+    const client = new CloudflareGraphQLClient(
+      'tok',
+      'https://example.com/graphql',
+      fetchMock as unknown as typeof fetch,
+    );
+    const result = await client.fetchZoneBatch(['zone-a', 'zone-b'], zoneScoped, {
+      start: new Date(0),
+      end: new Date(1),
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.rows['zone-a']).toHaveLength(1);
+    expect(result.rows['zone-b']).toHaveLength(1);
+    expect(result.rows['zone-a']?.[0].count).toBe(10);
+    expect(result.rows['zone-b']?.[0].count).toBe(20);
   });
 });
 
 describe('CloudflareMetricsCollector', () => {
   class FakeClient {
     public calls: Array<{ dataset: string; range: { start: Date; end: Date } }> = [];
-    public zoneCalls: Array<{ zoneTag: string; dataset: string }> = [];
+    public zoneCalls: Array<{ zoneTags: string[]; dataset: string }> = [];
+    public batchCalls: Array<{ datasets: string[]; includeScheduled: boolean }> = [];
     constructor(
       public readonly rowsByDataset: Record<string, DatasetRow[]>,
       public readonly zoneRowsByDataset: Record<string, Record<string, DatasetRow[]>> = {},
@@ -294,20 +409,51 @@ describe('CloudflareMetricsCollector', () => {
         datetime: string;
         cpuTimeUs: number;
       }> = [],
+      public readonly errorsByDataset: Record<string, string> = {},
     ) {}
+
     // eslint-disable-next-line @typescript-eslint/require-await
-    async fetchDataset(_account: string, dataset: DatasetQuery, range: { start: Date; end: Date }) {
-      this.calls.push({ dataset: dataset.key, range });
-      return this.rowsByDataset[dataset.key] ?? [];
+    async fetchAccountBatch(
+      _accountTag: string,
+      datasets: readonly DatasetQuery[],
+      range: { start: Date; end: Date },
+      options: { includeScheduledInvocations?: boolean } = {},
+    ) {
+      this.batchCalls.push({
+        datasets: datasets.map((d) => d.key),
+        includeScheduled: options.includeScheduledInvocations ?? false,
+      });
+      const rows: Record<string, DatasetRow[]> = {};
+      const errors: Record<string, string> = {};
+      for (const dataset of datasets) {
+        this.calls.push({ dataset: dataset.key, range });
+        if (this.errorsByDataset[dataset.key]) {
+          errors[dataset.key] = this.errorsByDataset[dataset.key];
+          continue;
+        }
+        rows[dataset.key] = this.rowsByDataset[dataset.key] ?? [];
+      }
+      return {
+        rows,
+        errors,
+        scheduledInvocations: options.includeScheduledInvocations ? this.scheduledInvocations : undefined,
+      };
     }
+
     // eslint-disable-next-line @typescript-eslint/require-await
-    async fetchZoneDataset(zoneTag: string, dataset: DatasetQuery) {
-      this.zoneCalls.push({ zoneTag, dataset: dataset.key });
-      return this.zoneRowsByDataset[dataset.key]?.[zoneTag] ?? [];
-    }
-    // eslint-disable-next-line @typescript-eslint/require-await
-    async fetchScheduledInvocations() {
-      return this.scheduledInvocations;
+    async fetchZoneBatch(zoneTags: readonly string[], dataset: DatasetQuery, _range: { start: Date; end: Date }) {
+      this.zoneCalls.push({ zoneTags: [...zoneTags], dataset: dataset.key });
+      const rows: Record<string, DatasetRow[]> = {};
+      const errors: Record<string, string> = {};
+      for (const zoneTag of zoneTags) {
+        const zoneRows = this.zoneRowsByDataset[dataset.key]?.[zoneTag];
+        if (zoneRows === undefined && this.errorsByDataset[`zone:${zoneTag}`]) {
+          errors[zoneTag] = this.errorsByDataset[`zone:${zoneTag}`];
+          continue;
+        }
+        rows[zoneTag] = zoneRows ?? [];
+      }
+      return { rows, errors };
     }
   }
 
@@ -511,38 +657,56 @@ describe('CloudflareMetricsCollector', () => {
     expect(observed?.fields.get('rows')).toEqual({ value: 0, type: 'int' });
   });
 
-  it('reports an error result when the client throws and does not abort other datasets', async () => {
-    class ErroringClient {
+  it('reports per-dataset errors from a batch response without aborting others', async () => {
+    // Simulates a partial GraphQL response where one field is rejected and
+    // the others still return data. The batched client surfaces the error
+    // in `batchResult.errors[dataset.key]`, the collector maps it to a
+    // collector_dataset{status=error} self-metric, and the other datasets
+    // still get emitted.
+    class PartialErrorClient {
       // eslint-disable-next-line @typescript-eslint/require-await
-      async fetchDataset(_a: string, dataset: DatasetQuery) {
-        if (dataset.key === 'workers_invocations') {
-          throw new CloudflareGraphQLError('boom', 500);
+      async fetchAccountBatch(
+        _accountTag: string,
+        datasets: readonly DatasetQuery[],
+        _range: { start: Date; end: Date },
+        options: { includeScheduledInvocations?: boolean } = {},
+      ) {
+        const rows: Record<string, DatasetRow[]> = {};
+        const errors: Record<string, string> = {};
+        for (const dataset of datasets) {
+          if (dataset.key === 'workers_invocations') {
+            errors[dataset.key] = 'boom';
+          } else {
+            rows[dataset.key] = [];
+          }
         }
-        return [];
+        return {
+          rows,
+          errors,
+          scheduledInvocations: options.includeScheduledInvocations ? [] : undefined,
+        };
       }
       // eslint-disable-next-line @typescript-eslint/require-await
-      async fetchZoneDataset() {
-        return [];
-      }
-      // eslint-disable-next-line @typescript-eslint/require-await
-      async fetchScheduledInvocations() {
-        return [];
+      async fetchZoneBatch() {
+        return { rows: {}, errors: {} };
       }
     }
     const collector = new CloudflareMetricsCollector(
-      new ErroringClient() as unknown as CloudflareGraphQLClient,
+      new PartialErrorClient() as unknown as CloudflareGraphQLClient,
       'acct',
       metrics,
       { now: () => new Date('2026-04-10T12:15:00Z') },
     );
 
     const results = await collector.collectAll([WORKERS_INVOCATIONS, R2_OPERATIONS]);
-    expect(results[0].error).toContain('boom');
-    expect(results[1].error).toBeUndefined();
+    const workersResult = results.find((r) => r.dataset === 'workers_invocations');
+    const r2Result = results.find((r) => r.dataset === 'r2_operations');
+    expect(workersResult?.error).toContain('boom');
+    expect(r2Result?.error).toBeUndefined();
     const errorMetric = provider.metrics.find(
       (m) => m.tags.get('dataset') === 'workers_invocations' && m.tags.get('status') === 'error',
     );
-    expect(errorMetric?.tags.get('error')).toBe('graphql_500');
+    expect(errorMetric?.tags.get('error')).toBe('Error');
   });
 
   it('accepts date-granularity datasets and synthesizes a midnight UTC timestamp', async () => {
@@ -854,15 +1018,11 @@ describe('CloudflareMetricsCollector', () => {
       restClient,
     });
 
-    const [result] = await collector.collectAll([zoneScoped]);
-    expect(result.rows).toBe(2);
-    expect(result.points).toBe(2);
-    expect(client.zoneCalls).toEqual(
-      expect.arrayContaining([
-        { zoneTag: 'zone-a', dataset: 'zone_detail' },
-        { zoneTag: 'zone-b', dataset: 'zone_detail' },
-      ]),
-    );
+    const results = await collector.collectAll([zoneScoped]);
+    const zoneResult = results.find((r) => r.dataset === 'zone_detail');
+    expect(zoneResult?.rows).toBe(2);
+    expect(zoneResult?.points).toBe(2);
+    expect(client.zoneCalls).toEqual([{ zoneTags: ['zone-a', 'zone-b'], dataset: 'zone_detail' }]);
 
     const exported = provider.metrics.filter((m) => m.name === 'cf_zone_detail');
     expect(exported).toHaveLength(2);
