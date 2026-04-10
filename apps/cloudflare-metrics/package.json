@@ -1,0 +1,17 @@
+{
+  "name": "@immich-services/cloudflare-metrics",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir ../../dist/cloudflare-metrics",
+    "tail": "wrangler tail",
+    "test": "vitest run --exclude 'src/integration.test.ts'",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@influxdata/influxdb-client": "^1.34.0"
+  }
+}

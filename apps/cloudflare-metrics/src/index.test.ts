@@ -1,0 +1,560 @@
+import { SELF } from 'cloudflare:test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CloudflareMetricsCollector } from './collector.js';
+import {
+  ALL_DATASETS,
+  D1_QUERIES,
+  DURABLE_OBJECTS_PERIODIC,
+  DURABLE_OBJECTS_STORAGE,
+  HYPERDRIVE_POOL,
+  QUEUE_BACKLOG,
+  R2_OPERATIONS,
+  WORKERS_INVOCATIONS,
+} from './datasets.js';
+import {
+  buildDatasetQuery,
+  buildDatasetVariables,
+  CloudflareGraphQLClient,
+  CloudflareGraphQLError,
+} from './graphql-client.js';
+import {
+  CloudflareMetricsRepository,
+  InfluxMetricsProvider,
+  Metric,
+  type IMetricsProviderRepository,
+} from './metrics.js';
+import type { DatasetQuery, DatasetRow } from './types.js';
+
+class RecordingProvider implements IMetricsProviderRepository {
+  readonly metrics: Metric[] = [];
+  flushCount = 0;
+  pushMetric(metric: Metric) {
+    this.metrics.push(metric);
+  }
+  flush() {
+    this.flushCount++;
+  }
+}
+
+function metricsRepo(provider: IMetricsProviderRepository) {
+  return new CloudflareMetricsRepository('cloudflare_metrics', new Request('https://localhost/test'), [provider], '');
+}
+
+describe('Metric', () => {
+  it('stores int, float, and duration fields with their types', () => {
+    const metric = Metric.create('test')
+      .addTag('foo', 'bar')
+      .intField('count', 5)
+      .floatField('ratio', 0.42)
+      .durationField('duration', 12.5);
+
+    expect(metric.name).toBe('test');
+    expect(metric.tags.get('foo')).toBe('bar');
+    expect(metric.fields.get('count')).toEqual({ value: 5, type: 'int' });
+    expect(metric.fields.get('ratio')).toEqual({ value: 0.42, type: 'float' });
+    expect(metric.fields.get('duration')).toEqual({ value: 12.5, type: 'duration' });
+  });
+
+  it('records an export timestamp override', () => {
+    const now = new Date('2026-04-10T12:00:00Z');
+    const metric = Metric.create('test').intField('v', 1).setExportTimestamp(now);
+    expect(metric.exportTimestamp).toEqual(now);
+  });
+
+  it('prefixes metric name only if not already prefixed', () => {
+    const metric = Metric.create('op');
+    metric.prefixName('svc');
+    metric.prefixName('svc');
+    expect(metric.name).toBe('svc_op');
+  });
+});
+
+describe('InfluxMetricsProvider line protocol', () => {
+  it('emits int and float fields with the correct suffixes', () => {
+    const provider = new InfluxMetricsProvider('', '');
+    const metric = Metric.create('cf_test')
+      .addTag('script_name', 'hello')
+      .intField('requests', 3)
+      .floatField('duration_ms', 1.5)
+      .setExportTimestamp(new Date('2026-04-10T12:00:00Z'));
+    provider.pushMetric(metric);
+
+    // Access the private `metrics` via casting — we just want to assert the line protocol.
+    const lines = (provider as unknown as { metrics: string[] }).metrics;
+    expect(lines).toHaveLength(1);
+    // Integer field should end with `i`, float should not.
+    expect(lines[0]).toMatch(/cf_test,script_name=hello .*requests=3i/);
+    expect(lines[0]).toMatch(/duration_ms=1\.5/);
+    // Timestamp in nanoseconds for 2026-04-10T12:00:00Z
+    const expectedNs = new Date('2026-04-10T12:00:00Z').getTime() * 1_000_000;
+    expect(lines[0]).toMatch(new RegExp(` ${expectedNs}$`));
+  });
+
+  it('flush clears the pending buffer', async () => {
+    const provider = new InfluxMetricsProvider('', '');
+    provider.pushMetric(Metric.create('foo').intField('v', 1));
+    expect(provider.pendingCount).toBe(1);
+    await provider.flush();
+    expect(provider.pendingCount).toBe(0);
+  });
+});
+
+describe('buildDatasetQuery', () => {
+  it('includes dimensions, sum, avg, max, and quantiles blocks', () => {
+    const query = buildDatasetQuery(WORKERS_INVOCATIONS);
+    expect(query).toContain('workersInvocationsAdaptive');
+    expect(query).toContain('dimensions { datetimeFiveMinutes scriptName status scriptVersion usageModel }');
+    expect(query).toContain('sum { requests errors');
+    expect(query).toContain('max { cpuTime duration');
+    expect(query).toContain('quantiles { cpuTimeP50 cpuTimeP99');
+    expect(query).toContain('orderBy: [datetimeFiveMinutes_ASC]');
+  });
+
+  it('builds a valid query for every dataset in the registry', () => {
+    for (const dataset of ALL_DATASETS) {
+      const query = buildDatasetQuery(dataset);
+      expect(query).toContain(dataset.field);
+      expect(query).toContain('viewer');
+      expect(query).toContain('dimensions { ');
+    }
+  });
+
+  it('omits orderBy when the timestamp dimension is not selected', () => {
+    const dataset: DatasetQuery = { ...WORKERS_INVOCATIONS, dimensions: ['scriptName'] };
+    const query = buildDatasetQuery(dataset);
+    expect(query).not.toContain('orderBy');
+  });
+});
+
+describe('buildDatasetVariables', () => {
+  const range = {
+    start: new Date('2026-04-10T12:00:00Z'),
+    end: new Date('2026-04-10T12:10:00Z'),
+  };
+
+  it('uses datetime_geq / datetime_leq by default', () => {
+    const vars = buildDatasetVariables('acct', WORKERS_INVOCATIONS, range);
+    expect(vars).toEqual({
+      accountTag: 'acct',
+      filter: {
+        datetime_geq: '2026-04-10T12:00:00.000Z',
+        datetime_leq: '2026-04-10T12:10:00.000Z',
+      },
+      limit: 9999,
+    });
+  });
+
+  it('uses date_geq / date_leq for date-granularity datasets', () => {
+    const vars = buildDatasetVariables('acct', DURABLE_OBJECTS_STORAGE, range);
+    expect(vars.filter).toEqual({
+      date_geq: '2026-04-10',
+      date_leq: '2026-04-10',
+    });
+  });
+
+  it('respects the dataset limit override', () => {
+    const dataset: DatasetQuery = { ...WORKERS_INVOCATIONS, limit: 7 };
+    const vars = buildDatasetVariables('acct', dataset, range);
+    expect(vars.limit).toBe(7);
+  });
+
+  it('merges extra filter clauses', () => {
+    const dataset: DatasetQuery = {
+      ...WORKERS_INVOCATIONS,
+      extraFilter: { scriptName: 'version-api-prod' },
+    };
+    const vars = buildDatasetVariables('acct', dataset, range) as { filter: Record<string, unknown> };
+    expect(vars.filter).toMatchObject({ scriptName: 'version-api-prod' });
+    expect(vars.filter).toMatchObject({ datetime_geq: '2026-04-10T12:00:00.000Z' });
+  });
+});
+
+describe('CloudflareGraphQLClient', () => {
+  it('sends the bearer token and parses dataset rows', async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            data: {
+              viewer: {
+                accounts: [
+                  {
+                    workersInvocationsAdaptive: [
+                      {
+                        dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', scriptName: 'a' },
+                        sum: { requests: 10 },
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+            errors: null,
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      ),
+    );
+
+    const client = new CloudflareGraphQLClient(
+      'tok',
+      'https://example.com/graphql',
+      fetchMock as unknown as typeof fetch,
+    );
+    const rows = await client.fetchDataset('acct', WORKERS_INVOCATIONS, {
+      start: new Date('2026-04-10T12:00:00Z'),
+      end: new Date('2026-04-10T12:10:00Z'),
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].dimensions.scriptName).toBe('a');
+    const call = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const init = call[1];
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer tok');
+    const body = JSON.parse(init.body as string);
+    expect(body.variables.accountTag).toBe('acct');
+    expect(body.query).toContain('workersInvocationsAdaptive');
+  });
+
+  it('throws a CloudflareGraphQLError on HTTP failure', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response('boom', { status: 500 })));
+    const client = new CloudflareGraphQLClient(
+      'tok',
+      'https://example.com/graphql',
+      fetchMock as unknown as typeof fetch,
+    );
+    await expect(
+      client.fetchDataset('acct', WORKERS_INVOCATIONS, { start: new Date(0), end: new Date(1) }),
+    ).rejects.toBeInstanceOf(CloudflareGraphQLError);
+  });
+
+  it('throws a CloudflareGraphQLError on GraphQL errors', async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ data: null, errors: [{ message: 'bad filter' }] }), { status: 200 }),
+      ),
+    );
+    const client = new CloudflareGraphQLClient(
+      'tok',
+      'https://example.com/graphql',
+      fetchMock as unknown as typeof fetch,
+    );
+    await expect(
+      client.fetchDataset('acct', WORKERS_INVOCATIONS, { start: new Date(0), end: new Date(1) }),
+    ).rejects.toThrow(/bad filter/);
+  });
+});
+
+describe('CloudflareMetricsCollector', () => {
+  class FakeClient {
+    public calls: Array<{ dataset: string; range: { start: Date; end: Date } }> = [];
+    constructor(public readonly rowsByDataset: Record<string, DatasetRow[]>) {}
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async fetchDataset(_account: string, dataset: DatasetQuery, range: { start: Date; end: Date }) {
+      this.calls.push({ dataset: dataset.key, range });
+      return this.rowsByDataset[dataset.key] ?? [];
+    }
+  }
+
+  let provider: RecordingProvider;
+  let metrics: CloudflareMetricsRepository;
+
+  beforeEach(() => {
+    provider = new RecordingProvider();
+    metrics = metricsRepo(provider);
+  });
+
+  it('computes a lagged query range so late-arriving buckets are included', () => {
+    const now = new Date('2026-04-10T12:00:00Z');
+    const collector = new CloudflareMetricsCollector(
+      new FakeClient({}) as unknown as CloudflareGraphQLClient,
+      'acct',
+      metrics,
+      { now: () => now, lagMs: 2 * 60 * 1000, windowMs: 5 * 60 * 1000 },
+    );
+    const range = collector.getRange();
+    expect(range.end).toEqual(new Date('2026-04-10T11:58:00Z'));
+    expect(range.start).toEqual(new Date('2026-04-10T11:53:00Z'));
+  });
+
+  it('emits a workers invocations metric with snake_case tags and fields, scaled durations', async () => {
+    const row: DatasetRow = {
+      dimensions: {
+        datetimeFiveMinutes: '2026-04-10T12:00:00Z',
+        scriptName: 'version-api-prod',
+        status: 'success',
+        scriptVersion: 'abc',
+        usageModel: 'standard',
+      },
+      sum: {
+        requests: 9,
+        errors: 0,
+        subrequests: 9,
+        clientDisconnects: 0,
+        cpuTimeUs: 7474,
+        duration: 0.165_879,
+        wallTime: 1_327_032,
+        responseBodySize: 522,
+      },
+      max: {
+        cpuTime: 1400,
+        duration: 0.037_329_5,
+        wallTime: 298_636,
+        requestDuration: 1579,
+        responseBodySize: 58,
+      },
+      quantiles: {
+        cpuTimeP50: 730,
+        cpuTimeP99: 1400,
+        durationP50: 0.015_286_75,
+        durationP99: 0.037_329_5,
+        wallTimeP50: 122_294,
+        wallTimeP99: 298_636,
+        responseBodySizeP99: 58,
+      },
+    };
+
+    const client = new FakeClient({ workers_invocations: [row] });
+    const collector = new CloudflareMetricsCollector(
+      client as unknown as CloudflareGraphQLClient,
+      'acct-xyz',
+      metrics,
+      { now: () => new Date('2026-04-10T12:15:00Z') },
+    );
+
+    const [result] = await collector.collectAll([WORKERS_INVOCATIONS]);
+    expect(result.points).toBe(1);
+    expect(result.rows).toBe(1);
+    expect(result.error).toBeUndefined();
+
+    const exported = provider.metrics.find((m) => m.name === 'cf_workers_invocations');
+    expect(exported).toBeDefined();
+    expect(exported?.tags.get('script_name')).toBe('version-api-prod');
+    expect(exported?.tags.get('status')).toBe('success');
+    expect(exported?.tags.get('account_id')).toBe('acct-xyz');
+    expect(exported?.exportTimestamp).toEqual(new Date('2026-04-10T12:00:00Z'));
+    expect(exported?.fields.get('requests')).toEqual({ value: 9, type: 'int' });
+    // Duration in seconds (0.165879) × 1000 = 165.879 ms, stored as float
+    expect(exported?.fields.get('duration_ms_sum')).toEqual({ value: 165.879, type: 'float' });
+    expect(exported?.fields.get('duration_ms_p99')).toEqual({ value: 37.3295, type: 'float' });
+    expect(exported?.fields.get('cpu_time_us_p99')).toEqual({ value: 1400, type: 'int' });
+  });
+
+  it('coerces numeric dimensions to string tags', async () => {
+    const row: DatasetRow = {
+      dimensions: {
+        datetimeFiveMinutes: '2026-04-10T12:00:00Z',
+        bucketName: 'my-bucket',
+        actionType: 'GetObject',
+        actionStatus: 'success',
+        responseStatusCode: 200,
+        storageClass: 'Standard',
+      },
+      sum: { requests: 5, responseBytes: 100, responseObjectSize: 100 },
+    };
+    const client = new FakeClient({ r2_operations: [row] });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    await collector.collectAll([R2_OPERATIONS]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_r2_operations');
+    expect(exported?.tags.get('response_status_code')).toBe('200');
+    expect(exported?.tags.get('bucket_name')).toBe('my-bucket');
+  });
+
+  it('drops rows with neither a timestamp dimension nor any numeric field', async () => {
+    const row: DatasetRow = { dimensions: { scriptName: 'no-timestamp' }, sum: { readQueries: 1 } };
+    const client = new FakeClient({ d1_queries: [row] });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    const [result] = await collector.collectAll([D1_QUERIES]);
+    expect(result.rows).toBe(1);
+    expect(result.points).toBe(0);
+    expect(provider.metrics.some((m) => m.name === 'cf_d1_queries')).toBe(false);
+  });
+
+  it('skips null-valued fields rather than emitting zeros', async () => {
+    const row: DatasetRow = {
+      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', databaseId: 'db1', databaseRole: 'primary' },
+      sum: { readQueries: null, writeQueries: 0, rowsRead: 10, rowsWritten: null, queryBatchResponseBytes: 100 },
+      avg: { queryBatchTimeMs: null, queryBatchResponseBytes: 100, sampleInterval: 1 },
+    };
+    const client = new FakeClient({ d1_queries: [row] });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    await collector.collectAll([D1_QUERIES]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_d1_queries');
+    expect(exported?.fields.has('read_queries')).toBe(false);
+    expect(exported?.fields.has('rows_written')).toBe(false);
+    expect(exported?.fields.get('write_queries')).toEqual({ value: 0, type: 'int' });
+    expect(exported?.fields.get('rows_read')).toEqual({ value: 10, type: 'int' });
+    expect(exported?.fields.get('query_duration_ms_avg')).toBeUndefined();
+    expect(exported?.fields.get('sample_interval')).toEqual({ value: 1, type: 'float' });
+  });
+
+  it('records a per-dataset collector metric tagged with success/error', async () => {
+    const client = new FakeClient({ workers_invocations: [] });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    await collector.collectAll([WORKERS_INVOCATIONS]);
+    const observed = provider.metrics.find(
+      (m) => m.name === 'cloudflare_metrics_collector_dataset' && m.tags.get('dataset') === 'workers_invocations',
+    );
+    expect(observed?.tags.get('status')).toBe('success');
+    expect(observed?.fields.get('rows')).toEqual({ value: 0, type: 'int' });
+  });
+
+  it('reports an error result when the client throws and does not abort other datasets', async () => {
+    class ErroringClient {
+      // eslint-disable-next-line @typescript-eslint/require-await
+      async fetchDataset(_a: string, dataset: DatasetQuery) {
+        if (dataset.key === 'workers_invocations') {
+          throw new CloudflareGraphQLError('boom', 500);
+        }
+        return [];
+      }
+    }
+    const collector = new CloudflareMetricsCollector(
+      new ErroringClient() as unknown as CloudflareGraphQLClient,
+      'acct',
+      metrics,
+      { now: () => new Date('2026-04-10T12:15:00Z') },
+    );
+
+    const results = await collector.collectAll([WORKERS_INVOCATIONS, R2_OPERATIONS]);
+    expect(results[0].error).toContain('boom');
+    expect(results[1].error).toBeUndefined();
+    const errorMetric = provider.metrics.find(
+      (m) => m.tags.get('dataset') === 'workers_invocations' && m.tags.get('status') === 'error',
+    );
+    expect(errorMetric?.tags.get('error')).toBe('graphql_500');
+  });
+
+  it('accepts date-granularity datasets and synthesizes a midnight UTC timestamp', async () => {
+    const row: DatasetRow = {
+      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z' },
+      max: { storedBytes: 1024 },
+    };
+    const client = new FakeClient({ durable_objects_storage: [row] });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    await collector.collectAll([DURABLE_OBJECTS_STORAGE]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_durable_objects_storage');
+    expect(exported?.exportTimestamp).toEqual(new Date('2026-04-10T12:00:00Z'));
+    expect(exported?.fields.get('stored_bytes')).toEqual({ value: 1024, type: 'int' });
+  });
+
+  it('emits periodic durable-object fields with correct unit scaling', async () => {
+    const row: DatasetRow = {
+      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', namespaceId: 'ns' },
+      sum: {
+        activeTime: 1000,
+        cpuTime: 500,
+        duration: 72.99,
+        exceededCpuErrors: 0,
+        exceededMemoryErrors: 0,
+        fatalInternalErrors: 2,
+        inboundWebsocketMsgCount: 0,
+        outboundWebsocketMsgCount: 10,
+        rowsRead: 100,
+        rowsWritten: 50,
+        storageDeletes: 0,
+        storageReadUnits: 0,
+        storageWriteUnits: 0,
+        subrequests: 0,
+      },
+      max: { activeWebsocketConnections: 5 },
+    };
+    const client = new FakeClient({ durable_objects_periodic: [row] });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    await collector.collectAll([DURABLE_OBJECTS_PERIODIC]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_durable_objects_periodic');
+    expect(exported?.fields.get('duration_ms')).toEqual({ value: 72_990, type: 'float' });
+    expect(exported?.fields.get('fatal_internal_errors')).toEqual({ value: 2, type: 'int' });
+    expect(exported?.fields.get('active_ws_connections_max')).toEqual({ value: 5, type: 'int' });
+  });
+
+  it('handles avg-only datasets like queue backlog', async () => {
+    const row: DatasetRow = {
+      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', queueId: 'q1' },
+      avg: { bytes: 123.4, messages: 7.5, sampleInterval: 1 },
+    };
+    const client = new FakeClient({ queue_backlog: [row] });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    await collector.collectAll([QUEUE_BACKLOG]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_queue_backlog');
+    expect(exported?.fields.get('backlog_bytes_avg')).toEqual({ value: 123.4, type: 'float' });
+    expect(exported?.fields.get('backlog_messages_avg')).toEqual({ value: 7.5, type: 'float' });
+  });
+
+  it('uses datetimeMinute timestamp dimension for hyperdrive pool sizes', async () => {
+    const row: DatasetRow = {
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', configId: 'cfg', databaseType: 'pg' },
+      max: { currentPoolSize: 3, maxPoolSize: 10, waitingClients: 0 },
+    };
+    const client = new FakeClient({ hyperdrive_pool: [row] });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    await collector.collectAll([HYPERDRIVE_POOL]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_hyperdrive_pool');
+    expect(exported?.exportTimestamp).toEqual(new Date('2026-04-10T12:00:00Z'));
+    expect(exported?.fields.get('current_pool_size')).toEqual({ value: 3, type: 'int' });
+  });
+});
+
+describe('dataset registry invariants', () => {
+  it('every dataset defines at least one tag or field', () => {
+    for (const dataset of ALL_DATASETS) {
+      const fieldCount = Object.keys(dataset.fields).length;
+      expect(fieldCount, `${dataset.key} must have fields`).toBeGreaterThan(0);
+      for (const [, spec] of Object.entries(dataset.fields)) {
+        expect(['int', 'float']).toContain(spec.type);
+        expect(spec.source[0]).toMatch(/^(sum|avg|max|min|quantiles)$/);
+      }
+    }
+  });
+
+  it('every dataset selects its timestamp dimension', () => {
+    for (const dataset of ALL_DATASETS) {
+      const timestampDim = dataset.timestampDimension ?? 'datetimeFiveMinutes';
+      expect(dataset.dimensions, `${dataset.key} must include ${timestampDim}`).toContain(timestampDim);
+    }
+  });
+
+  it('measurement names are unique and cf_-prefixed', () => {
+    const seen = new Set<string>();
+    for (const dataset of ALL_DATASETS) {
+      expect(dataset.measurement).toMatch(/^cf_/);
+      expect(seen.has(dataset.measurement)).toBe(false);
+      seen.add(dataset.measurement);
+    }
+  });
+});
+
+describe('HTTP handler', () => {
+  it('returns 200 for /health', async () => {
+    const response = await SELF.fetch('https://example.com/health');
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { status: string };
+    expect(body.status).toBe('ok');
+  });
+
+  it('returns 404 for unknown routes', async () => {
+    const response = await SELF.fetch('https://example.com/nope');
+    expect(response.status).toBe(404);
+  });
+
+  it('returns 503 from /collect when the API token or account ID is missing', async () => {
+    const response = await SELF.fetch('https://example.com/collect');
+    expect(response.status).toBe(503);
+  });
+});

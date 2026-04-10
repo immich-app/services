@@ -59,6 +59,12 @@ importers:
         specifier: ^4.35.0
         version: 4.35.0(@cloudflare/workers-types@4.20250909.0)
 
+  apps/cloudflare-metrics:
+    dependencies:
+      '@influxdata/influxdb-client':
+        specifier: ^1.34.0
+        version: 1.35.0
+
   apps/github-approval-check:
     dependencies:
       '@octokit/app':
