@@ -2,9 +2,15 @@
 # GraphQL Analytics API. Scoped to this account only and limited to the
 # "Account Analytics Read" permission group so the worker can't do anything
 # destructive with the token if it's ever exfiltrated.
+#
+# The permission group UUID is hardcoded because the data source for
+# `cloudflare_api_token_permission_groups_list` requires user-level token
+# management permissions that the Terraform service account does not have.
+# Permission group IDs are stable public identifiers.
 
-data "cloudflare_api_token_permission_groups_list" "account_analytics_read" {
-  name = "Account%20Analytics%20Read"
+locals {
+  # "Account Analytics Read"
+  cloudflare_permission_group_account_analytics_read = "b89a480218d04ceb98b4fe57ca29dc1f"
 }
 
 resource "cloudflare_api_token" "analytics_read" {
@@ -15,7 +21,7 @@ resource "cloudflare_api_token" "analytics_read" {
       effect = "allow"
       permission_groups = [
         {
-          id = data.cloudflare_api_token_permission_groups_list.account_analytics_read.result[0].id
+          id = local.cloudflare_permission_group_account_analytics_read
         },
       ]
       resources = jsonencode({
@@ -25,7 +31,6 @@ resource "cloudflare_api_token" "analytics_read" {
   ]
 }
 
-output "analytics_api_token" {
-  value     = cloudflare_api_token.analytics_read.value
-  sensitive = true
+output "analytics_api_token_id" {
+  value = cloudflare_api_token.analytics_read.id
 }
