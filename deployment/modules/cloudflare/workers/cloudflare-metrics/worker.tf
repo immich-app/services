@@ -68,3 +68,10 @@ resource "cloudflare_workers_cron_trigger" "collect" {
   schedules   = [{ cron = "*/5 * * * *" }]
   depends_on  = [cloudflare_workers_deployment.worker]
 }
+
+# Empty preview_url output keeps the shared CI preview-URL collector happy —
+# this worker has no custom domain, but the workflow still calls
+# `terragrunt output -raw preview_url` for every module.
+output "preview_url" {
+  value = ""
+}
