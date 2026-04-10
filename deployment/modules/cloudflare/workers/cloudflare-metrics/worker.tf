@@ -65,7 +65,7 @@ resource "cloudflare_workers_deployment" "worker" {
 resource "cloudflare_workers_cron_trigger" "collect" {
   account_id  = var.cloudflare_account_id
   script_name = cloudflare_worker.worker.name
-  schedules   = [{ cron = "*/5 * * * *" }]
+  schedules   = [{ cron = "* * * * *" }]
   depends_on  = [cloudflare_workers_deployment.worker]
 }
 

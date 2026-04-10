@@ -5,14 +5,45 @@ import { Metric, type CloudflareMetricsRepository } from './metrics.js';
 import type { CollectionResult, DatasetQuery, DatasetRow } from './types.js';
 
 /**
- * Module-level zone name cache, keyed by zoneTag. Cloudflare Workers
- * isolates stay warm for several minutes to hours, so caching Pages zone
- * lookups across invocations avoids paying the ~15-subrequest Pages
- * enumeration cost on every cron tick — which matters a lot when each
- * invocation is already close to the 50-subrequest limit. Resets when the
- * isolate is recycled, which is fine as a cheap TTL.
+ * Module-level caches persisted across Worker isolate invocations.
+ * Cloudflare Workers isolates stay warm for several minutes to hours, so
+ * these let us skip REST lookups that would otherwise run every cron tick
+ * — which matters a lot at 1-minute cron frequency where we want every
+ * invocation to be as cheap as possible. Caches reset when the isolate
+ * is recycled; that's the effective TTL.
  */
 const globalZoneNameCache = new Map<string, string>();
+const globalD1NameCache = new Map<string, string>();
+const globalQueueNameCache = new Map<string, string>();
+
+interface CachedResourceLookup<T> {
+  values: T[];
+  loadedAt: number;
+}
+
+/**
+ * Cache for the full bulk-list responses, keyed by kind. We re-fetch if
+ * the cache is older than `RESOURCE_CACHE_TTL_MS` or empty. Keeping the
+ * full list (not just id→name) lets us seed the per-cron `resourceCache`
+ * cleanly in `populateResourceCache`.
+ */
+const RESOURCE_CACHE_TTL_MS = 10 * 60 * 1000;
+let cachedD1Databases: CachedResourceLookup<{ uuid: string; name: string }> | null = null;
+let cachedQueues: CachedResourceLookup<{ queue_id: string; queue_name: string }> | null = null;
+let cachedBulkZones: CachedResourceLookup<{ id: string; name: string }> | null = null;
+
+/**
+ * Resets all module-level caches. Intended for unit tests so each test
+ * gets a fresh view of the rest client; has no use in production code.
+ */
+export function __resetCollectorCachesForTests(): void {
+  globalZoneNameCache.clear();
+  globalD1NameCache.clear();
+  globalQueueNameCache.clear();
+  cachedD1Databases = null;
+  cachedQueues = null;
+  cachedBulkZones = null;
+}
 
 export interface CollectorOptions {
   /**
@@ -40,15 +71,20 @@ export interface CollectorOptions {
 }
 
 /**
- * Collection window defaults. The cron fires every 5 minutes, and with
- * 1-minute buckets we want enough overlap that missing one cron run still
- * results in every bucket being written at least once. 5 min lag keeps us
- * out of buckets Cloudflare hasn't finalised yet; 12 min window plus the
- * lag means each run touches ~12 minute-buckets, overlapping the previous
- * run by ~7 minutes.
+ * Collection window defaults. The cron fires every 1 minute, so each tick
+ * picks up the freshest bucket plus a 2-minute overlap buffer so one
+ * missed cron doesn't drop data. 5 min lag keeps us out of buckets
+ * Cloudflare hasn't finalised yet (the analytics pipeline delay is
+ * typically 2–5 minutes).
+ *
+ *   [ now - (lag + window), now - lag )
+ *   = [ now - 8m, now - 5m )
+ *
+ * VictoriaMetrics dedupes on (series, timestamp) so the 2-minute overlap
+ * between consecutive runs is free.
  */
 const DEFAULT_LAG_MS = 5 * 60 * 1000;
-const DEFAULT_WINDOW_MS = 12 * 60 * 1000;
+const DEFAULT_WINDOW_MS = 3 * 60 * 1000;
 /**
  * Upper bound on individual `/zones/{id}` lookups per cron tick. Each
  * lookup is one subrequest, and Cloudflare Workers caps subrequests at
@@ -307,9 +343,8 @@ export class CloudflareMetricsCollector {
 
   private async populateResourceCache(): Promise<void> {
     this.resourceCache = emptyResourceCache();
-    // Seed zones from the module-level cache populated in previous invocations.
-    // Pages project zones (resolved via `/zones/{id}`) rarely change so a cross-
-    // invocation cache turns their lookups into ~0 subrequests steady-state.
+    // Seed lazily-resolved zone names (Pages projects) from the module-level
+    // cache populated in previous invocations — these rarely change.
     for (const [tag, name] of globalZoneNameCache) {
       this.resourceCache.zones.set(tag, name);
     }
@@ -317,16 +352,40 @@ export class CloudflareMetricsCollector {
       return;
     }
 
+    const restClient = this.restClient;
+    const now = this.now().getTime();
+    const cacheFresh = <T>(cache: CachedResourceLookup<T> | null): cache is CachedResourceLookup<T> =>
+      cache !== null && now - cache.loadedAt < RESOURCE_CACHE_TTL_MS;
+
+    // Use cached bulk responses when fresh, otherwise re-fetch. Each refresh
+    // saves 1 subrequest / lookup between calls — meaningful at 1-minute
+    // cron frequency.
     const [d1Result, queuesResult, zonesResult] = await Promise.allSettled([
-      this.restClient.listD1Databases(this.accountTag),
-      this.restClient.listQueues(this.accountTag),
-      this.restClient.listZones(this.accountTag),
+      cacheFresh(cachedD1Databases)
+        ? Promise.resolve(cachedD1Databases.values)
+        : restClient.listD1Databases(this.accountTag).then((values) => {
+            cachedD1Databases = { values, loadedAt: now };
+            return values;
+          }),
+      cacheFresh(cachedQueues)
+        ? Promise.resolve(cachedQueues.values)
+        : restClient.listQueues(this.accountTag).then((values) => {
+            cachedQueues = { values, loadedAt: now };
+            return values;
+          }),
+      cacheFresh(cachedBulkZones)
+        ? Promise.resolve(cachedBulkZones.values)
+        : restClient.listZones(this.accountTag).then((values) => {
+            cachedBulkZones = { values, loadedAt: now };
+            return values;
+          }),
     ]);
 
     this.recordResourceLookup('d1_databases', d1Result, (items) => {
       for (const db of items) {
         if (db.uuid && db.name) {
           this.resourceCache.d1Databases.set(db.uuid, db.name);
+          globalD1NameCache.set(db.uuid, db.name);
         }
       }
     });
@@ -334,6 +393,7 @@ export class CloudflareMetricsCollector {
       for (const q of items) {
         if (q.queue_id && q.queue_name) {
           this.resourceCache.queues.set(q.queue_id, q.queue_name);
+          globalQueueNameCache.set(q.queue_id, q.queue_name);
         }
       }
     });
@@ -345,6 +405,21 @@ export class CloudflareMetricsCollector {
         }
       }
     });
+
+    // If a REST lookup failed entirely (no cache yet and fetch rejected),
+    // fall back to whatever id→name pairs survived from previous isolate
+    // invocations via the global caches. Better to emit stale-but-present
+    // name tags than empty ones.
+    if (d1Result.status === 'rejected') {
+      for (const [uuid, name] of globalD1NameCache) {
+        this.resourceCache.d1Databases.set(uuid, name);
+      }
+    }
+    if (queuesResult.status === 'rejected') {
+      for (const [id, name] of globalQueueNameCache) {
+        this.resourceCache.queues.set(id, name);
+      }
+    }
   }
 
   private recordResourceLookup<T>(

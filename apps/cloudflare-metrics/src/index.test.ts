@@ -1,7 +1,7 @@
 import { SELF } from 'cloudflare:test';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ICloudflareRestClient } from './cloudflare-api.js';
-import { CloudflareMetricsCollector } from './collector.js';
+import { __resetCollectorCachesForTests, CloudflareMetricsCollector } from './collector.js';
 import {
   ALL_DATASETS,
   D1_QUERIES,
@@ -102,6 +102,42 @@ describe('InfluxMetricsProvider line protocol', () => {
     expect(provider.pendingCount).toBe(1);
     await provider.flush();
     expect(provider.pendingCount).toBe(0);
+  });
+
+  it('stashes a failed flush body and resends it on the next successful flush', async () => {
+    // Use a fetch mock via globalThis so the provider picks it up through its
+    // real `fetch` call path.
+    const originalFetch = globalThis.fetch;
+    let call = 0;
+    const received: string[] = [];
+    globalThis.fetch = ((_url: RequestInfo | URL, init?: RequestInit) => {
+      call++;
+      received.push(init?.body as string);
+      if (call === 1) {
+        // First flush: backend is down.
+        return Promise.resolve(new Response('bad gateway', { status: 502 }));
+      }
+      return Promise.resolve(new Response('', { status: 204 }));
+    }) as typeof fetch;
+
+    try {
+      const provider = new InfluxMetricsProvider('token', 'prod');
+      provider.pushMetric(Metric.create('first').intField('v', 1));
+      await provider.flush();
+      // First attempt failed; the body should be stashed in the module-level
+      // retry buffer.
+
+      provider.pushMetric(Metric.create('second').intField('v', 2));
+      await provider.flush();
+
+      expect(call).toBe(2);
+      // Second request body should contain BOTH the retried first flush and
+      // the newly pushed metric, concatenated.
+      expect(received[1]).toContain('first');
+      expect(received[1]).toContain('second');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });
 
@@ -512,6 +548,7 @@ describe('CloudflareMetricsCollector', () => {
   beforeEach(() => {
     provider = new RecordingProvider();
     metrics = metricsRepo(provider);
+    __resetCollectorCachesForTests();
   });
 
   it('computes a lagged query range so late-arriving buckets are included', () => {

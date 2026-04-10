@@ -119,6 +119,20 @@ function getMetricsWriteUrl(environment: string): string {
   return `https://cf-workers.monitoring.${environment || 'dev'}.immich.cloud/write`;
 }
 
+/**
+ * Module-level buffer for metrics whose flush attempt failed. Persisted
+ * across Worker isolate invocations (each isolate stays alive for minutes
+ * to hours) so a transient VictoriaMetrics outage doesn't drop the current
+ * cron's data — the next successful flush prepends the stashed body and
+ * both land atomically.
+ *
+ * Capped at a generous 10 MB to avoid unbounded growth under sustained
+ * outages; beyond that we drop the oldest buffer rather than run the
+ * Worker out of memory.
+ */
+const pendingFlushBuffers: string[] = [];
+const MAX_PENDING_FLUSH_BYTES = 10 * 1024 * 1024;
+
 export class InfluxMetricsProvider implements IMetricsProviderRepository {
   private metrics: string[] = [];
   private writeUrl: string;
@@ -157,26 +171,53 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
   }
 
   async flush() {
-    if (this.metrics.length === 0) {
+    const currentBody = this.metrics.join('\n');
+    this.metrics = [];
+
+    // Prepend any buffered bodies from previous failed flushes (oldest first).
+    const parts = [...pendingFlushBuffers];
+    if (currentBody) {
+      parts.push(currentBody);
+    }
+    pendingFlushBuffers.length = 0;
+
+    if (parts.length === 0) {
       return;
     }
-    const body = this.metrics.join('\n');
-    this.metrics = [];
+    const body = parts.join('\n');
+
     if (this.environment !== 'prod') {
       console.log(body);
     }
     if (!this.influxApiToken) {
       return;
     }
-    const response = await fetch(this.writeUrl, {
-      method: 'POST',
-      body,
-      headers: { Authorization: `Token ${this.influxApiToken}` },
-    });
-    if (!response.ok) {
-      console.error('Failed to push metrics', response.status, response.statusText);
+    try {
+      const response = await fetch(this.writeUrl, {
+        method: 'POST',
+        body,
+        headers: { Authorization: `Token ${this.influxApiToken}` },
+      });
+      await response.body?.cancel();
+      if (!response.ok) {
+        console.error('Failed to push metrics', response.status, response.statusText);
+        this.stashFailedFlush(body);
+      }
+    } catch (error) {
+      console.error('Metric flush threw', error);
+      this.stashFailedFlush(body);
     }
-    await response.body?.cancel();
+  }
+
+  private stashFailedFlush(body: string): void {
+    // Evict oldest buffers if we're over the byte cap.
+    pendingFlushBuffers.push(body);
+    let total = pendingFlushBuffers.reduce((acc, b) => acc + b.length, 0);
+    while (total > MAX_PENDING_FLUSH_BYTES && pendingFlushBuffers.length > 1) {
+      const dropped = pendingFlushBuffers.shift();
+      total -= dropped?.length ?? 0;
+      console.warn('[metrics] dropped buffered flush body over cap');
+    }
   }
 }
 

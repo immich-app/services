@@ -27,7 +27,7 @@ export interface TagSpec {
   as: string;
 }
 
-export type AggregationBlock = 'sum' | 'avg' | 'max' | 'min' | 'quantiles';
+export type AggregationBlock = 'sum' | 'avg' | 'max' | 'min' | 'quantiles' | 'uniq';
 
 export interface DatasetQuery {
   /** Human-friendly dataset key, also used in logging */
@@ -87,6 +87,7 @@ export interface DatasetRow {
   max?: Record<string, number | null>;
   min?: Record<string, number | null>;
   quantiles?: Record<string, number | null>;
+  uniq?: Record<string, number | null>;
   /** Top-level row count on `*AdaptiveGroups` datasets. */
   count?: number | null;
 }
