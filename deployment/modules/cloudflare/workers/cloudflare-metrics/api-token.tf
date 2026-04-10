@@ -12,17 +12,20 @@ locals {
   cloudflare_permission_group_account_analytics_read = "b89a480218d04ceb98b4fe57ca29dc1f"
 }
 
+# Bumping the `input` on this resource forces the analytics_read token to be
+# destroyed and recreated on the next apply. We use this to work around
+# Cloudflare provider v5 issue #5045: the provider only reports
+# `cloudflare_api_token.value` in state immediately after creation, and state
+# refreshes wipe the attribute to empty. Every time we need a fresh, non-empty
+# `.value`, bump `generation` below.
+resource "terraform_data" "analytics_token_generation" {
+  input = "2"
+}
+
 resource "cloudflare_api_token" "analytics_read" {
   provider = cloudflare.bootstrap
 
-  # The `-gen-N` suffix lets us force recreation by bumping the generation.
-  # Cloudflare provider v5 has an ongoing bug where `cloudflare_api_token.value`
-  # is only populated in state immediately after creation; on any subsequent
-  # refresh the provider wipes it (see
-  # cloudflare/terraform-provider-cloudflare#5045). The worker binding reads
-  # the value via a `terraform_data` capture keyed to the token id, so both
-  # resources need to be recreated together to re-capture a fresh value.
-  name = "cloudflare-metrics-analytics-read${local.resource_suffix}-gen-1"
+  name = "cloudflare-metrics-analytics-read${local.resource_suffix}"
 
   policies = [
     {
@@ -37,14 +40,17 @@ resource "cloudflare_api_token" "analytics_read" {
       })
     },
   ]
+
+  lifecycle {
+    replace_triggered_by = [terraform_data.analytics_token_generation]
+  }
 }
 
-# Captures the token value at creation time so the worker binding survives
-# state refreshes that null out `cloudflare_api_token.value`. The
-# `triggers_replace` binding ties this resource's lifecycle to the
-# `cloudflare_api_token` id — whenever the token is recreated, this capture
-# is too, refreshing the stored value. The `ignore_changes = [input]` guard
-# protects the captured value between recreations.
+# Captures the fresh `.value` each time the api_token is recreated and pins it
+# in state, so the worker binding keeps a populated token even after future
+# state refreshes wipe `cloudflare_api_token.value`. `triggers_replace` is
+# keyed on the token id so this resource gets rebuilt alongside every token
+# rotation.
 resource "terraform_data" "analytics_token_value" {
   input = cloudflare_api_token.analytics_read.value
 
