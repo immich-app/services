@@ -1273,7 +1273,7 @@ describe('dataset registry invariants', () => {
       expect(fieldCount, `${dataset.key} must have fields`).toBeGreaterThan(0);
       for (const [, spec] of Object.entries(dataset.fields)) {
         expect(['int', 'float']).toContain(spec.type);
-        expect(spec.source[0]).toMatch(/^(sum|avg|max|min|quantiles|_top)$/);
+        expect(spec.source[0]).toMatch(/^(sum|avg|max|min|quantiles|uniq|_top)$/);
       }
     }
   });
