@@ -4,6 +4,16 @@ import { CloudflareGraphQLError } from './graphql-client.js';
 import { Metric, type CloudflareMetricsRepository } from './metrics.js';
 import type { CollectionResult, DatasetQuery, DatasetRow } from './types.js';
 
+/**
+ * Module-level zone name cache, keyed by zoneTag. Cloudflare Workers
+ * isolates stay warm for several minutes to hours, so caching Pages zone
+ * lookups across invocations avoids paying the ~15-subrequest Pages
+ * enumeration cost on every cron tick — which matters a lot when each
+ * invocation is already close to the 50-subrequest limit. Resets when the
+ * isolate is recycled, which is fine as a cheap TTL.
+ */
+const globalZoneNameCache = new Map<string, string>();
+
 export interface CollectorOptions {
   /**
    * How far behind "now" the end of the collection window should be. Cloudflare
@@ -39,11 +49,27 @@ export interface CollectorOptions {
  */
 const DEFAULT_LAG_MS = 5 * 60 * 1000;
 const DEFAULT_WINDOW_MS = 12 * 60 * 1000;
+/**
+ * Cap on the number of individual `/zones/{id}` lookups we'll issue per
+ * cron tick. Cloudflare Workers caps subrequests at 50/invocation on most
+ * plans; between our datasets, bulk REST lookups, zone-scoped queries and
+ * the metric flush we're already close to the ceiling. Cold start resolves
+ * 8 Pages zones per run, subsequent invocations hit the module-level cache.
+ */
+const MAX_INDIVIDUAL_ZONE_LOOKUPS_PER_RUN = 8;
 
 interface ResourceCache {
   d1Databases: Map<string, string>;
   queues: Map<string, string>;
+  /** All known zones: bulk list + lazily-resolved Pages projects. */
   zones: Map<string, string>;
+  /**
+   * Zones that came from the bulk `/zones?account.id=` list, i.e. real
+   * account-owned zones. Zone-scoped datasets only iterate this subset to
+   * avoid running per-zone queries against the dozens of Pages project
+   * zones (which would blow through the Workers subrequest limit).
+   */
+  bulkZoneTags: Set<string>;
 }
 
 function emptyResourceCache(): ResourceCache {
@@ -51,6 +77,7 @@ function emptyResourceCache(): ResourceCache {
     d1Databases: new Map(),
     queues: new Map(),
     zones: new Map(),
+    bulkZoneTags: new Set(),
   };
 }
 
@@ -191,6 +218,12 @@ export class CloudflareMetricsCollector {
 
   private async populateResourceCache(): Promise<void> {
     this.resourceCache = emptyResourceCache();
+    // Seed zones from the module-level cache populated in previous invocations.
+    // Pages project zones (resolved via `/zones/{id}`) rarely change so a cross-
+    // invocation cache turns their lookups into ~0 subrequests steady-state.
+    for (const [tag, name] of globalZoneNameCache) {
+      this.resourceCache.zones.set(tag, name);
+    }
     if (!this.restClient) {
       return;
     }
@@ -219,6 +252,7 @@ export class CloudflareMetricsCollector {
       for (const z of items) {
         if (z.id && z.name) {
           this.resourceCache.zones.set(z.id, z.name);
+          this.resourceCache.bulkZoneTags.add(z.id);
         }
       }
     });
@@ -300,7 +334,10 @@ export class CloudflareMetricsCollector {
     range: { start: Date; end: Date },
   ): Promise<CollectionResult> {
     const startedAt = performance.now();
-    const zones = [...this.resourceCache.zones];
+    // Only iterate bulk-listed zones (the 6 real account zones), not the
+    // dozens of lazily-resolved Cloudflare Pages project zones. We'd blow
+    // through the 50-subrequest Workers limit otherwise.
+    const zones = [...this.resourceCache.zones].filter(([tag]) => this.resourceCache.bulkZoneTags.has(tag));
     if (zones.length === 0) {
       this.metrics.push(
         Metric.create('collector_dataset')
@@ -450,7 +487,10 @@ export class CloudflareMetricsCollector {
     if (missing.size === 0) {
       return;
     }
-    const ids = [...missing];
+    // Throttle the number of lookups per invocation so cold starts don't
+    // exceed the 50-subrequest limit. The module-level cache will absorb
+    // the rest across the next few cron ticks.
+    const ids = [...missing].slice(0, MAX_INDIVIDUAL_ZONE_LOOKUPS_PER_RUN);
     const startedAt = performance.now();
     const restClient = this.restClient;
     const results = await Promise.allSettled(ids.map((id) => restClient.getZone(id)));
@@ -459,6 +499,9 @@ export class CloudflareMetricsCollector {
     for (const [i, result] of results.entries()) {
       if (result.status === 'fulfilled' && result.value) {
         this.resourceCache.zones.set(ids[i], result.value.name);
+        // Persist in the module-level cache so the next isolate invocation
+        // skips the lookup.
+        globalZoneNameCache.set(ids[i], result.value.name);
         resolved++;
       } else if (result.status === 'rejected') {
         failed++;
