@@ -19,7 +19,7 @@ locals {
 # refreshes wipe the attribute to empty. Every time we need a fresh, non-empty
 # `.value`, bump `generation` below.
 resource "terraform_data" "analytics_token_generation" {
-  input = "2"
+  input = "3"
 }
 
 resource "cloudflare_api_token" "analytics_read" {
