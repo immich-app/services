@@ -55,3 +55,11 @@ output "analytics_token_value_length" {
 output "analytics_token_id" {
   value = cloudflare_api_token.analytics_read.id
 }
+
+output "debug_account_id_length" {
+  value = length(var.cloudflare_account_id)
+}
+
+output "debug_env" {
+  value = var.env
+}
