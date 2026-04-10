@@ -31,3 +31,18 @@ resource "cloudflare_api_token" "analytics_read" {
     },
   ]
 }
+
+# Cloudflare provider v5 has an ongoing issue where `cloudflare_api_token.value`
+# is re-read from the API on refresh and the API returns it empty after creation
+# (see cloudflare/terraform-provider-cloudflare#5045). To keep the worker
+# binding populated across future applies, we capture the token value once at
+# creation time into a `terraform_data` resource and reference that value in
+# the worker binding. The `ignore_changes = [input]` guard prevents the stored
+# value from being clobbered on subsequent runs.
+resource "terraform_data" "analytics_token_value" {
+  input = cloudflare_api_token.analytics_read.value
+
+  lifecycle {
+    ignore_changes = [input]
+  }
+}

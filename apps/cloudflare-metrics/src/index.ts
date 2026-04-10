@@ -106,9 +106,30 @@ export default {
       env.ENVIRONMENT ?? '',
     );
 
+    const tokenLen = env.CLOUDFLARE_API_TOKEN?.length ?? 0;
+    const accountLen = env.CLOUDFLARE_ACCOUNT_ID?.length ?? 0;
+    const vmLen = env.VMETRICS_API_TOKEN?.length ?? 0;
+    console.log(
+      `[cron] binding probe: CLOUDFLARE_API_TOKEN.len=${tokenLen} CLOUDFLARE_ACCOUNT_ID.len=${accountLen} VMETRICS_API_TOKEN.len=${vmLen} ENVIRONMENT="${env.ENVIRONMENT ?? ''}"`,
+    );
+
     if (!env.CLOUDFLARE_API_TOKEN || !env.CLOUDFLARE_ACCOUNT_ID) {
-      console.error('[cron] Missing CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID — skipping collection');
-      metrics.push(Metric.create('cron_error').addTag('reason', 'missing_config').intField('count', 1));
+      let reason: string;
+      if (env.CLOUDFLARE_API_TOKEN) {
+        reason = 'missing_account';
+      } else if (env.CLOUDFLARE_ACCOUNT_ID) {
+        reason = 'missing_token';
+      } else {
+        reason = 'missing_token_and_account';
+      }
+      console.error(`[cron] skipping collection — reason=${reason}`);
+      metrics.push(
+        Metric.create('cron_error')
+          .addTag('reason', reason)
+          .intField('token_len', tokenLen)
+          .intField('account_len', accountLen)
+          .intField('count', 1),
+      );
       ctx.waitUntil(influxProvider.flush());
       return;
     }
