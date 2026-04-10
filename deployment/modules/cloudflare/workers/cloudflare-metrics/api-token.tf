@@ -1,15 +1,26 @@
 # Read-only API token used by the cloudflare-metrics worker to query the
-# GraphQL Analytics API. Scoped to this account only and limited to the
-# "Account Analytics Read" permission group so the worker can't do anything
-# destructive with the token if it's ever exfiltrated.
+# GraphQL Analytics API and to enumerate resource metadata (D1 databases,
+# queues, zones) that's needed to enrich metric tags with human-readable
+# names. Scoped to this account only, read-only permissions.
 #
-# The permission group UUID is hardcoded — listing permission groups requires
-# the same user-level privileges the data source would need, and the IDs are
-# stable public identifiers.
+# The permission group UUIDs are looked up dynamically via the bootstrap
+# provider, which authenticates with the user-level `var.cloudflare_api_token`
+# that already has permission to list/manage API tokens.
+
+data "cloudflare_api_token_permission_groups_list" "all" {
+  provider = cloudflare.bootstrap
+}
 
 locals {
-  # "Account Analytics Read"
-  cloudflare_permission_group_account_analytics_read = "b89a480218d04ceb98b4fe57ca29dc1f"
+  cf_permission_group_ids = {
+    for g in data.cloudflare_api_token_permission_groups_list.all.result : g.name => g.id
+  }
+
+  cloudflare_metrics_permission_group_names = [
+    "Account Analytics Read",
+    "D1 Read",
+    "Queues Read",
+  ]
 }
 
 # Bumping this forces the analytics_read token to be destroyed and recreated
@@ -19,7 +30,7 @@ locals {
 # recreate the token whenever we need the value to be freshly available to
 # downstream resources.
 resource "terraform_data" "analytics_token_generation" {
-  input = "4"
+  input = "5"
 }
 
 resource "cloudflare_api_token" "analytics_read" {
@@ -31,9 +42,9 @@ resource "cloudflare_api_token" "analytics_read" {
     {
       effect = "allow"
       permission_groups = [
-        {
-          id = local.cloudflare_permission_group_account_analytics_read
-        },
+        for name in local.cloudflare_metrics_permission_group_names : {
+          id = local.cf_permission_group_ids[name]
+        }
       ]
       resources = jsonencode({
         "com.cloudflare.api.account.${var.cloudflare_account_id}" = "*"

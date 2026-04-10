@@ -1,3 +1,4 @@
+import { CloudflareRestClient } from './cloudflare-api.js';
 import { CloudflareMetricsCollector } from './collector.js';
 import { ALL_DATASETS } from './datasets.js';
 import { DeferredRepository } from './deferred.js';
@@ -138,7 +139,8 @@ export default {
 };
 
 async function runCollection(env: Env, metrics: CloudflareMetricsRepository) {
-  const client = new CloudflareGraphQLClient(env.CLOUDFLARE_API_TOKEN ?? '');
-  const collector = new CloudflareMetricsCollector(client, env.CLOUDFLARE_ACCOUNT_ID, metrics);
+  const graphqlClient = new CloudflareGraphQLClient(env.CLOUDFLARE_API_TOKEN ?? '');
+  const restClient = new CloudflareRestClient(env.CLOUDFLARE_API_TOKEN ?? '');
+  const collector = new CloudflareMetricsCollector(graphqlClient, env.CLOUDFLARE_ACCOUNT_ID, metrics, { restClient });
   return collector.collectAll(ALL_DATASETS);
 }

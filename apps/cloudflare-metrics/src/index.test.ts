@@ -1,13 +1,16 @@
 import { SELF } from 'cloudflare:test';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ICloudflareRestClient } from './cloudflare-api.js';
 import { CloudflareMetricsCollector } from './collector.js';
 import {
   ALL_DATASETS,
   D1_QUERIES,
   DURABLE_OBJECTS_PERIODIC,
   DURABLE_OBJECTS_STORAGE,
+  HTTP_REQUESTS_OVERVIEW,
   HYPERDRIVE_POOL,
   QUEUE_BACKLOG,
+  QUEUE_OPERATIONS,
   R2_OPERATIONS,
   WORKERS_INVOCATIONS,
 } from './datasets.js';
@@ -253,6 +256,41 @@ describe('CloudflareMetricsCollector', () => {
     async fetchDataset(_account: string, dataset: DatasetQuery, range: { start: Date; end: Date }) {
       this.calls.push({ dataset: dataset.key, range });
       return this.rowsByDataset[dataset.key] ?? [];
+    }
+  }
+
+  class FakeRestClient implements ICloudflareRestClient {
+    constructor(
+      public readonly d1: Array<{ uuid: string; name: string }> = [],
+      public readonly queues: Array<{ queue_id: string; queue_name: string }> = [],
+      public readonly zones: Array<{ id: string; name: string }> = [],
+    ) {}
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async listD1Databases() {
+      return this.d1;
+    }
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async listQueues() {
+      return this.queues;
+    }
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async listZones() {
+      return this.zones;
+    }
+  }
+
+  class ThrowingRestClient implements ICloudflareRestClient {
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async listD1Databases(): Promise<never> {
+      throw new Error('d1 boom');
+    }
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async listQueues(): Promise<never> {
+      throw new Error('queues boom');
+    }
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async listZones(): Promise<never> {
+      throw new Error('zones boom');
     }
   }
 
@@ -508,6 +546,198 @@ describe('CloudflareMetricsCollector', () => {
     const exported = provider.metrics.find((m) => m.name === 'cf_hyperdrive_pool');
     expect(exported?.exportTimestamp).toEqual(new Date('2026-04-10T12:00:00Z'));
     expect(exported?.fields.get('current_pool_size')).toEqual({ value: 3, type: 'int' });
+  });
+
+  it('enriches D1 metrics with database_name from the rest client', async () => {
+    const row: DatasetRow = {
+      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', databaseId: 'db-123', databaseRole: 'primary' },
+      sum: { readQueries: 10, writeQueries: 0, rowsRead: 100, rowsWritten: 0, queryBatchResponseBytes: 200 },
+    };
+    const client = new FakeClient({ d1_queries: [row] });
+    const restClient = new FakeRestClient([{ uuid: 'db-123', name: 'releases-prod' }]);
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+      restClient,
+    });
+    await collector.collectAll([D1_QUERIES]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_d1_queries');
+    expect(exported?.tags.get('database_id')).toBe('db-123');
+    expect(exported?.tags.get('database_name')).toBe('releases-prod');
+  });
+
+  it('enriches queue metrics with queue_name from the rest client', async () => {
+    const row: DatasetRow = {
+      dimensions: {
+        datetimeFiveMinutes: '2026-04-10T12:00:00Z',
+        queueId: 'q-abc',
+        actionType: 'WriteMessage',
+        consumerType: 'worker',
+        outcome: 'success',
+      },
+      sum: { billableOperations: 5, bytes: 1234 },
+    };
+    const client = new FakeClient({ queue_operations: [row] });
+    const restClient = new FakeRestClient([], [{ queue_id: 'q-abc', queue_name: 'ingest-events' }]);
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+      restClient,
+    });
+    await collector.collectAll([QUEUE_OPERATIONS]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_queue_operations');
+    expect(exported?.tags.get('queue_id')).toBe('q-abc');
+    expect(exported?.tags.get('queue_name')).toBe('ingest-events');
+  });
+
+  it('enriches queue backlog metrics with queue_name', async () => {
+    const row: DatasetRow = {
+      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', queueId: 'q-abc' },
+      avg: { bytes: 100, messages: 2, sampleInterval: 1 },
+    };
+    const client = new FakeClient({ queue_backlog: [row] });
+    const restClient = new FakeRestClient([], [{ queue_id: 'q-abc', queue_name: 'ingest-events' }]);
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+      restClient,
+    });
+    await collector.collectAll([QUEUE_BACKLOG]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_queue_backlog');
+    expect(exported?.tags.get('queue_name')).toBe('ingest-events');
+  });
+
+  it('enriches HTTP overview metrics with zone_name', async () => {
+    const row: DatasetRow = {
+      dimensions: {
+        datetimeFiveMinutes: '2026-04-10T12:00:00Z',
+        zoneTag: 'zone-1',
+        clientCountryName: 'US',
+        clientRequestHTTPProtocol: 'HTTP/2',
+        edgeResponseStatus: 200,
+      },
+      sum: { requests: 100, bytes: 5000, cachedRequests: 50, cachedBytes: 2500, pageViews: 0, visits: 0 },
+    };
+    const client = new FakeClient({ http_requests_overview: [row] });
+    const restClient = new FakeRestClient([], [], [{ id: 'zone-1', name: 'example.com' }]);
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+      restClient,
+    });
+    await collector.collectAll([HTTP_REQUESTS_OVERVIEW]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_http_requests_overview');
+    expect(exported?.tags.get('zone_tag')).toBe('zone-1');
+    expect(exported?.tags.get('zone_name')).toBe('example.com');
+  });
+
+  it('omits the enrichment tag when the rest client has no match', async () => {
+    const row: DatasetRow = {
+      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', databaseId: 'db-unknown', databaseRole: 'primary' },
+      sum: { readQueries: 1, writeQueries: 0, rowsRead: 0, rowsWritten: 0, queryBatchResponseBytes: 0 },
+    };
+    const client = new FakeClient({ d1_queries: [row] });
+    const restClient = new FakeRestClient([{ uuid: 'db-123', name: 'releases-prod' }]);
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+      restClient,
+    });
+    await collector.collectAll([D1_QUERIES]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_d1_queries');
+    expect(exported?.tags.get('database_id')).toBe('db-unknown');
+    expect(exported?.tags.has('database_name')).toBe(false);
+  });
+
+  it('records per-resource lookup self-metrics with success and error statuses', async () => {
+    const client = new FakeClient({});
+    const restClient = new ThrowingRestClient();
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+      restClient,
+    });
+    await collector.collectAll([]);
+    const lookups = provider.metrics.filter((m) => m.name === 'cloudflare_metrics_resource_lookup');
+    expect(lookups).toHaveLength(3);
+    for (const lookup of lookups) {
+      expect(lookup.tags.get('status')).toBe('error');
+    }
+    const resources = new Set(lookups.map((m) => m.tags.get('resource')));
+    expect(resources).toEqual(new Set(['d1_databases', 'queues', 'zones']));
+  });
+
+  it('falls back to unenriched metrics when no rest client is provided', async () => {
+    const row: DatasetRow = {
+      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', databaseId: 'db-123', databaseRole: 'primary' },
+      sum: { readQueries: 1, writeQueries: 0, rowsRead: 0, rowsWritten: 0, queryBatchResponseBytes: 0 },
+    };
+    const client = new FakeClient({ d1_queries: [row] });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    await collector.collectAll([D1_QUERIES]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_d1_queries');
+    expect(exported?.tags.has('database_name')).toBe(false);
+    expect(provider.metrics.some((m) => m.name === 'cloudflare_metrics_resource_lookup')).toBe(false);
+  });
+});
+
+describe('CloudflareRestClient', () => {
+  it('paginates through listD1Databases', async () => {
+    const { CloudflareRestClient } = await import('./cloudflare-api.js');
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            result: [{ uuid: 'a', name: 'one' }],
+            result_info: { page: 1, per_page: 100, total_pages: 2, count: 1, total_count: 2 },
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            result: [{ uuid: 'b', name: 'two' }],
+            result_info: { page: 2, per_page: 100, total_pages: 2, count: 1, total_count: 2 },
+          }),
+          { status: 200 },
+        ),
+      );
+
+    const client = new CloudflareRestClient('tok', 'https://example.com', fetchMock as unknown as typeof fetch);
+    const dbs = await client.listD1Databases('acct');
+    expect(dbs).toEqual([
+      { uuid: 'a', name: 'one' },
+      { uuid: 'b', name: 'two' },
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const firstCall = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(firstCall[0]).toContain('/accounts/acct/d1/database?page=1');
+    expect((firstCall[1].headers as Record<string, string>).Authorization).toBe('Bearer tok');
+  });
+
+  it('throws CloudflareRestError on non-OK responses', async () => {
+    const { CloudflareRestClient, CloudflareRestError } = await import('./cloudflare-api.js');
+    const fetchMock = vi.fn().mockResolvedValue(new Response('nope', { status: 403 }));
+    const client = new CloudflareRestClient('tok', 'https://example.com', fetchMock as unknown as typeof fetch);
+    await expect(client.listQueues('acct')).rejects.toBeInstanceOf(CloudflareRestError);
+  });
+
+  it('keeps the existing query string when listing zones', async () => {
+    const { CloudflareRestClient } = await import('./cloudflare-api.js');
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          result: [{ id: 'z1', name: 'example.com' }],
+          result_info: { page: 1, per_page: 100, total_pages: 1, count: 1, total_count: 1 },
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new CloudflareRestClient('tok', 'https://example.com', fetchMock as unknown as typeof fetch);
+    await client.listZones('acct');
+    const call = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(call[0]).toContain('/zones?account.id=acct&page=1');
   });
 });
 

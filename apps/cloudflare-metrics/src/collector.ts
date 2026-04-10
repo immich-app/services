@@ -1,3 +1,4 @@
+import type { ICloudflareRestClient } from './cloudflare-api.js';
 import type { ICloudflareGraphQLClient } from './graphql-client.js';
 import { CloudflareGraphQLError } from './graphql-client.js';
 import { Metric, type CloudflareMetricsRepository } from './metrics.js';
@@ -19,15 +20,38 @@ export interface CollectorOptions {
    * Clock override for tests.
    */
   now?: () => Date;
+  /**
+   * Optional REST client for resolving resource names (D1, queues, zones)
+   * that aren't surfaced via GraphQL dimensions. When provided, the
+   * collector will fetch the lists once at the start of `collectAll` and
+   * enrich metric tags with the resolved names.
+   */
+  restClient?: ICloudflareRestClient;
 }
 
 const DEFAULT_LAG_MS = 5 * 60 * 1000;
 const DEFAULT_WINDOW_MS = 10 * 60 * 1000;
 
+interface ResourceCache {
+  d1Databases: Map<string, string>;
+  queues: Map<string, string>;
+  zones: Map<string, string>;
+}
+
+function emptyResourceCache(): ResourceCache {
+  return {
+    d1Databases: new Map(),
+    queues: new Map(),
+    zones: new Map(),
+  };
+}
+
 export class CloudflareMetricsCollector {
   private readonly lagMs: number;
   private readonly windowMs: number;
   private readonly now: () => Date;
+  private readonly restClient?: ICloudflareRestClient;
+  private resourceCache: ResourceCache = emptyResourceCache();
 
   constructor(
     private readonly client: ICloudflareGraphQLClient,
@@ -38,6 +62,7 @@ export class CloudflareMetricsCollector {
     this.lagMs = options.lagMs ?? DEFAULT_LAG_MS;
     this.windowMs = options.windowMs ?? DEFAULT_WINDOW_MS;
     this.now = options.now ?? (() => new Date());
+    this.restClient = options.restClient;
   }
 
   getRange(): { start: Date; end: Date } {
@@ -47,12 +72,73 @@ export class CloudflareMetricsCollector {
   }
 
   async collectAll(datasets: readonly DatasetQuery[]): Promise<CollectionResult[]> {
+    await this.populateResourceCache();
     const range = this.getRange();
     const results: CollectionResult[] = [];
     for (const dataset of datasets) {
       results.push(await this.collectDataset(dataset, range));
     }
     return results;
+  }
+
+  private async populateResourceCache(): Promise<void> {
+    this.resourceCache = emptyResourceCache();
+    if (!this.restClient) {
+      return;
+    }
+
+    const [d1Result, queuesResult, zonesResult] = await Promise.allSettled([
+      this.restClient.listD1Databases(this.accountTag),
+      this.restClient.listQueues(this.accountTag),
+      this.restClient.listZones(this.accountTag),
+    ]);
+
+    this.recordResourceLookup('d1_databases', d1Result, (items) => {
+      for (const db of items) {
+        if (db.uuid && db.name) {
+          this.resourceCache.d1Databases.set(db.uuid, db.name);
+        }
+      }
+    });
+    this.recordResourceLookup('queues', queuesResult, (items) => {
+      for (const q of items) {
+        if (q.queue_id && q.queue_name) {
+          this.resourceCache.queues.set(q.queue_id, q.queue_name);
+        }
+      }
+    });
+    this.recordResourceLookup('zones', zonesResult, (items) => {
+      for (const z of items) {
+        if (z.id && z.name) {
+          this.resourceCache.zones.set(z.id, z.name);
+        }
+      }
+    });
+  }
+
+  private recordResourceLookup<T>(
+    resource: string,
+    result: PromiseSettledResult<T[]>,
+    onSuccess: (items: T[]) => void,
+  ): void {
+    if (result.status === 'fulfilled') {
+      onSuccess(result.value);
+      this.metrics.push(
+        Metric.create('resource_lookup')
+          .addTag('resource', resource)
+          .addTag('status', 'success')
+          .intField('count', result.value.length),
+      );
+    } else {
+      console.error(`[collector] resource lookup ${resource} failed:`, errorMessage(result.reason));
+      this.metrics.push(
+        Metric.create('resource_lookup')
+          .addTag('resource', resource)
+          .addTag('status', 'error')
+          .addTag('error', errorTag(result.reason))
+          .intField('errors', 1),
+      );
+    }
   }
 
   async collectDataset(dataset: DatasetQuery, range: { start: Date; end: Date }): Promise<CollectionResult> {
@@ -116,6 +202,8 @@ export class CloudflareMetricsCollector {
       }
     }
 
+    this.applyResourceTags(metric, dataset, row);
+
     let hasField = false;
     for (const [fieldName, spec] of Object.entries(dataset.fields)) {
       const [block, key] = spec.source;
@@ -138,6 +226,46 @@ export class CloudflareMetricsCollector {
     }
 
     return metric;
+  }
+
+  /**
+   * Adds `<resource>_name` tags based on pre-loaded REST lookups.
+   * Keyed on the dataset's GraphQL field so that per-dataset dimensions
+   * (e.g. `databaseId` vs `queueId` vs `zoneTag`) only get enriched where
+   * relevant.
+   */
+  private applyResourceTags(metric: Metric, dataset: DatasetQuery, row: DatasetRow): void {
+    const dims = row.dimensions ?? {};
+    switch (dataset.field) {
+      case 'd1AnalyticsAdaptiveGroups':
+      case 'd1StorageAdaptiveGroups': {
+        const id = normalizeTagValue(dims.databaseId);
+        const name = id ? this.resourceCache.d1Databases.get(id) : undefined;
+        if (name) {
+          metric.addTag('database_name', name);
+        }
+        break;
+      }
+      case 'queueMessageOperationsAdaptiveGroups':
+      case 'queueBacklogAdaptiveGroups': {
+        const id = normalizeTagValue(dims.queueId);
+        const name = id ? this.resourceCache.queues.get(id) : undefined;
+        if (name) {
+          metric.addTag('queue_name', name);
+        }
+        break;
+      }
+      case 'httpRequestsOverviewAdaptiveGroups': {
+        const tag = normalizeTagValue(dims.zoneTag);
+        const name = tag ? this.resourceCache.zones.get(tag) : undefined;
+        if (name) {
+          metric.addTag('zone_name', name);
+        }
+        break;
+      }
+      default:
+      // no enrichment for this dataset
+    }
   }
 }
 

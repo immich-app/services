@@ -1107,9 +1107,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_id) (rate(cf_d1_queries_read_queries[$__rate_interval]))",
+          "expr": "sum by (database_name, database_id) (rate(cf_d1_queries_read_queries[$__rate_interval]))",
           "instant": false,
-          "legendFormat": "{{database_id}}",
+          "legendFormat": "{{database_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
@@ -1200,9 +1200,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_id) (rate(cf_d1_queries_write_queries[$__rate_interval]))",
+          "expr": "sum by (database_name, database_id) (rate(cf_d1_queries_write_queries[$__rate_interval]))",
           "instant": false,
-          "legendFormat": "{{database_id}}",
+          "legendFormat": "{{database_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
@@ -1293,9 +1293,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_id) (rate(cf_d1_queries_rows_read[$__rate_interval]))",
+          "expr": "sum by (database_name, database_id) (rate(cf_d1_queries_rows_read[$__rate_interval]))",
           "instant": false,
-          "legendFormat": "{{database_id}}",
+          "legendFormat": "{{database_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
@@ -1386,9 +1386,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_id) (rate(cf_d1_queries_rows_written[$__rate_interval]))",
+          "expr": "sum by (database_name, database_id) (rate(cf_d1_queries_rows_written[$__rate_interval]))",
           "instant": false,
-          "legendFormat": "{{database_id}}",
+          "legendFormat": "{{database_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
@@ -1479,9 +1479,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (database_id) (cf_d1_storage_database_size_bytes)",
+          "expr": "max by (database_name, database_id) (cf_d1_storage_database_size_bytes)",
           "instant": false,
-          "legendFormat": "{{database_id}}",
+          "legendFormat": "{{database_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
@@ -1572,9 +1572,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "avg by (database_id) (cf_d1_queries_query_duration_ms_avg)",
+          "expr": "avg by (database_name, database_id) (cf_d1_queries_query_duration_ms_avg)",
           "instant": false,
-          "legendFormat": "{{database_id}}",
+          "legendFormat": "{{database_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
@@ -3311,9 +3311,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "avg by (queue_id) (cf_queue_backlog_backlog_messages_avg)",
+          "expr": "avg by (queue_name, queue_id) (cf_queue_backlog_backlog_messages_avg)",
           "instant": false,
-          "legendFormat": "{{queue_id}}",
+          "legendFormat": "{{queue_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
@@ -3404,9 +3404,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "avg by (queue_id) (cf_queue_backlog_backlog_bytes_avg)",
+          "expr": "avg by (queue_name, queue_id) (cf_queue_backlog_backlog_bytes_avg)",
           "instant": false,
-          "legendFormat": "{{queue_id}}",
+          "legendFormat": "{{queue_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
@@ -3590,9 +3590,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (queue_id) (rate(cf_queue_operations_bytes[$__rate_interval]))",
+          "expr": "sum by (queue_name, queue_id) (rate(cf_queue_operations_bytes[$__rate_interval]))",
           "instant": false,
-          "legendFormat": "{{queue_id}}",
+          "legendFormat": "{{queue_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
@@ -3696,9 +3696,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_tag) (rate(cf_http_requests_overview_requests[$__rate_interval]))",
+          "expr": "sum by (zone_name, zone_tag) (rate(cf_http_requests_overview_requests[$__rate_interval]))",
           "instant": false,
-          "legendFormat": "{{zone_tag}}",
+          "legendFormat": "{{zone_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
@@ -3882,9 +3882,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_tag) (rate(cf_http_requests_overview_bytes[$__rate_interval]))",
+          "expr": "sum by (zone_name, zone_tag) (rate(cf_http_requests_overview_bytes[$__rate_interval]))",
           "instant": false,
-          "legendFormat": "{{zone_tag}}",
+          "legendFormat": "{{zone_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
@@ -3975,9 +3975,9 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_tag) (rate(cf_http_requests_overview_cached_requests[$__rate_interval])) / clamp_min(sum by (zone_tag) (rate(cf_http_requests_overview_requests[$__rate_interval])), 1)",
+          "expr": "sum by (zone_name, zone_tag) (rate(cf_http_requests_overview_cached_requests[$__rate_interval])) / clamp_min(sum by (zone_name, zone_tag) (rate(cf_http_requests_overview_requests[$__rate_interval])), 1)",
           "instant": false,
-          "legendFormat": "{{zone_tag}}",
+          "legendFormat": "{{zone_name}}",
           "range": true,
           "refId": "A",
           "interval": "5m"
