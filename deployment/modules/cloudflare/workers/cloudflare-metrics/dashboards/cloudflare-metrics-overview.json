@@ -540,8 +540,7 @@
           "instant": false,
           "legendFormat": "{{script_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Requests by Script",
@@ -633,8 +632,7 @@
           "instant": false,
           "legendFormat": "{{script_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Errors by Script",
@@ -726,8 +724,7 @@
           "instant": false,
           "legendFormat": "{{script_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "CPU Time p99 per Script",
@@ -819,8 +816,7 @@
           "instant": false,
           "legendFormat": "{{script_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Wall Duration p99 per Script",
@@ -912,8 +908,7 @@
           "instant": false,
           "legendFormat": "{{http_response_status}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Subrequest HTTP Status",
@@ -1005,8 +1000,7 @@
           "instant": false,
           "legendFormat": "{{hostname}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Subrequest Egress by Host",
@@ -1111,8 +1105,7 @@
           "instant": false,
           "legendFormat": "{{database_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Read Queries per Database",
@@ -1204,8 +1197,7 @@
           "instant": false,
           "legendFormat": "{{database_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Write Queries per Database",
@@ -1297,8 +1289,7 @@
           "instant": false,
           "legendFormat": "{{database_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Rows Read per Database",
@@ -1390,8 +1381,7 @@
           "instant": false,
           "legendFormat": "{{database_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Rows Written per Database",
@@ -1483,8 +1473,7 @@
           "instant": false,
           "legendFormat": "{{database_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "D1 Storage Size",
@@ -1576,8 +1565,7 @@
           "instant": false,
           "legendFormat": "{{database_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Query Duration (avg)",
@@ -1682,8 +1670,7 @@
           "instant": false,
           "legendFormat": "{{bucket_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "R2 Operations per Bucket",
@@ -1775,8 +1762,7 @@
           "instant": false,
           "legendFormat": "{{action_type}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "R2 Operations by Action",
@@ -1868,8 +1854,7 @@
           "instant": false,
           "legendFormat": "{{bucket_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "R2 Egress Bytes per Bucket",
@@ -1961,8 +1946,7 @@
           "instant": false,
           "legendFormat": "{{bucket_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "R2 Payload Storage per Bucket",
@@ -2054,8 +2038,7 @@
           "instant": false,
           "legendFormat": "{{bucket_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "R2 Object Count per Bucket",
@@ -2147,8 +2130,7 @@
           "instant": false,
           "legendFormat": "{{bucket_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "R2 Error Rate per Bucket",
@@ -2253,8 +2235,7 @@
           "instant": false,
           "legendFormat": "{{action_type}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "KV Operations by Action",
@@ -2346,8 +2327,7 @@
           "instant": false,
           "legendFormat": "{{namespace_id}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "KV Operations by Namespace",
@@ -2439,8 +2419,7 @@
           "instant": false,
           "legendFormat": "{{namespace_id}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "KV Storage Bytes",
@@ -2532,8 +2511,7 @@
           "instant": false,
           "legendFormat": "{{namespace_id}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "KV Key Count",
@@ -2638,8 +2616,7 @@
           "instant": false,
           "legendFormat": "{{script_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "DO Requests by Script",
@@ -2731,8 +2708,7 @@
           "instant": false,
           "legendFormat": "{{script_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "DO Errors by Script",
@@ -2824,8 +2800,7 @@
           "instant": false,
           "legendFormat": "{{namespace_id}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "DO CPU Time",
@@ -2917,8 +2892,7 @@
           "instant": false,
           "legendFormat": "read {{namespace_id}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -2930,8 +2904,7 @@
           "instant": false,
           "legendFormat": "write {{namespace_id}}",
           "range": true,
-          "refId": "B",
-          "interval": "5m"
+          "refId": "B"
         }
       ],
       "title": "DO Storage Rows Read/Written",
@@ -3023,8 +2996,7 @@
           "instant": false,
           "legendFormat": "{{namespace_id}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "DO Active WebSocket Connections",
@@ -3116,8 +3088,7 @@
           "instant": false,
           "legendFormat": "{{namespace_id}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "DO SQL Storage Bytes",
@@ -3209,8 +3180,7 @@
           "instant": false,
           "legendFormat": "stored",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "DO KV Storage Bytes (account total)",
@@ -3315,8 +3285,7 @@
           "instant": false,
           "legendFormat": "{{queue_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Queue Backlog (messages)",
@@ -3408,8 +3377,7 @@
           "instant": false,
           "legendFormat": "{{queue_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Queue Backlog (bytes)",
@@ -3501,8 +3469,7 @@
           "instant": false,
           "legendFormat": "{{action_type}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Queue Operations by Action",
@@ -3594,8 +3561,7 @@
           "instant": false,
           "legendFormat": "{{queue_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Queue Throughput (bytes)",
@@ -3700,8 +3666,7 @@
           "instant": false,
           "legendFormat": "{{zone_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "HTTP Requests per Zone",
@@ -3793,8 +3758,7 @@
           "instant": false,
           "legendFormat": "{{edge_response_status}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "HTTP Status Codes",
@@ -3886,8 +3850,7 @@
           "instant": false,
           "legendFormat": "{{zone_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Bytes Served per Zone",
@@ -3979,8 +3942,7 @@
           "instant": false,
           "legendFormat": "{{zone_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Cache Hit Rate per Zone",
@@ -4085,8 +4047,7 @@
           "instant": false,
           "legendFormat": "{{dataset}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Rows Collected per Dataset",
@@ -4182,8 +4143,7 @@
           "instant": false,
           "legendFormat": "{{dataset}} [{{error}}]",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Collector Errors",
@@ -4275,8 +4235,7 @@
           "instant": false,
           "legendFormat": "{{dataset}}",
           "range": true,
-          "refId": "A",
-          "interval": "5m"
+          "refId": "A"
         }
       ],
       "title": "Collector Duration per Dataset (p99)",
@@ -4381,8 +4340,7 @@
           "instant": false,
           "legendFormat": "{{script_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Scheduled Invocations per Script",
@@ -4474,8 +4432,7 @@
           "instant": false,
           "legendFormat": "{{status}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Scheduled Status (success vs error)",
@@ -4567,8 +4524,7 @@
           "instant": false,
           "legendFormat": "{{script_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Scheduled CPU Time (sum) per Script",
@@ -4660,8 +4616,7 @@
           "instant": false,
           "legendFormat": "{{script_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Scheduled CPU Time (max) per Script",
@@ -4766,8 +4721,7 @@
           "instant": false,
           "legendFormat": "{{database_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "D1 Query Count per Database",
@@ -4859,8 +4813,7 @@
           "instant": false,
           "legendFormat": "{{database_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "D1 Query Errors per Database",
@@ -4952,8 +4905,7 @@
           "instant": false,
           "legendFormat": "{{database_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "D1 Query Duration p50",
@@ -5045,8 +4997,7 @@
           "instant": false,
           "legendFormat": "{{database_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "D1 Query Duration p95",
@@ -5138,8 +5089,7 @@
           "instant": false,
           "legendFormat": "{{database_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "D1 Query Duration p99",
@@ -5244,8 +5194,7 @@
           "instant": false,
           "legendFormat": "{{queue_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Queue Consumer Concurrency",
@@ -5350,8 +5299,7 @@
           "instant": false,
           "legendFormat": "{{zone_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Requests per Zone",
@@ -5443,8 +5391,7 @@
           "instant": false,
           "legendFormat": "{{http_method}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Requests by HTTP Method",
@@ -5536,8 +5483,7 @@
           "instant": false,
           "legendFormat": "{{edge_response_status}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Requests by Response Status",
@@ -5629,8 +5575,7 @@
           "instant": false,
           "legendFormat": "{{cache_status}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Cache Status Breakdown",
@@ -5722,8 +5667,7 @@
           "instant": false,
           "legendFormat": "{{zone_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Edge TTFB (avg) per Zone",
@@ -5815,8 +5759,7 @@
           "instant": false,
           "legendFormat": "{{zone_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Origin Response Time (avg) per Zone",
@@ -5908,8 +5851,7 @@
           "instant": false,
           "legendFormat": "{{zone_name}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Edge Response Bytes per Zone",
@@ -6001,8 +5943,7 @@
           "instant": false,
           "legendFormat": "{{client_country}}",
           "range": true,
-          "refId": "A",
-          "interval": "1m"
+          "refId": "A"
         }
       ],
       "title": "Requests by Country (Top)",
