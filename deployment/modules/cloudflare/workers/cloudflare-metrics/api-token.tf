@@ -16,6 +16,7 @@ locals {
     "Account Analytics Read",
     "D1 Read",
     "Queues Read",
+    "Zone Read",
   ]
 
   # Some permission group names exist at multiple scopes (e.g. account and
@@ -36,7 +37,7 @@ locals {
 # recreate the token whenever we need the value to be freshly available to
 # downstream resources.
 resource "terraform_data" "analytics_token_generation" {
-  input = "5"
+  input = "6"
 }
 
 resource "cloudflare_api_token" "analytics_read" {
@@ -44,16 +45,31 @@ resource "cloudflare_api_token" "analytics_read" {
 
   name = "cloudflare-metrics-analytics-read${local.resource_suffix}"
 
+  # Two policies: one scoped to the account (for account-level datasets and
+  # REST endpoints like D1 and Queues), and one scoped to all zones in the
+  # account (so `GET /zones/{id}` can resolve individual zone names for
+  # Cloudflare Pages projects that don't appear in the bulk `/zones` list).
   policies = [
     {
       effect = "allow"
       permission_groups = [
-        for name in local.cloudflare_metrics_permission_group_names : {
-          id = local.cf_permission_group_ids[name]
-        }
+        { id = local.cf_permission_group_ids["Account Analytics Read"] },
+        { id = local.cf_permission_group_ids["D1 Read"] },
+        { id = local.cf_permission_group_ids["Queues Read"] },
       ]
       resources = jsonencode({
         "com.cloudflare.api.account.${var.cloudflare_account_id}" = "*"
+      })
+    },
+    {
+      effect = "allow"
+      permission_groups = [
+        { id = local.cf_permission_group_ids["Zone Read"] },
+      ]
+      resources = jsonencode({
+        "com.cloudflare.api.account.zone.*" = {
+          "com.cloudflare.api.account.${var.cloudflare_account_id}" = "*"
+        }
       })
     },
   ]
