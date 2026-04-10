@@ -12,15 +12,21 @@ data "cloudflare_api_token_permission_groups_list" "all" {
 }
 
 locals {
-  cf_permission_group_ids = {
-    for g in data.cloudflare_api_token_permission_groups_list.all.result : g.name => g.id
-  }
-
   cloudflare_metrics_permission_group_names = [
     "Account Analytics Read",
     "D1 Read",
     "Queues Read",
   ]
+
+  # Some permission group names exist at multiple scopes (e.g. account and
+  # zone-level "Logs Read"), so we can't build a simple `name => id` map.
+  # Instead we look up each required name explicitly and take the first match.
+  cf_permission_group_ids = {
+    for name in local.cloudflare_metrics_permission_group_names :
+    name => [
+      for g in data.cloudflare_api_token_permission_groups_list.all.result : g.id if g.name == name
+    ][0]
+  }
 }
 
 # Bumping this forces the analytics_read token to be destroyed and recreated
