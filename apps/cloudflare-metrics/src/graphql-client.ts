@@ -1,4 +1,4 @@
-import type { AccountQueryResult, DatasetQuery, DatasetRow, GraphQLResponse } from './types.js';
+import type { AccountQueryResult, DatasetQuery, DatasetRow, GraphQLResponse, ZoneQueryResult } from './types.js';
 
 const CLOUDFLARE_GRAPHQL_ENDPOINT = 'https://api.cloudflare.com/client/v4/graphql';
 const DEFAULT_DATASET_LIMIT = 9999;
@@ -14,8 +14,26 @@ export class CloudflareGraphQLError extends Error {
   }
 }
 
+export interface ScheduledWorkerInvocation {
+  scriptName: string;
+  cron: string;
+  status: string;
+  datetime: string;
+  cpuTimeUs: number;
+}
+
 export interface ICloudflareGraphQLClient {
   fetchDataset(accountTag: string, dataset: DatasetQuery, range: { start: Date; end: Date }): Promise<DatasetRow[]>;
+  fetchZoneDataset(zoneTag: string, dataset: DatasetQuery, range: { start: Date; end: Date }): Promise<DatasetRow[]>;
+  /**
+   * `workersInvocationsScheduled` is a flat event list with no aggregation
+   * block structure, so it lives outside the `DatasetQuery` model and has
+   * its own fetch method.
+   */
+  fetchScheduledInvocations(
+    accountTag: string,
+    range: { start: Date; end: Date },
+  ): Promise<ScheduledWorkerInvocation[]>;
 }
 
 export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
@@ -39,6 +57,57 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     }
     const rows = accounts[0][dataset.field];
     return rows ?? [];
+  }
+
+  async fetchZoneDataset(
+    zoneTag: string,
+    dataset: DatasetQuery,
+    range: { start: Date; end: Date },
+  ): Promise<DatasetRow[]> {
+    const query = buildDatasetQuery(dataset);
+    const variables = buildDatasetVariables(zoneTag, dataset, range);
+    const response = await this.execute<ZoneQueryResult>(query, variables);
+    const zones = response.data?.viewer.zones ?? [];
+    if (zones.length === 0) {
+      return [];
+    }
+    const rows = zones[0][dataset.field];
+    return rows ?? [];
+  }
+
+  async fetchScheduledInvocations(
+    accountTag: string,
+    range: { start: Date; end: Date },
+  ): Promise<ScheduledWorkerInvocation[]> {
+    const query = `query ScheduledInvocations($accountTag: String!, $filter: JSON!, $limit: Int!) {
+  viewer {
+    accounts(filter: { accountTag: $accountTag }) {
+      workersInvocationsScheduled(limit: $limit, filter: $filter) {
+        scriptName
+        cron
+        status
+        datetime
+        cpuTimeUs
+      }
+    }
+  }
+}`;
+    const variables = {
+      accountTag,
+      filter: {
+        datetime_geq: range.start.toISOString(),
+        datetime_leq: range.end.toISOString(),
+      },
+      limit: DEFAULT_DATASET_LIMIT,
+    };
+    const response = await this.execute<{
+      viewer: { accounts: Array<{ workersInvocationsScheduled: ScheduledWorkerInvocation[] }> };
+    }>(query, variables);
+    const accounts = response.data?.viewer.accounts ?? [];
+    if (accounts.length === 0) {
+      return [];
+    }
+    return accounts[0].workersInvocationsScheduled ?? [];
   }
 
   async execute<T>(query: string, variables: Record<string, unknown>): Promise<GraphQLResponse<T>> {
@@ -89,12 +158,17 @@ export function buildDatasetQuery(dataset: DatasetQuery): string {
     .filter(([, fields]) => fields && fields.length > 0)
     .map(([block, fields]) => `${block} { ${(fields ?? []).join(' ')} }`)
     .join(' ');
+  const topLevelSelection = (dataset.topLevelFields ?? []).join(' ');
+  const scope = dataset.scope ?? 'account';
+  const rootFilterArg = scope === 'zone' ? 'zoneTag' : 'accountTag';
+  const rootField = scope === 'zone' ? 'zones' : 'accounts';
 
-  return `query CloudflareMetrics($accountTag: String!, $filter: ${filterInputTypeFor(dataset)}!, $limit: Int!) {
+  return `query CloudflareMetrics($${rootFilterArg}: String!, $filter: ${filterInputTypeFor(dataset)}!, $limit: Int!) {
   viewer {
-    accounts(filter: { accountTag: $accountTag }) {
+    ${rootField}(filter: { ${rootFilterArg}: $${rootFilterArg} }) {
       ${dataset.field}(limit: $limit, filter: $filter${orderByClause(dataset)}) {
         dimensions { ${dimensionSelection} }
+        ${topLevelSelection}
         ${blockSelections}
       }
     }
@@ -103,7 +177,7 @@ export function buildDatasetQuery(dataset: DatasetQuery): string {
 }
 
 export function buildDatasetVariables(
-  accountTag: string,
+  contextTag: string,
   dataset: DatasetQuery,
   range: { start: Date; end: Date },
 ): Record<string, unknown> {
@@ -115,8 +189,9 @@ export function buildDatasetVariables(
     filter.datetime_geq = range.start.toISOString();
     filter.datetime_leq = range.end.toISOString();
   }
+  const rootFilterArg = dataset.scope === 'zone' ? 'zoneTag' : 'accountTag';
   return {
-    accountTag,
+    [rootFilterArg]: contextTag,
     filter,
     limit: dataset.limit ?? DEFAULT_DATASET_LIMIT,
   };
@@ -132,7 +207,7 @@ function filterInputTypeFor(_dataset: DatasetQuery): string {
 }
 
 function orderByClause(dataset: DatasetQuery): string {
-  const timestampDim = dataset.timestampDimension ?? 'datetimeFiveMinutes';
+  const timestampDim = dataset.timestampDimension ?? 'datetimeMinute';
   // Grouping implicitly takes place on the dimensions, so orderBy helps
   // make sure we get the most recent buckets within the limit.
   if (dataset.dimensions.includes(timestampDim)) {

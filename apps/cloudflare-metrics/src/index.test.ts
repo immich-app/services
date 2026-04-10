@@ -106,11 +106,43 @@ describe('buildDatasetQuery', () => {
   it('includes dimensions, sum, avg, max, and quantiles blocks', () => {
     const query = buildDatasetQuery(WORKERS_INVOCATIONS);
     expect(query).toContain('workersInvocationsAdaptive');
-    expect(query).toContain('dimensions { datetimeFiveMinutes scriptName status scriptVersion usageModel }');
+    expect(query).toContain('dimensions { datetimeMinute scriptName status scriptVersion usageModel }');
     expect(query).toContain('sum { requests errors');
     expect(query).toContain('max { cpuTime duration');
     expect(query).toContain('quantiles { cpuTimeP50 cpuTimeP99');
-    expect(query).toContain('orderBy: [datetimeFiveMinutes_ASC]');
+    expect(query).toContain('orderBy: [datetimeMinute_ASC]');
+  });
+
+  it('includes top-level scalar fields when specified', () => {
+    const dataset: DatasetQuery = {
+      key: 'x',
+      measurement: 'cf_x',
+      field: 'xGroups',
+      dimensions: ['datetimeMinute'],
+      topLevelFields: ['count'],
+      blocks: {},
+      tags: [],
+      fields: { count: { type: 'int', source: ['_top', 'count'] } },
+    };
+    const query = buildDatasetQuery(dataset);
+    expect(query).toMatch(/dimensions \{ datetimeMinute \}\s+count/);
+  });
+
+  it('targets viewer.zones when the dataset is zone-scoped', () => {
+    const dataset: DatasetQuery = {
+      key: 'z',
+      measurement: 'cf_z',
+      field: 'zGroups',
+      scope: 'zone',
+      dimensions: ['datetimeMinute'],
+      blocks: { sum: ['requests'] },
+      tags: [],
+      fields: { requests: { type: 'int', source: ['sum', 'requests'] } },
+    };
+    const query = buildDatasetQuery(dataset);
+    expect(query).toContain('$zoneTag: String!');
+    expect(query).toContain('zones(filter: { zoneTag: $zoneTag })');
+    expect(query).not.toContain('accountTag');
   });
 
   it('builds a valid query for every dataset in the registry', () => {
@@ -184,7 +216,7 @@ describe('CloudflareGraphQLClient', () => {
                   {
                     workersInvocationsAdaptive: [
                       {
-                        dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', scriptName: 'a' },
+                        dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', scriptName: 'a' },
                         sum: { requests: 10 },
                       },
                     ],
@@ -251,11 +283,31 @@ describe('CloudflareGraphQLClient', () => {
 describe('CloudflareMetricsCollector', () => {
   class FakeClient {
     public calls: Array<{ dataset: string; range: { start: Date; end: Date } }> = [];
-    constructor(public readonly rowsByDataset: Record<string, DatasetRow[]>) {}
+    public zoneCalls: Array<{ zoneTag: string; dataset: string }> = [];
+    constructor(
+      public readonly rowsByDataset: Record<string, DatasetRow[]>,
+      public readonly zoneRowsByDataset: Record<string, Record<string, DatasetRow[]>> = {},
+      public readonly scheduledInvocations: Array<{
+        scriptName: string;
+        cron: string;
+        status: string;
+        datetime: string;
+        cpuTimeUs: number;
+      }> = [],
+    ) {}
     // eslint-disable-next-line @typescript-eslint/require-await
     async fetchDataset(_account: string, dataset: DatasetQuery, range: { start: Date; end: Date }) {
       this.calls.push({ dataset: dataset.key, range });
       return this.rowsByDataset[dataset.key] ?? [];
+    }
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async fetchZoneDataset(zoneTag: string, dataset: DatasetQuery) {
+      this.zoneCalls.push({ zoneTag, dataset: dataset.key });
+      return this.zoneRowsByDataset[dataset.key]?.[zoneTag] ?? [];
+    }
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async fetchScheduledInvocations() {
+      return this.scheduledInvocations;
     }
   }
 
@@ -332,7 +384,7 @@ describe('CloudflareMetricsCollector', () => {
   it('emits a workers invocations metric with snake_case tags and fields, scaled durations', async () => {
     const row: DatasetRow = {
       dimensions: {
-        datetimeFiveMinutes: '2026-04-10T12:00:00Z',
+        datetimeMinute: '2026-04-10T12:00:00Z',
         scriptName: 'version-api-prod',
         status: 'success',
         scriptVersion: 'abc',
@@ -395,7 +447,7 @@ describe('CloudflareMetricsCollector', () => {
   it('coerces numeric dimensions to string tags', async () => {
     const row: DatasetRow = {
       dimensions: {
-        datetimeFiveMinutes: '2026-04-10T12:00:00Z',
+        datetimeMinute: '2026-04-10T12:00:00Z',
         bucketName: 'my-bucket',
         actionType: 'GetObject',
         actionStatus: 'success',
@@ -428,7 +480,7 @@ describe('CloudflareMetricsCollector', () => {
 
   it('skips null-valued fields rather than emitting zeros', async () => {
     const row: DatasetRow = {
-      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', databaseId: 'db1', databaseRole: 'primary' },
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', databaseId: 'db1', databaseRole: 'primary' },
       sum: { readQueries: null, writeQueries: 0, rowsRead: 10, rowsWritten: null, queryBatchResponseBytes: 100 },
       avg: { queryBatchTimeMs: null, queryBatchResponseBytes: 100, sampleInterval: 1 },
     };
@@ -468,6 +520,14 @@ describe('CloudflareMetricsCollector', () => {
         }
         return [];
       }
+      // eslint-disable-next-line @typescript-eslint/require-await
+      async fetchZoneDataset() {
+        return [];
+      }
+      // eslint-disable-next-line @typescript-eslint/require-await
+      async fetchScheduledInvocations() {
+        return [];
+      }
     }
     const collector = new CloudflareMetricsCollector(
       new ErroringClient() as unknown as CloudflareGraphQLClient,
@@ -487,7 +547,7 @@ describe('CloudflareMetricsCollector', () => {
 
   it('accepts date-granularity datasets and synthesizes a midnight UTC timestamp', async () => {
     const row: DatasetRow = {
-      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z' },
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z' },
       max: { storedBytes: 1024 },
     };
     const client = new FakeClient({ durable_objects_storage: [row] });
@@ -502,7 +562,7 @@ describe('CloudflareMetricsCollector', () => {
 
   it('emits periodic durable-object fields with correct unit scaling', async () => {
     const row: DatasetRow = {
-      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', namespaceId: 'ns' },
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', namespaceId: 'ns' },
       sum: {
         activeTime: 1000,
         cpuTime: 500,
@@ -534,7 +594,7 @@ describe('CloudflareMetricsCollector', () => {
 
   it('handles avg-only datasets like queue backlog', async () => {
     const row: DatasetRow = {
-      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', queueId: 'q1' },
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', queueId: 'q1' },
       avg: { bytes: 123.4, messages: 7.5, sampleInterval: 1 },
     };
     const client = new FakeClient({ queue_backlog: [row] });
@@ -564,7 +624,7 @@ describe('CloudflareMetricsCollector', () => {
 
   it('enriches D1 metrics with database_name from the rest client', async () => {
     const row: DatasetRow = {
-      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', databaseId: 'db-123', databaseRole: 'primary' },
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', databaseId: 'db-123', databaseRole: 'primary' },
       sum: { readQueries: 10, writeQueries: 0, rowsRead: 100, rowsWritten: 0, queryBatchResponseBytes: 200 },
     };
     const client = new FakeClient({ d1_queries: [row] });
@@ -582,7 +642,7 @@ describe('CloudflareMetricsCollector', () => {
   it('enriches queue metrics with queue_name from the rest client', async () => {
     const row: DatasetRow = {
       dimensions: {
-        datetimeFiveMinutes: '2026-04-10T12:00:00Z',
+        datetimeMinute: '2026-04-10T12:00:00Z',
         queueId: 'q-abc',
         actionType: 'WriteMessage',
         consumerType: 'worker',
@@ -604,7 +664,7 @@ describe('CloudflareMetricsCollector', () => {
 
   it('enriches queue backlog metrics with queue_name', async () => {
     const row: DatasetRow = {
-      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', queueId: 'q-abc' },
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', queueId: 'q-abc' },
       avg: { bytes: 100, messages: 2, sampleInterval: 1 },
     };
     const client = new FakeClient({ queue_backlog: [row] });
@@ -621,7 +681,7 @@ describe('CloudflareMetricsCollector', () => {
   it('enriches HTTP overview metrics with zone_name', async () => {
     const row: DatasetRow = {
       dimensions: {
-        datetimeFiveMinutes: '2026-04-10T12:00:00Z',
+        datetimeMinute: '2026-04-10T12:00:00Z',
         zoneTag: 'zone-1',
         clientCountryName: 'US',
         clientRequestHTTPProtocol: 'HTTP/2',
@@ -643,11 +703,11 @@ describe('CloudflareMetricsCollector', () => {
 
   it('resolves HTTP zones missing from the bulk list via per-tag lookup', async () => {
     const bulkZone: DatasetRow = {
-      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', zoneTag: 'zone-bulk' },
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', zoneTag: 'zone-bulk' },
       sum: { requests: 10, bytes: 500, cachedRequests: 0, cachedBytes: 0, pageViews: 0, visits: 0 },
     };
     const pagesZone: DatasetRow = {
-      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', zoneTag: 'zone-pages' },
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', zoneTag: 'zone-pages' },
       sum: { requests: 5, bytes: 200, cachedRequests: 0, cachedBytes: 0, pageViews: 0, visits: 0 },
     };
     const client = new FakeClient({ http_requests_overview: [bulkZone, pagesZone] });
@@ -679,7 +739,7 @@ describe('CloudflareMetricsCollector', () => {
 
   it('falls back to the zoneTag when individual lookup returns nothing', async () => {
     const row: DatasetRow = {
-      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', zoneTag: 'zone-unknown' },
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', zoneTag: 'zone-unknown' },
       sum: { requests: 1, bytes: 1, cachedRequests: 0, cachedBytes: 0, pageViews: 0, visits: 0 },
     };
     const client = new FakeClient({ http_requests_overview: [row] });
@@ -698,7 +758,7 @@ describe('CloudflareMetricsCollector', () => {
 
   it('omits the enrichment tag when the rest client has no match', async () => {
     const row: DatasetRow = {
-      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', databaseId: 'db-unknown', databaseRole: 'primary' },
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', databaseId: 'db-unknown', databaseRole: 'primary' },
       sum: { readQueries: 1, writeQueries: 0, rowsRead: 0, rowsWritten: 0, queryBatchResponseBytes: 0 },
     };
     const client = new FakeClient({ d1_queries: [row] });
@@ -732,7 +792,7 @@ describe('CloudflareMetricsCollector', () => {
 
   it('falls back to unenriched metrics when no rest client is provided', async () => {
     const row: DatasetRow = {
-      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', databaseId: 'db-123', databaseRole: 'primary' },
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', databaseId: 'db-123', databaseRole: 'primary' },
       sum: { readQueries: 1, writeQueries: 0, rowsRead: 0, rowsWritten: 0, queryBatchResponseBytes: 0 },
     };
     const client = new FakeClient({ d1_queries: [row] });
@@ -743,6 +803,179 @@ describe('CloudflareMetricsCollector', () => {
     const exported = provider.metrics.find((m) => m.name === 'cf_d1_queries');
     expect(exported?.tags.has('database_name')).toBe(false);
     expect(provider.metrics.some((m) => m.name === 'cloudflare_metrics_resource_lookup')).toBe(false);
+  });
+
+  it('iterates cached zones for zone-scoped datasets and injects zone tags', async () => {
+    const zoneScoped: DatasetQuery = {
+      key: 'zone_detail',
+      measurement: 'cf_zone_detail',
+      field: 'httpRequestsAdaptiveGroups',
+      scope: 'zone',
+      dimensions: ['datetimeMinute', 'edgeResponseStatus'],
+      topLevelFields: ['count'],
+      blocks: { sum: ['edgeResponseBytes'] },
+      tags: [{ source: 'edgeResponseStatus', as: 'edge_response_status' }],
+      fields: {
+        requests: { type: 'int', source: ['_top', 'count'] },
+        edge_response_bytes: { type: 'int', source: ['sum', 'edgeResponseBytes'] },
+      },
+    };
+    const client = new FakeClient(
+      {},
+      {
+        zone_detail: {
+          'zone-a': [
+            {
+              dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', edgeResponseStatus: 200 },
+              count: 42,
+              sum: { edgeResponseBytes: 1024 },
+            },
+          ],
+          'zone-b': [
+            {
+              dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', edgeResponseStatus: 500 },
+              count: 3,
+              sum: { edgeResponseBytes: 0 },
+            },
+          ],
+        },
+      },
+    );
+    const restClient = new FakeRestClient(
+      [],
+      [],
+      [
+        { id: 'zone-a', name: 'a.example.com' },
+        { id: 'zone-b', name: 'b.example.com' },
+      ],
+    );
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+      restClient,
+    });
+
+    const [result] = await collector.collectAll([zoneScoped]);
+    expect(result.rows).toBe(2);
+    expect(result.points).toBe(2);
+    expect(client.zoneCalls).toEqual(
+      expect.arrayContaining([
+        { zoneTag: 'zone-a', dataset: 'zone_detail' },
+        { zoneTag: 'zone-b', dataset: 'zone_detail' },
+      ]),
+    );
+
+    const exported = provider.metrics.filter((m) => m.name === 'cf_zone_detail');
+    expect(exported).toHaveLength(2);
+    const a = exported.find((m) => m.tags.get('zone_tag') === 'zone-a');
+    const b = exported.find((m) => m.tags.get('zone_tag') === 'zone-b');
+    expect(a?.tags.get('zone_name')).toBe('a.example.com');
+    expect(a?.fields.get('requests')).toEqual({ value: 42, type: 'int' });
+    expect(b?.tags.get('zone_name')).toBe('b.example.com');
+    expect(b?.fields.get('edge_response_bytes')).toEqual({ value: 0, type: 'int' });
+  });
+
+  it('skips zone-scoped datasets when the zone cache is empty', async () => {
+    const zoneScoped: DatasetQuery = {
+      key: 'zone_detail',
+      measurement: 'cf_zone_detail',
+      field: 'httpRequestsAdaptiveGroups',
+      scope: 'zone',
+      dimensions: ['datetimeMinute'],
+      topLevelFields: ['count'],
+      blocks: {},
+      tags: [],
+      fields: { requests: { type: 'int', source: ['_top', 'count'] } },
+    };
+    const client = new FakeClient({});
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    const [result] = await collector.collectAll([zoneScoped]);
+    expect(result.rows).toBe(0);
+    expect(result.points).toBe(0);
+    const observed = provider.metrics.find(
+      (m) => m.name === 'cloudflare_metrics_collector_dataset' && m.tags.get('dataset') === 'zone_detail',
+    );
+    expect(observed?.tags.get('status')).toBe('skipped');
+    expect(observed?.tags.get('reason')).toBe('no_zones_in_cache');
+  });
+
+  it('aggregates scheduled worker invocations client-side into minute buckets', async () => {
+    const client = new FakeClient({}, {}, [
+      {
+        scriptName: 'version-api',
+        cron: '*/5 * * * *',
+        status: 'success',
+        datetime: '2026-04-10T12:00:10Z',
+        cpuTimeUs: 1000,
+      },
+      {
+        scriptName: 'version-api',
+        cron: '*/5 * * * *',
+        status: 'success',
+        datetime: '2026-04-10T12:00:42Z',
+        cpuTimeUs: 3000,
+      },
+      {
+        scriptName: 'version-api',
+        cron: '*/5 * * * *',
+        status: 'error',
+        datetime: '2026-04-10T12:01:12Z',
+        cpuTimeUs: 500,
+      },
+    ]);
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    const results = await collector.collectAll([]);
+    const scheduledResult = results.find((r) => r.dataset === 'workers_scheduled');
+    expect(scheduledResult?.rows).toBe(3);
+    expect(scheduledResult?.points).toBe(2); // one bucket for success in 12:00, one for error in 12:01
+
+    const scheduled = provider.metrics.filter((m) => m.name === 'cf_workers_scheduled');
+    expect(scheduled).toHaveLength(2);
+
+    const successBucket = scheduled.find((m) => m.tags.get('status') === 'success');
+    expect(successBucket?.fields.get('invocations')).toEqual({ value: 2, type: 'int' });
+    expect(successBucket?.fields.get('cpu_time_us_sum')).toEqual({ value: 4000, type: 'int' });
+    expect(successBucket?.fields.get('cpu_time_us_avg')).toEqual({ value: 2000, type: 'int' });
+    expect(successBucket?.fields.get('cpu_time_us_max')).toEqual({ value: 3000, type: 'int' });
+    expect(successBucket?.tags.get('script_name')).toBe('version-api');
+    expect(successBucket?.tags.get('cron')).toBe('*/5 * * * *');
+    expect(successBucket?.exportTimestamp).toEqual(new Date('2026-04-10T12:00:00Z'));
+
+    const errorBucket = scheduled.find((m) => m.tags.get('status') === 'error');
+    expect(errorBucket?.fields.get('invocations')).toEqual({ value: 1, type: 'int' });
+    expect(errorBucket?.exportTimestamp).toEqual(new Date('2026-04-10T12:01:00Z'));
+  });
+
+  it('reads top-level count fields from the row', async () => {
+    const dataset: DatasetQuery = {
+      key: 'd1_queries_detail',
+      measurement: 'cf_d1_queries_detail',
+      field: 'd1QueriesAdaptiveGroups',
+      dimensions: ['datetimeMinute', 'databaseId'],
+      topLevelFields: ['count'],
+      blocks: { sum: ['queryDurationMs'] },
+      tags: [{ source: 'databaseId', as: 'database_id' }],
+      fields: {
+        query_count: { type: 'int', source: ['_top', 'count'] },
+        query_duration_ms_sum: { type: 'float', source: ['sum', 'queryDurationMs'] },
+      },
+    };
+    const row: DatasetRow = {
+      dimensions: { datetimeMinute: '2026-04-10T12:00:00Z', databaseId: 'db-1' },
+      count: 42,
+      sum: { queryDurationMs: 7.5 },
+    };
+    const client = new FakeClient({ d1_queries_detail: [row] });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+    });
+    await collector.collectAll([dataset]);
+    const exported = provider.metrics.find((m) => m.name === 'cf_d1_queries_detail');
+    expect(exported?.fields.get('query_count')).toEqual({ value: 42, type: 'int' });
+    expect(exported?.fields.get('query_duration_ms_sum')).toEqual({ value: 7.5, type: 'float' });
   });
 });
 
@@ -843,14 +1076,14 @@ describe('dataset registry invariants', () => {
       expect(fieldCount, `${dataset.key} must have fields`).toBeGreaterThan(0);
       for (const [, spec] of Object.entries(dataset.fields)) {
         expect(['int', 'float']).toContain(spec.type);
-        expect(spec.source[0]).toMatch(/^(sum|avg|max|min|quantiles)$/);
+        expect(spec.source[0]).toMatch(/^(sum|avg|max|min|quantiles|_top)$/);
       }
     }
   });
 
   it('every dataset selects its timestamp dimension', () => {
     for (const dataset of ALL_DATASETS) {
-      const timestampDim = dataset.timestampDimension ?? 'datetimeFiveMinutes';
+      const timestampDim = dataset.timestampDimension ?? 'datetimeMinute';
       expect(dataset.dimensions, `${dataset.key} must include ${timestampDim}`).toContain(timestampDim);
     }
   });

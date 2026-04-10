@@ -2,10 +2,17 @@ export type FieldValue = number;
 
 export type FieldType = 'int' | 'float';
 
+/**
+ * Special marker for the top-level of the row. `['_top', 'count']` reads
+ * `row.count` directly; standard aggregation blocks use `['sum', 'requests']`
+ * etc. to read `row.sum.requests`.
+ */
+export type FieldSource = readonly [string, string];
+
 export interface FieldSpec {
   type: FieldType;
   /** Source path into the GraphQL result row (e.g. ['sum', 'requests']) */
-  source: readonly [string, string];
+  source: FieldSource;
   /**
    * Optional scalar multiplier applied to the value before export.
    * Useful for unit normalization (e.g. seconds → milliseconds).
@@ -27,23 +34,38 @@ export interface DatasetQuery {
   key: string;
   /** Exported metric measurement name (e.g. "cf_workers_invocations") */
   measurement: string;
-  /** The GraphQL field on `account` to query */
+  /** The GraphQL field on `account` (or `zone`, see `scope`) to query */
   field: string;
   /**
+   * Query scope. Most datasets live under `viewer.accounts`; a handful are
+   * only accessible under `viewer.zones` (e.g. `httpRequestsAdaptiveGroups`
+   * on plans where the account-level rollup is gated). When set to `zone`,
+   * the collector iterates over the zones in the resource cache and runs
+   * one query per zone, injecting the zone tag/name into the row before
+   * emission.
+   */
+  scope?: 'account' | 'zone';
+  /**
    * GraphQL dimensions to select (these also determine the grouping keys).
-   * Must include at least one of `datetimeFiveMinutes` or `date` so rows
-   * can be timestamped.
+   * Must include at least one of `datetimeMinute`, `datetimeFiveMinutes`,
+   * or `date` so rows can be timestamped.
    */
   dimensions: readonly string[];
   /** Blocks to query (sum, avg, max, etc.) with the fields inside each */
   blocks: Partial<Record<AggregationBlock, readonly string[]>>;
+  /**
+   * Top-level scalar fields to include in the selection (e.g. `count` on
+   * `*AdaptiveGroups` datasets that expose an implicit row count). These
+   * are read via a `['_top', fieldName]` source in the field spec.
+   */
+  topLevelFields?: readonly string[];
   /** Tag projection (dimension → tag name) */
   tags: readonly TagSpec[];
   /** Field projection (source path → exported field name) */
   fields: Record<string, FieldSpec>;
   /**
    * Dimension used to derive the metric timestamp. Defaults to
-   * `datetimeFiveMinutes`.
+   * `datetimeMinute`.
    */
   timestampDimension?: string;
   /**
@@ -65,6 +87,8 @@ export interface DatasetRow {
   max?: Record<string, number | null>;
   min?: Record<string, number | null>;
   quantiles?: Record<string, number | null>;
+  /** Top-level row count on `*AdaptiveGroups` datasets. */
+  count?: number | null;
 }
 
 export interface GraphQLResponse<T> {
@@ -79,6 +103,12 @@ export interface GraphQLResponse<T> {
 export interface AccountQueryResult {
   viewer: {
     accounts: Array<Record<string, DatasetRow[]>>;
+  };
+}
+
+export interface ZoneQueryResult {
+  viewer: {
+    zones: Array<Record<string, DatasetRow[]>>;
   };
 }
 

@@ -1,10 +1,11 @@
 import type { DatasetQuery } from './types.js';
 
 /**
- * Five-minute bucket granularity is used wherever possible because the
- * exporter runs on a 5-minute cron. Datasets that do not support a
- * `datetimeFiveMinutes` dimension fall back to `datetime` (raw bucket) or
- * `date` (daily rollup, e.g. Durable Objects storage).
+ * One-minute bucket granularity via the `datetimeMinute` dimension — the
+ * finest grouping the Cloudflare Analytics API exposes. The exporter runs
+ * on a 5-minute cron and the collector uses a wider window so each run
+ * overlaps with the previous one (VictoriaMetrics dedupes by series +
+ * timestamp so overlap is free).
  *
  * Dimension → tag mapping and field names use snake_case to match the
  * existing VictoriaMetrics conventions in other workers.
@@ -14,8 +15,7 @@ export const WORKERS_INVOCATIONS: DatasetQuery = {
   key: 'workers_invocations',
   measurement: 'cf_workers_invocations',
   field: 'workersInvocationsAdaptive',
-  dimensions: ['datetimeFiveMinutes', 'scriptName', 'status', 'scriptVersion', 'usageModel'],
-  timestampDimension: 'datetimeFiveMinutes',
+  dimensions: ['datetimeMinute', 'scriptName', 'status', 'scriptVersion', 'usageModel'],
   blocks: {
     sum: [
       'requests',
@@ -73,7 +73,7 @@ export const WORKERS_SUBREQUESTS: DatasetQuery = {
   key: 'workers_subrequests',
   measurement: 'cf_workers_subrequests',
   field: 'workersSubrequestsAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'scriptName', 'hostname', 'cacheStatus', 'httpResponseStatus', 'requestOutcome'],
+  dimensions: ['datetimeMinute', 'scriptName', 'hostname', 'cacheStatus', 'httpResponseStatus', 'requestOutcome'],
   blocks: {
     sum: [
       'subrequests',
@@ -105,7 +105,7 @@ export const WORKERS_OVERVIEW: DatasetQuery = {
   key: 'workers_overview',
   measurement: 'cf_workers_overview',
   field: 'workersOverviewRequestsAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'status', 'usageModel'],
+  dimensions: ['datetimeMinute', 'status', 'usageModel'],
   blocks: { sum: ['cpuTimeUs'] },
   tags: [
     { source: 'status', as: 'status' },
@@ -120,7 +120,7 @@ export const D1_QUERIES: DatasetQuery = {
   key: 'd1_queries',
   measurement: 'cf_d1_queries',
   field: 'd1AnalyticsAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'databaseId', 'databaseRole'],
+  dimensions: ['datetimeMinute', 'databaseId', 'databaseRole'],
   blocks: {
     sum: ['readQueries', 'writeQueries', 'rowsRead', 'rowsWritten', 'queryBatchResponseBytes'],
     avg: ['queryBatchTimeMs', 'queryBatchResponseBytes', 'sampleInterval'],
@@ -145,7 +145,7 @@ export const D1_STORAGE: DatasetQuery = {
   key: 'd1_storage',
   measurement: 'cf_d1_storage',
   field: 'd1StorageAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'databaseId'],
+  dimensions: ['datetimeMinute', 'databaseId'],
   blocks: { max: ['databaseSizeBytes'] },
   tags: [{ source: 'databaseId', as: 'database_id' }],
   fields: {
@@ -157,7 +157,7 @@ export const R2_OPERATIONS: DatasetQuery = {
   key: 'r2_operations',
   measurement: 'cf_r2_operations',
   field: 'r2OperationsAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'bucketName', 'actionType', 'actionStatus', 'responseStatusCode', 'storageClass'],
+  dimensions: ['datetimeMinute', 'bucketName', 'actionType', 'actionStatus', 'responseStatusCode', 'storageClass'],
   blocks: {
     sum: ['requests', 'responseBytes', 'responseObjectSize'],
   },
@@ -179,7 +179,7 @@ export const R2_STORAGE: DatasetQuery = {
   key: 'r2_storage',
   measurement: 'cf_r2_storage',
   field: 'r2StorageAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'bucketName', 'storageClass'],
+  dimensions: ['datetimeMinute', 'bucketName', 'storageClass'],
   blocks: { max: ['objectCount', 'payloadSize', 'metadataSize', 'uploadCount'] },
   tags: [
     { source: 'bucketName', as: 'bucket_name' },
@@ -197,7 +197,7 @@ export const KV_OPERATIONS: DatasetQuery = {
   key: 'kv_operations',
   measurement: 'cf_kv_operations',
   field: 'kvOperationsAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'namespaceId', 'actionType', 'result', 'responseStatusCode'],
+  dimensions: ['datetimeMinute', 'namespaceId', 'actionType', 'result', 'responseStatusCode'],
   blocks: { sum: ['requests', 'objectBytes'] },
   tags: [
     { source: 'namespaceId', as: 'namespace_id' },
@@ -215,7 +215,7 @@ export const KV_STORAGE: DatasetQuery = {
   key: 'kv_storage',
   measurement: 'cf_kv_storage',
   field: 'kvStorageAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'namespaceId'],
+  dimensions: ['datetimeMinute', 'namespaceId'],
   blocks: { max: ['byteCount', 'keyCount'] },
   tags: [{ source: 'namespaceId', as: 'namespace_id' }],
   fields: {
@@ -228,7 +228,7 @@ export const DURABLE_OBJECTS_INVOCATIONS: DatasetQuery = {
   key: 'durable_objects_invocations',
   measurement: 'cf_durable_objects_invocations',
   field: 'durableObjectsInvocationsAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'namespaceId', 'scriptName', 'status', 'type'],
+  dimensions: ['datetimeMinute', 'namespaceId', 'scriptName', 'status', 'type'],
   blocks: {
     sum: ['requests', 'errors', 'responseBodySize', 'wallTime'],
     max: ['wallTime', 'responseBodySize'],
@@ -253,7 +253,7 @@ export const DURABLE_OBJECTS_PERIODIC: DatasetQuery = {
   key: 'durable_objects_periodic',
   measurement: 'cf_durable_objects_periodic',
   field: 'durableObjectsPeriodicGroups',
-  dimensions: ['datetimeFiveMinutes', 'namespaceId'],
+  dimensions: ['datetimeMinute', 'namespaceId'],
   blocks: {
     sum: [
       'activeTime',
@@ -297,7 +297,7 @@ export const DURABLE_OBJECTS_STORAGE: DatasetQuery = {
   key: 'durable_objects_storage',
   measurement: 'cf_durable_objects_storage',
   field: 'durableObjectsStorageGroups',
-  dimensions: ['datetimeFiveMinutes'],
+  dimensions: ['datetimeMinute'],
   filterGranularity: 'date',
   blocks: { max: ['storedBytes'] },
   tags: [],
@@ -310,7 +310,7 @@ export const DURABLE_OBJECTS_SQL_STORAGE: DatasetQuery = {
   key: 'durable_objects_sql_storage',
   measurement: 'cf_durable_objects_sql_storage',
   field: 'durableObjectsSqlStorageGroups',
-  dimensions: ['datetimeFiveMinutes', 'namespaceId'],
+  dimensions: ['datetimeMinute', 'namespaceId'],
   filterGranularity: 'date',
   blocks: { max: ['storedBytes'] },
   tags: [{ source: 'namespaceId', as: 'namespace_id' }],
@@ -323,7 +323,7 @@ export const DURABLE_OBJECTS_SUBREQUESTS: DatasetQuery = {
   key: 'durable_objects_subrequests',
   measurement: 'cf_durable_objects_subrequests',
   field: 'durableObjectsSubrequestsAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'namespaceId', 'scriptName'],
+  dimensions: ['datetimeMinute', 'namespaceId', 'scriptName'],
   blocks: { sum: ['requestBodySizeUncached'] },
   tags: [
     { source: 'namespaceId', as: 'namespace_id' },
@@ -338,7 +338,7 @@ export const QUEUE_OPERATIONS: DatasetQuery = {
   key: 'queue_operations',
   measurement: 'cf_queue_operations',
   field: 'queueMessageOperationsAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'queueId', 'actionType', 'consumerType', 'outcome'],
+  dimensions: ['datetimeMinute', 'queueId', 'actionType', 'consumerType', 'outcome'],
   blocks: { sum: ['billableOperations', 'bytes'] },
   tags: [
     { source: 'queueId', as: 'queue_id' },
@@ -356,7 +356,7 @@ export const QUEUE_BACKLOG: DatasetQuery = {
   key: 'queue_backlog',
   measurement: 'cf_queue_backlog',
   field: 'queueBacklogAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'queueId'],
+  dimensions: ['datetimeMinute', 'queueId'],
   blocks: { avg: ['bytes', 'messages', 'sampleInterval'] },
   tags: [{ source: 'queueId', as: 'queue_id' }],
   fields: {
@@ -370,7 +370,7 @@ export const HYPERDRIVE_QUERIES: DatasetQuery = {
   key: 'hyperdrive_queries',
   measurement: 'cf_hyperdrive_queries',
   field: 'hyperdriveQueriesAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'configId', 'cacheStatus', 'eventStatus', 'isFree'],
+  dimensions: ['datetimeMinute', 'configId', 'cacheStatus', 'eventStatus', 'isFree'],
   blocks: {
     sum: [
       'queryBytes',
@@ -404,7 +404,6 @@ export const HYPERDRIVE_POOL: DatasetQuery = {
   measurement: 'cf_hyperdrive_pool',
   field: 'hyperdrivePoolSizesAdaptiveGroups',
   dimensions: ['datetimeMinute', 'configId', 'databaseType'],
-  timestampDimension: 'datetimeMinute',
   blocks: { max: ['currentPoolSize', 'maxPoolSize', 'waitingClients'] },
   tags: [
     { source: 'configId', as: 'config_id' },
@@ -421,13 +420,7 @@ export const HTTP_REQUESTS_OVERVIEW: DatasetQuery = {
   key: 'http_requests_overview',
   measurement: 'cf_http_requests_overview',
   field: 'httpRequestsOverviewAdaptiveGroups',
-  dimensions: [
-    'datetimeFiveMinutes',
-    'zoneTag',
-    'clientCountryName',
-    'clientRequestHTTPProtocol',
-    'edgeResponseStatus',
-  ],
+  dimensions: ['datetimeMinute', 'zoneTag', 'clientCountryName', 'clientRequestHTTPProtocol', 'edgeResponseStatus'],
   blocks: { sum: ['requests', 'bytes', 'cachedRequests', 'cachedBytes', 'pageViews', 'visits'] },
   tags: [
     { source: 'zoneTag', as: 'zone_tag' },
@@ -449,7 +442,7 @@ export const PAGES_FUNCTIONS_INVOCATIONS: DatasetQuery = {
   key: 'pages_functions_invocations',
   measurement: 'cf_pages_functions_invocations',
   field: 'pagesFunctionsInvocationsAdaptiveGroups',
-  dimensions: ['datetimeFiveMinutes', 'scriptName', 'status', 'usageModel'],
+  dimensions: ['datetimeMinute', 'scriptName', 'status', 'usageModel'],
   blocks: {
     sum: ['requests', 'errors', 'clientDisconnects', 'duration', 'wallTime', 'subrequests', 'responseBodySize'],
   },
@@ -469,11 +462,110 @@ export const PAGES_FUNCTIONS_INVOCATIONS: DatasetQuery = {
   },
 };
 
+export const D1_QUERIES_DETAIL: DatasetQuery = {
+  key: 'd1_queries_detail',
+  measurement: 'cf_d1_queries_detail',
+  field: 'd1QueriesAdaptiveGroups',
+  dimensions: ['datetimeMinute', 'databaseId', 'databaseRole', 'error'],
+  topLevelFields: ['count'],
+  blocks: {
+    sum: ['queryDurationMs', 'rowsRead', 'rowsReturned', 'rowsWritten'],
+    avg: ['queryDurationMs', 'sampleInterval'],
+    quantiles: ['queryDurationMsP50', 'queryDurationMsP95', 'queryDurationMsP99'],
+  },
+  tags: [
+    { source: 'databaseId', as: 'database_id' },
+    { source: 'databaseRole', as: 'database_role' },
+    { source: 'error', as: 'error' },
+  ],
+  fields: {
+    query_count: { type: 'int', source: ['_top', 'count'] },
+    query_duration_ms_sum: { type: 'float', source: ['sum', 'queryDurationMs'] },
+    rows_read: { type: 'int', source: ['sum', 'rowsRead'] },
+    rows_returned: { type: 'int', source: ['sum', 'rowsReturned'] },
+    rows_written: { type: 'int', source: ['sum', 'rowsWritten'] },
+    query_duration_ms_avg: { type: 'float', source: ['avg', 'queryDurationMs'] },
+    sample_interval: { type: 'float', source: ['avg', 'sampleInterval'] },
+    query_duration_ms_p50: { type: 'float', source: ['quantiles', 'queryDurationMsP50'] },
+    query_duration_ms_p95: { type: 'float', source: ['quantiles', 'queryDurationMsP95'] },
+    query_duration_ms_p99: { type: 'float', source: ['quantiles', 'queryDurationMsP99'] },
+  },
+};
+
+export const QUEUE_CONSUMER: DatasetQuery = {
+  key: 'queue_consumer',
+  measurement: 'cf_queue_consumer',
+  field: 'queueConsumerMetricsAdaptiveGroups',
+  dimensions: ['datetimeMinute', 'queueId'],
+  blocks: { avg: ['concurrency', 'sampleInterval'] },
+  tags: [{ source: 'queueId', as: 'queue_id' }],
+  fields: {
+    concurrency_avg: { type: 'float', source: ['avg', 'concurrency'] },
+    sample_interval: { type: 'float', source: ['avg', 'sampleInterval'] },
+  },
+};
+
+// Note: `firewallEventsAdaptiveGroups` is gated on Business/Enterprise plans and
+// returns `authz`/"does not have access to the path" on free/Pro accounts. We
+// leave it out of the registry rather than failing loudly every cron tick —
+// if the plan level changes, adding an entry here with
+// `scope: 'zone', field: 'firewallEventsAdaptiveGroups'` will be enough.
+
+export const HTTP_REQUESTS_DETAIL: DatasetQuery = {
+  key: 'http_requests_detail',
+  measurement: 'cf_http_requests_detail',
+  field: 'httpRequestsAdaptiveGroups',
+  // `httpRequestsAdaptiveGroups` is gated at the account level on non-Enterprise
+  // plans but works at the zone level. The collector iterates over the cached
+  // zones (bulk list + Pages lookups) and runs one query per zone.
+  scope: 'zone',
+  dimensions: [
+    'datetimeMinute',
+    'clientCountryName',
+    'clientRequestHTTPMethodName',
+    'clientRequestHTTPProtocol',
+    'edgeResponseStatus',
+    'cacheStatus',
+  ],
+  topLevelFields: ['count'],
+  blocks: {
+    sum: [
+      'edgeRequestBytes',
+      'edgeResponseBytes',
+      'visits',
+      'crossZoneSubrequests',
+      'edgeTimeToFirstByteMs',
+      'originResponseDurationMs',
+    ],
+    avg: ['edgeTimeToFirstByteMs', 'originResponseDurationMs', 'sampleInterval'],
+  },
+  tags: [
+    { source: 'clientCountryName', as: 'client_country' },
+    { source: 'clientRequestHTTPMethodName', as: 'http_method' },
+    { source: 'clientRequestHTTPProtocol', as: 'http_protocol' },
+    { source: 'edgeResponseStatus', as: 'edge_response_status' },
+    { source: 'cacheStatus', as: 'cache_status' },
+  ],
+  fields: {
+    requests: { type: 'int', source: ['_top', 'count'] },
+    edge_request_bytes: { type: 'int', source: ['sum', 'edgeRequestBytes'] },
+    edge_response_bytes: { type: 'int', source: ['sum', 'edgeResponseBytes'] },
+    visits: { type: 'int', source: ['sum', 'visits'] },
+    cross_zone_subrequests: { type: 'int', source: ['sum', 'crossZoneSubrequests'] },
+    edge_ttfb_ms_sum: { type: 'float', source: ['sum', 'edgeTimeToFirstByteMs'] },
+    origin_response_ms_sum: { type: 'float', source: ['sum', 'originResponseDurationMs'] },
+    edge_ttfb_ms_avg: { type: 'float', source: ['avg', 'edgeTimeToFirstByteMs'] },
+    origin_response_ms_avg: { type: 'float', source: ['avg', 'originResponseDurationMs'] },
+    sample_interval: { type: 'float', source: ['avg', 'sampleInterval'] },
+  },
+};
+
 export const ALL_DATASETS: DatasetQuery[] = [
   WORKERS_INVOCATIONS,
   WORKERS_SUBREQUESTS,
   WORKERS_OVERVIEW,
   D1_QUERIES,
+  D1_QUERIES_DETAIL,
   D1_STORAGE,
   R2_OPERATIONS,
   R2_STORAGE,
@@ -486,8 +578,10 @@ export const ALL_DATASETS: DatasetQuery[] = [
   DURABLE_OBJECTS_SUBREQUESTS,
   QUEUE_OPERATIONS,
   QUEUE_BACKLOG,
+  QUEUE_CONSUMER,
   HYPERDRIVE_QUERIES,
   HYPERDRIVE_POOL,
   HTTP_REQUESTS_OVERVIEW,
+  HTTP_REQUESTS_DETAIL,
   PAGES_FUNCTIONS_INVOCATIONS,
 ];
