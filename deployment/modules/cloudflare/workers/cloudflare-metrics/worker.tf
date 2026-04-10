@@ -25,7 +25,7 @@ resource "cloudflare_worker_version" "worker" {
     {
       name = "CLOUDFLARE_API_TOKEN"
       type = "secret_text"
-      text = var.cloudflare_analytics_api_token
+      text = cloudflare_api_token.analytics_read.value
     },
     {
       name = "VMETRICS_API_TOKEN"
