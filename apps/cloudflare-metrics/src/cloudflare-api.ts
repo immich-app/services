@@ -43,6 +43,12 @@ export interface ICloudflareRestClient {
   listD1Databases(accountId: string): Promise<D1Database[]>;
   listQueues(accountId: string): Promise<Queue[]>;
   listZones(accountId: string): Promise<Zone[]>;
+  /**
+   * Fetches a single zone by id. Returns `null` when the zone is not found
+   * (so callers can treat missing zones as a best-effort miss rather than an
+   * error). Other HTTP errors are thrown as `CloudflareRestError`.
+   */
+  getZone(zoneId: string): Promise<Zone | null>;
 }
 
 /**
@@ -69,6 +75,27 @@ export class CloudflareRestClient implements ICloudflareRestClient {
 
   async listZones(accountId: string): Promise<Zone[]> {
     return this.listPaginated<Zone>(`/zones?account.id=${encodeURIComponent(accountId)}`);
+  }
+
+  async getZone(zoneId: string): Promise<Zone | null> {
+    const doFetch = this.fetchImpl ?? globalThis.fetch;
+    const url = `${this.baseUrl}/zones/${encodeURIComponent(zoneId)}`;
+    const response = await doFetch(url, {
+      headers: { Authorization: `Bearer ${this.apiToken}` },
+    });
+    if (response.status === 404) {
+      await response.body?.cancel();
+      return null;
+    }
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      throw new CloudflareRestError(
+        `Cloudflare REST error (${response.status}) for /zones/${zoneId}: ${body.slice(0, 200)}`,
+        response.status,
+      );
+    }
+    const payload = (await response.json()) as { result: Zone | null };
+    return payload.result ?? null;
   }
 
   private async listPaginated<T>(path: string): Promise<T[]> {

@@ -260,10 +260,12 @@ describe('CloudflareMetricsCollector', () => {
   }
 
   class FakeRestClient implements ICloudflareRestClient {
+    public getZoneCalls: string[] = [];
     constructor(
       public readonly d1: Array<{ uuid: string; name: string }> = [],
       public readonly queues: Array<{ queue_id: string; queue_name: string }> = [],
       public readonly zones: Array<{ id: string; name: string }> = [],
+      public readonly individualZones: Record<string, { id: string; name: string } | null> = {},
     ) {}
     // eslint-disable-next-line @typescript-eslint/require-await
     async listD1Databases() {
@@ -276,6 +278,14 @@ describe('CloudflareMetricsCollector', () => {
     // eslint-disable-next-line @typescript-eslint/require-await
     async listZones() {
       return this.zones;
+    }
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async getZone(zoneId: string) {
+      this.getZoneCalls.push(zoneId);
+      if (zoneId in this.individualZones) {
+        return this.individualZones[zoneId];
+      }
+      return null;
     }
   }
 
@@ -291,6 +301,10 @@ describe('CloudflareMetricsCollector', () => {
     // eslint-disable-next-line @typescript-eslint/require-await
     async listZones(): Promise<never> {
       throw new Error('zones boom');
+    }
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async getZone(): Promise<never> {
+      throw new Error('getZone boom');
     }
   }
 
@@ -627,6 +641,61 @@ describe('CloudflareMetricsCollector', () => {
     expect(exported?.tags.get('zone_name')).toBe('example.com');
   });
 
+  it('resolves HTTP zones missing from the bulk list via per-tag lookup', async () => {
+    const bulkZone: DatasetRow = {
+      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', zoneTag: 'zone-bulk' },
+      sum: { requests: 10, bytes: 500, cachedRequests: 0, cachedBytes: 0, pageViews: 0, visits: 0 },
+    };
+    const pagesZone: DatasetRow = {
+      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', zoneTag: 'zone-pages' },
+      sum: { requests: 5, bytes: 200, cachedRequests: 0, cachedBytes: 0, pageViews: 0, visits: 0 },
+    };
+    const client = new FakeClient({ http_requests_overview: [bulkZone, pagesZone] });
+    const restClient = new FakeRestClient([], [], [{ id: 'zone-bulk', name: 'bulk.example.com' }], {
+      'zone-pages': { id: 'zone-pages', name: 'pages.example.com' },
+    });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+      restClient,
+    });
+    await collector.collectAll([HTTP_REQUESTS_OVERVIEW]);
+
+    const exported = provider.metrics.filter((m) => m.name === 'cf_http_requests_overview');
+    const bulk = exported.find((m) => m.tags.get('zone_tag') === 'zone-bulk');
+    const pages = exported.find((m) => m.tags.get('zone_tag') === 'zone-pages');
+    expect(bulk?.tags.get('zone_name')).toBe('bulk.example.com');
+    expect(pages?.tags.get('zone_name')).toBe('pages.example.com');
+
+    // Only the uncached zone should have been looked up individually.
+    expect(restClient.getZoneCalls).toEqual(['zone-pages']);
+
+    const lookup = provider.metrics.find(
+      (m) => m.name === 'cloudflare_metrics_resource_lookup' && m.tags.get('resource') === 'zones_individual',
+    );
+    expect(lookup?.tags.get('status')).toBe('success');
+    expect(lookup?.fields.get('resolved')).toEqual({ value: 1, type: 'int' });
+    expect(lookup?.fields.get('failed')).toEqual({ value: 0, type: 'int' });
+  });
+
+  it('falls back to the zoneTag when individual lookup returns nothing', async () => {
+    const row: DatasetRow = {
+      dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', zoneTag: 'zone-unknown' },
+      sum: { requests: 1, bytes: 1, cachedRequests: 0, cachedBytes: 0, pageViews: 0, visits: 0 },
+    };
+    const client = new FakeClient({ http_requests_overview: [row] });
+    // No bulk zones and no individual lookup results — rest client returns null.
+    const restClient = new FakeRestClient([], [], [], { 'zone-unknown': null });
+    const collector = new CloudflareMetricsCollector(client as unknown as CloudflareGraphQLClient, 'acct', metrics, {
+      now: () => new Date('2026-04-10T12:15:00Z'),
+      restClient,
+    });
+    await collector.collectAll([HTTP_REQUESTS_OVERVIEW]);
+
+    const exported = provider.metrics.find((m) => m.name === 'cf_http_requests_overview');
+    expect(exported?.tags.get('zone_tag')).toBe('zone-unknown');
+    expect(exported?.tags.get('zone_name')).toBe('zone-unknown');
+  });
+
   it('omits the enrichment tag when the rest client has no match', async () => {
     const row: DatasetRow = {
       dimensions: { datetimeFiveMinutes: '2026-04-10T12:00:00Z', databaseId: 'db-unknown', databaseRole: 'primary' },
@@ -738,6 +807,32 @@ describe('CloudflareRestClient', () => {
     await client.listZones('acct');
     const call = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(call[0]).toContain('/zones?account.id=acct&page=1');
+  });
+
+  it('returns null from getZone when the API responds with 404', async () => {
+    const { CloudflareRestClient } = await import('./cloudflare-api.js');
+    const fetchMock = vi.fn().mockResolvedValue(new Response('', { status: 404 }));
+    const client = new CloudflareRestClient('tok', 'https://example.com', fetchMock as unknown as typeof fetch);
+    const zone = await client.getZone('does-not-exist');
+    expect(zone).toBeNull();
+  });
+
+  it('returns the zone payload from getZone on success', async () => {
+    const { CloudflareRestClient } = await import('./cloudflare-api.js');
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          result: { id: 'z1', name: 'pages.example.com' },
+        }),
+        { status: 200 },
+      ),
+    );
+    const client = new CloudflareRestClient('tok', 'https://example.com', fetchMock as unknown as typeof fetch);
+    const zone = await client.getZone('z1');
+    expect(zone).toEqual({ id: 'z1', name: 'pages.example.com' });
+    const call = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(call[0]).toBe('https://example.com/zones/z1');
   });
 });
 

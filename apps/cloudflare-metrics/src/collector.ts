@@ -145,6 +145,12 @@ export class CloudflareMetricsCollector {
     const startedAt = performance.now();
     try {
       const rows = await this.client.fetchDataset(this.accountTag, dataset, range);
+      if (dataset.field === 'httpRequestsOverviewAdaptiveGroups') {
+        // Pages projects get their own zone tag in analytics but are not
+        // returned by `/zones?account.id=...`; resolve them individually
+        // before emitting so the metric tags carry a human-readable name.
+        await this.resolveMissingZones(rows);
+      }
       const points = this.emitRows(dataset, rows);
       const durationMs = performance.now() - startedAt;
       this.metrics.push(
@@ -229,6 +235,52 @@ export class CloudflareMetricsCollector {
   }
 
   /**
+   * Fetches any zone ids that aren't already in the cache individually via
+   * `/zones/{id}` and adds them. Used to cover Cloudflare Pages project zones
+   * (and any other zones that don't show up in the bulk `/zones` listing).
+   * Failures are tolerated — missing zones will fall back to their zoneTag in
+   * the metric label.
+   */
+  private async resolveMissingZones(rows: DatasetRow[]): Promise<void> {
+    if (!this.restClient) {
+      return;
+    }
+    const missing = new Set<string>();
+    for (const row of rows) {
+      const tag = normalizeTagValue(row.dimensions?.zoneTag);
+      if (tag && !this.resourceCache.zones.has(tag)) {
+        missing.add(tag);
+      }
+    }
+    if (missing.size === 0) {
+      return;
+    }
+    const ids = [...missing];
+    const startedAt = performance.now();
+    const restClient = this.restClient;
+    const results = await Promise.allSettled(ids.map((id) => restClient.getZone(id)));
+    let resolved = 0;
+    let failed = 0;
+    for (const [i, result] of results.entries()) {
+      if (result.status === 'fulfilled' && result.value) {
+        this.resourceCache.zones.set(ids[i], result.value.name);
+        resolved++;
+      } else if (result.status === 'rejected') {
+        failed++;
+      }
+    }
+    this.metrics.push(
+      Metric.create('resource_lookup')
+        .addTag('resource', 'zones_individual')
+        .addTag('status', failed > 0 ? 'partial' : 'success')
+        .intField('requested', ids.length)
+        .intField('resolved', resolved)
+        .intField('failed', failed)
+        .durationField('duration', performance.now() - startedAt),
+    );
+  }
+
+  /**
    * Adds `<resource>_name` tags based on pre-loaded REST lookups.
    * Keyed on the dataset's GraphQL field so that per-dataset dimensions
    * (e.g. `databaseId` vs `queueId` vs `zoneTag`) only get enriched where
@@ -257,9 +309,12 @@ export class CloudflareMetricsCollector {
       }
       case 'httpRequestsOverviewAdaptiveGroups': {
         const tag = normalizeTagValue(dims.zoneTag);
-        const name = tag ? this.resourceCache.zones.get(tag) : undefined;
-        if (name) {
-          metric.addTag('zone_name', name);
+        if (tag) {
+          // Always populate `zone_name`, falling back to the zoneTag when the
+          // name lookup didn't succeed. This keeps dashboard legends populated
+          // for zones we can't resolve (e.g. ex-sub-accounts, zones we no
+          // longer own) without leaving the series unlabelled.
+          metric.addTag('zone_name', this.resourceCache.zones.get(tag) ?? tag);
         }
         break;
       }
