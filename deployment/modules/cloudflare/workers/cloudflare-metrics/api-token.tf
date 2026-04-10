@@ -49,5 +49,6 @@ resource "cloudflare_api_token" "analytics_read" {
 # Diagnostic output so we can tell whether the token value was successfully
 # captured. Never logs the actual value.
 output "analytics_token_value_length" {
-  value = length(cloudflare_api_token.analytics_read.value)
+  value     = length(cloudflare_api_token.analytics_read.value)
+  sensitive = true
 }
