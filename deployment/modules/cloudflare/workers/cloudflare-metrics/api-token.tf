@@ -67,9 +67,7 @@ resource "cloudflare_api_token" "analytics_read" {
         { id = local.cf_permission_group_ids["Zone Read"] },
       ]
       resources = jsonencode({
-        "com.cloudflare.api.account.zone.*" = {
-          "com.cloudflare.api.account.${var.cloudflare_account_id}" = "*"
-        }
+        "com.cloudflare.api.account.zone.*" = "*"
       })
     },
   ]
