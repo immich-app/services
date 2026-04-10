@@ -9,3 +9,14 @@ variable "vmetrics_api_token" {
   type        = string
   sensitive   = true
 }
+
+variable "grafana_url" {
+  description = "Grafana instance URL"
+  type        = string
+}
+
+variable "grafana_token" {
+  description = "Grafana API authentication token"
+  type        = string
+  sensitive   = true
+}

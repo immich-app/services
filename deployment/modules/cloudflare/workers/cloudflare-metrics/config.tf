@@ -7,5 +7,9 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5"
     }
+    grafana = {
+      source  = "grafana/grafana"
+      version = "~> 3"
+    }
   }
 }
