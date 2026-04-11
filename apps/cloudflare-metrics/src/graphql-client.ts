@@ -2,6 +2,21 @@ import type { AccountQueryResult, DatasetQuery, DatasetRow, GraphQLResponse } fr
 
 const CLOUDFLARE_GRAPHQL_ENDPOINT = 'https://api.cloudflare.com/client/v4/graphql';
 const DEFAULT_DATASET_LIMIT = 9999;
+// Cloudflare GraphQL rejects batched queries above ~50 aliased datasets with a
+// "too many nodes, zones and accounts" error. Keep well under that so chunks
+// with higher-dimensionality datasets don't bump the ceiling either.
+export const ACCOUNT_BATCH_CHUNK_SIZE = 25;
+
+function chunkArray<T>(items: readonly T[], size: number): T[][] {
+  if (size <= 0) {
+    return items.length > 0 ? [[...items]] : [];
+  }
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size) as T[]);
+  }
+  return chunks;
+}
 
 export class CloudflareGraphQLError extends Error {
   constructor(
@@ -76,7 +91,42 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     range: { start: Date; end: Date },
     options: { includeScheduledInvocations?: boolean } = {},
   ): Promise<BatchedDatasetResult> {
-    const query = buildBatchedAccountQuery(datasets, options.includeScheduledInvocations ?? false);
+    // Cloudflare's GraphQL endpoint enforces a "too many nodes, zones and
+    // accounts" limit on combined query complexity. Empirically ~50 aliased
+    // datasets is the ceiling; we chunk well below that to leave headroom
+    // for datasets with extra blocks/dimensions.
+    const chunks = chunkArray(datasets, ACCOUNT_BATCH_CHUNK_SIZE);
+    if (chunks.length === 0 && options.includeScheduledInvocations) {
+      chunks.push([]);
+    }
+    const result: BatchedDatasetResult = { rows: {}, errors: {} };
+
+    for (const [i, chunk] of chunks.entries()) {
+      // Only attach the scheduled-invocations field to the first chunk so we
+      // don't fetch it multiple times.
+      const includeScheduled = i === 0 && (options.includeScheduledInvocations ?? false);
+      const chunkResult = await this.fetchAccountBatchChunk(accountTag, chunk, range, includeScheduled);
+      Object.assign(result.rows, chunkResult.rows);
+      Object.assign(result.errors, chunkResult.errors);
+      if (includeScheduled) {
+        if (chunkResult.errors.workers_scheduled) {
+          result.errors.workers_scheduled = chunkResult.errors.workers_scheduled;
+        } else {
+          result.scheduledInvocations = chunkResult.scheduledInvocations ?? [];
+        }
+      }
+    }
+
+    return result;
+  }
+
+  private async fetchAccountBatchChunk(
+    accountTag: string,
+    datasets: readonly DatasetQuery[],
+    range: { start: Date; end: Date },
+    includeScheduledInvocations: boolean,
+  ): Promise<BatchedDatasetResult> {
+    const query = buildBatchedAccountQuery(datasets, includeScheduledInvocations);
     const variables = {
       accountTag,
       filter: buildFilterObject(datasets[0] ?? null, range),
@@ -95,7 +145,7 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
       result.rows[dataset.key] = rows ?? [];
     }
 
-    if (options.includeScheduledInvocations) {
+    if (includeScheduledInvocations) {
       if (errorsByAlias.workers_scheduled) {
         result.errors.workers_scheduled = errorsByAlias.workers_scheduled;
       } else {
@@ -110,7 +160,7 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
       for (const dataset of datasets) {
         result.errors[dataset.key] = message;
       }
-      if (options.includeScheduledInvocations) {
+      if (includeScheduledInvocations) {
         result.errors.workers_scheduled = message;
       }
     }

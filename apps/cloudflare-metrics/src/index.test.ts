@@ -377,6 +377,41 @@ describe('CloudflareGraphQLClient', () => {
     expect(result.errors.d1_queries).toBe('no access');
   });
 
+  it('splits account batches into chunks under the graphql node limit', async () => {
+    // Build a fake dataset list that's large enough to span multiple chunks.
+    const datasets = Array.from({ length: 60 }, (_, i) => ({
+      ...WORKERS_INVOCATIONS,
+      key: `ds_${i}`,
+      measurement: `cf_ds_${i}`,
+    }));
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string);
+      // Return the aliased fields that this chunk actually asked for.
+      const aliases = [...body.query.matchAll(/(ds_\d+): workersInvocationsAdaptive/g)].map((m) => m[1]);
+      const account: Record<string, unknown> = {};
+      for (const alias of aliases) {
+        account[alias] = [];
+      }
+      return Promise.resolve(
+        new Response(JSON.stringify({ data: { viewer: { accounts: [account] } }, errors: null }), { status: 200 }),
+      );
+    });
+    const client = new CloudflareGraphQLClient(
+      'tok',
+      'https://example.com/graphql',
+      fetchMock as unknown as typeof fetch,
+    );
+    const result = await client.fetchAccountBatch('acct', datasets, {
+      start: new Date('2026-04-10T12:00:00Z'),
+      end: new Date('2026-04-10T12:10:00Z'),
+    });
+    // Each chunk is its own HTTP subrequest.
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(1);
+    // All datasets get a row entry, even if empty — nothing is dropped across chunks.
+    expect(Object.keys(result.rows)).toHaveLength(60);
+    expect(Object.keys(result.errors)).toHaveLength(0);
+  });
+
   it('batches multiple zones into a single request', async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(
