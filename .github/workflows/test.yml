@@ -41,3 +41,67 @@ jobs:
       - name: Run unit tests
         run: pnpm run test
         if: ${{ !cancelled() }}
+
+  # Path-filtered integration tests that hit the real Cloudflare GraphQL
+  # API. Only runs on pull requests when files inside the cloudflare-metrics
+  # worker have changed (or this workflow itself). Outside of PRs (push to
+  # main, manual dispatch) it always runs.
+  integration-test-cloudflare-metrics:
+    name: Integration Test (cloudflare-metrics)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Detect relevant changes
+        id: changes
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        with:
+          filters: |
+            cloudflare-metrics:
+              - 'apps/cloudflare-metrics/**'
+              - '.github/workflows/test.yml'
+
+      - name: Setup pnpm
+        if: >-
+          steps.changes.outputs.cloudflare-metrics == 'true'
+          || github.event_name != 'pull_request'
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
+      - name: Setup Node
+        if: >-
+          steps.changes.outputs.cloudflare-metrics == 'true'
+          || github.event_name != 'pull_request'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Run pnpm install
+        if: >-
+          steps.changes.outputs.cloudflare-metrics == 'true'
+          || github.event_name != 'pull_request'
+        run: pnpm install --frozen-lockfile
+
+      # Integration tests need a Cloudflare Analytics read token + account
+      # id. The 1Password service account token comes from the same GH
+      # secret the deploy job uses; the actual Cloudflare credentials are
+      # fetched at runtime via `op run`. Until that binding is set up, this
+      # step will fail fast with a clear error rather than silently
+      # skipping the test — fix by setting up OP_TF_DEV_ENV (or a scoped
+      # secret) in GH actions and creating the matching 1Password item.
+      - name: Install 1Password CLI
+        if: >-
+          steps.changes.outputs.cloudflare-metrics == 'true'
+          || github.event_name != 'pull_request'
+        uses: 1password/install-cli-action@9a0c9dd934086b7ab1d90115d455bda1c53c2bdb # v2.0.2
+
+      - name: Run integration tests
+        if: >-
+          steps.changes.outputs.cloudflare-metrics == 'true'
+          || github.event_name != 'pull_request'
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_TF_DEV_ENV }}
+        run: |
+          op run \
+            --env-file=apps/cloudflare-metrics/.integration.env \
+            -- pnpm --filter @immich-services/cloudflare-metrics run test:integration
