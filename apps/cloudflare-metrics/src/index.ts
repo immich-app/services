@@ -41,39 +41,29 @@ export default {
     );
 
     try {
-      const response = await metrics.monitorAsyncFunction({ name: 'handle_request' }, async () => {
+      const response = await metrics.monitorAsyncFunction({ name: 'handle_request' }, () => {
         const url = new URL(request.url);
 
         if (request.method === 'OPTIONS') {
-          return new Response(null, {
-            headers: {
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-              'Access-Control-Allow-Headers': 'Content-Type',
-              'Access-Control-Max-Age': '86400',
-            },
-          });
+          return Promise.resolve(
+            new Response(null, {
+              headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Max-Age': '86400',
+              },
+            }),
+          );
         }
 
         switch (url.pathname) {
           case '/health': {
-            return jsonResponse({ status: 'ok' });
-          }
-
-          case '/collect': {
-            // Manual trigger for debugging. Gated on having both tokens
-            // configured so it is effectively a no-op in local development
-            // without credentials.
-            if (!env.CLOUDFLARE_API_TOKEN || !env.CLOUDFLARE_ACCOUNT_ID) {
-              return errorResponse('Collector not configured', 503);
-            }
-            const graphqlClient = new CloudflareGraphQLClient(env.CLOUDFLARE_API_TOKEN);
-            const results = await runCollection(env, metrics, graphqlClient);
-            return jsonResponse({ results });
+            return Promise.resolve(jsonResponse({ status: 'ok' }));
           }
 
           default: {
-            return errorResponse('Not Found', 404);
+            return Promise.resolve(errorResponse('Not Found', 404));
           }
         }
       })();

@@ -1343,8 +1343,8 @@ describe('HTTP handler', () => {
     expect(response.status).toBe(404);
   });
 
-  it('returns 503 from /collect when the API token or account ID is missing', async () => {
+  it('returns 404 for /collect — the manual trigger endpoint has been removed', async () => {
     const response = await SELF.fetch('https://example.com/collect');
-    expect(response.status).toBe(503);
+    expect(response.status).toBe(404);
   });
 });
