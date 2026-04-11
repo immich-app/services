@@ -16,12 +16,12 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
   interval_seconds   = 60
   disable_provenance = true
 
-  # 1) Collector stopped running entirely — no cron_summary datapoints in
-  #    the last 10 minutes. Fires for the scheduled handler being wedged,
-  #    crashing at startup, or losing its token. We count datapoints rather
-  #    than using `absent_over_time` because absent returns an EMPTY series
-  #    when the metric is present (healthy), which grafana then treats as
-  #    NoData — inverting the alert.
+  # 1) Collector stopped running entirely. `cron_summary_datasets` is pushed
+  #    unconditionally once per successful tick in the scheduled handler, so
+  #    any gap in the series means the handler is wedged, crashing, or
+  #    missing its token. The threshold never trips in practice — it's just
+  #    there to give the rule a condition; the real signal is NoData →
+  #    Alerting.
   rule {
     name      = "Collector Not Running"
     condition = "C"
@@ -30,16 +30,16 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       ref_id         = "A"
       datasource_uid = local.prometheus_datasource_uid
       relative_time_range {
-        from = 900
+        from = 600
         to   = 0
       }
       model = jsonencode({
         datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
         editorMode    = "code"
-        expr          = "count(count_over_time(cloudflare_metrics_cron_summary_datasets[10m]))"
+        expr          = "max(cloudflare_metrics_cron_summary_datasets)"
         instant       = true
         intervalMs    = 60000
-        legendFormat  = "ticks"
+        legendFormat  = "datasets"
         maxDataPoints = 43200
         refId         = "A"
       })
@@ -57,7 +57,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
         refId      = "C"
         type       = "threshold"
         conditions = [{
-          evaluator = { params = [1], type = "lt" }
+          evaluator = { params = [0], type = "lt" }
           operator  = { type = "and" }
           query     = { params = ["C"] }
           reducer   = { params = [], type = "last" }
@@ -68,14 +68,12 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       })
     }
 
-    # NoData here means the metric has never been emitted in the lookback
-    # window at all — also unhealthy, so alert.
     no_data_state  = "Alerting"
     exec_err_state = "Error"
-    for            = "5m"
+    for            = "10m"
     annotations = {
       summary     = "Cloudflare metrics collector is not running"
-      description = "cloudflare_metrics_cron_summary_datasets has had fewer than 1 datapoint in the last 10 minutes — the scheduled handler is wedged, crashing, or missing its Cloudflare API token."
+      description = "No cloudflare_metrics_cron_summary_datasets datapoints in the last 10 minutes — the scheduled handler is wedged, crashing, or missing its Cloudflare API token."
     }
     labels    = { severity = "1" }
     is_paused = false
