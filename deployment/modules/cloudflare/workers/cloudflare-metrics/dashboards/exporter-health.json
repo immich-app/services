@@ -34,7 +34,7 @@
       "panels": []
     },
     {
-      "id": 2,
+      "id": 9001,
       "type": "stat",
       "title": "Datasets / tick",
       "datasource": {
@@ -100,7 +100,7 @@
       }
     },
     {
-      "id": 3,
+      "id": 2,
       "type": "stat",
       "title": "Points / tick",
       "datasource": {
@@ -166,7 +166,7 @@
       }
     },
     {
-      "id": 4,
+      "id": 3,
       "type": "stat",
       "title": "Errors / tick",
       "datasource": {
@@ -232,9 +232,9 @@
       }
     },
     {
-      "id": 5,
+      "id": 9002,
       "type": "stat",
-      "title": "GraphQL Requests / tick",
+      "title": "Cron Exceptions (10m)",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -273,7 +273,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max(cloudflare_metrics_graphql_client_requests)",
+          "expr": "sum(increase(cloudflare_metrics_cron_error_count[10m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -298,73 +298,7 @@
       }
     },
     {
-      "id": 6,
-      "type": "stat",
-      "title": "GraphQL Error Responses / tick",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 4,
-        "x": 16,
-        "y": 1
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short",
-          "noValue": "0"
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
-          },
-          "editorMode": "code",
-          "expr": "max(cloudflare_metrics_graphql_client_error_responses)",
-          "instant": true,
-          "range": false,
-          "legendFormat": "__auto",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      }
-    },
-    {
-      "id": 7,
+      "id": 9005,
       "type": "stat",
       "title": "Pending Flush Buffers",
       "datasource": {
@@ -374,7 +308,7 @@
       "gridPos": {
         "h": 4,
         "w": 4,
-        "x": 20,
+        "x": 16,
         "y": 1
       },
       "fieldConfig": {
@@ -430,7 +364,7 @@
       }
     },
     {
-      "id": 8,
+      "id": 4,
       "type": "row",
       "title": "Collector \u2014 per dataset",
       "collapsed": false,
@@ -443,7 +377,7 @@
       "panels": []
     },
     {
-      "id": 9,
+      "id": 5,
       "type": "timeseries",
       "title": "Rows per Dataset",
       "datasource": {
@@ -532,7 +466,7 @@
       }
     },
     {
-      "id": 10,
+      "id": 6,
       "type": "timeseries",
       "title": "Points per Dataset",
       "datasource": {
@@ -621,7 +555,7 @@
       }
     },
     {
-      "id": 11,
+      "id": 9003,
       "type": "timeseries",
       "title": "Errors per Dataset",
       "datasource": {
@@ -710,7 +644,7 @@
       }
     },
     {
-      "id": 12,
+      "id": 7,
       "type": "timeseries",
       "title": "Duration per Dataset (last value)",
       "datasource": {
@@ -799,7 +733,7 @@
       }
     },
     {
-      "id": 13,
+      "id": 8,
       "type": "row",
       "title": "GraphQL",
       "collapsed": false,
@@ -812,7 +746,7 @@
       "panels": []
     },
     {
-      "id": 14,
+      "id": 9006,
       "type": "timeseries",
       "title": "Requests per Tick",
       "datasource": {
@@ -901,7 +835,7 @@
       }
     },
     {
-      "id": 15,
+      "id": 9007,
       "type": "timeseries",
       "title": "Error Responses per Tick",
       "datasource": {
@@ -990,7 +924,7 @@
       }
     },
     {
-      "id": 16,
+      "id": 9,
       "type": "row",
       "title": "Flush to VictoriaMetrics",
       "collapsed": false,
@@ -1003,7 +937,7 @@
       "panels": []
     },
     {
-      "id": 17,
+      "id": 10,
       "type": "timeseries",
       "title": "Flush Bytes",
       "datasource": {
@@ -1092,7 +1026,7 @@
       }
     },
     {
-      "id": 18,
+      "id": 11,
       "type": "timeseries",
       "title": "Flush Duration",
       "datasource": {
@@ -1181,7 +1115,7 @@
       }
     },
     {
-      "id": 19,
+      "id": 9004,
       "type": "timeseries",
       "title": "Flush Errors",
       "datasource": {
@@ -1270,7 +1204,7 @@
       }
     },
     {
-      "id": 20,
+      "id": 12,
       "type": "timeseries",
       "title": "Pending Buffers",
       "datasource": {
@@ -1371,7 +1305,7 @@
       }
     },
     {
-      "id": 21,
+      "id": 13,
       "type": "row",
       "title": "Resource Lookups (REST)",
       "collapsed": false,
@@ -1384,7 +1318,7 @@
       "panels": []
     },
     {
-      "id": 22,
+      "id": 14,
       "type": "timeseries",
       "title": "Lookup Calls",
       "datasource": {
@@ -1473,7 +1407,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 15,
       "type": "timeseries",
       "title": "Lookup Errors",
       "datasource": {
@@ -1562,7 +1496,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 16,
       "type": "timeseries",
       "title": "Zones Bulk Resolved",
       "datasource": {
@@ -1675,7 +1609,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 17,
       "type": "row",
       "title": "Worker HTTP",
       "collapsed": false,
@@ -1688,7 +1622,7 @@
       "panels": []
     },
     {
-      "id": 26,
+      "id": 18,
       "type": "timeseries",
       "title": "HTTP Responses",
       "datasource": {
@@ -1777,7 +1711,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 19,
       "type": "timeseries",
       "title": "Handle Duration",
       "datasource": {

@@ -7,6 +7,21 @@ locals {
   dashboards_folder_uid = replace(lower(local.grafana_folder_name), "/[^a-z\\d]/", "-")
 
   prometheus_datasource_uid = "36979063-5384-4eb9-8679-565a727cbc13"
+
+  # All exporter-health alerts link back to panels on the exporter-health
+  # dashboard. The panel IDs are pinned in the 9000 range inside the
+  # dashboard generator (apps/cloudflare-metrics generate-dashboards.py) so
+  # reordering panels doesn't break the alert → panel links.
+  exporter_health_uid = "cf-exporter-health"
+  alert_panels = {
+    collector_liveness   = 9001
+    cron_errors          = 9002
+    dataset_errors       = 9003
+    flush_errors         = 9004
+    pending_flush        = 9005
+    graphql_requests     = 9006
+    graphql_err_response = 9007
+  }
 }
 
 resource "grafana_rule_group" "cloudflare_metrics_alerts" {
@@ -72,8 +87,10 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
     exec_err_state = "Error"
     for            = "10m"
     annotations = {
-      summary     = "Cloudflare metrics collector is not running"
-      description = "No cloudflare_metrics_cron_summary_datasets datapoints in the last 10 minutes — the scheduled handler is wedged, crashing, or missing its Cloudflare API token."
+      __dashboardUid__ = local.exporter_health_uid
+      __panelId__      = tostring(local.alert_panels.collector_liveness)
+      summary          = "Cloudflare metrics collector is not running"
+      description      = "No cloudflare_metrics_cron_summary_datasets datapoints in the last 10 minutes — the scheduled handler is wedged, crashing, or missing its Cloudflare API token."
     }
     labels    = { severity = "1" }
     is_paused = false
@@ -131,8 +148,10 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
     exec_err_state = "OK"
     for            = "1m"
     annotations = {
-      summary     = "Cloudflare metrics collector threw an exception"
-      description = "cron_error_count was incremented in the last 10 minutes — collection threw or the handler booted without its Cloudflare credentials."
+      __dashboardUid__ = local.exporter_health_uid
+      __panelId__      = tostring(local.alert_panels.cron_errors)
+      summary          = "Cloudflare metrics collector threw an exception"
+      description      = "cron_error_count was incremented in the last 10 minutes — collection threw or the handler booted without its Cloudflare credentials."
     }
     labels    = { severity = "1" }
     is_paused = false
@@ -191,8 +210,10 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
     exec_err_state = "OK"
     for            = "10m"
     annotations = {
-      summary     = "Collector dataset errors sustained"
-      description = "More than 10 dataset-level errors in the last 15 minutes. Check the exporter-health dashboard to see which datasets are failing."
+      __dashboardUid__ = local.exporter_health_uid
+      __panelId__      = tostring(local.alert_panels.dataset_errors)
+      summary          = "Collector dataset errors sustained"
+      description      = "More than 10 dataset-level errors in the last 15 minutes. Check the exporter-health dashboard to see which datasets are failing."
     }
     labels    = { severity = "3" }
     is_paused = false
@@ -252,8 +273,10 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
     exec_err_state = "OK"
     for            = "10m"
     annotations = {
-      summary     = "Metrics flush to VictoriaMetrics is failing"
-      description = "More than 3 flush errors in the last 15 minutes. The worker is stashing bodies for retry; the stash is capped at 10 MB before it starts dropping the oldest. Check VictoriaMetrics / vmauth health."
+      __dashboardUid__ = local.exporter_health_uid
+      __panelId__      = tostring(local.alert_panels.flush_errors)
+      summary          = "Metrics flush to VictoriaMetrics is failing"
+      description      = "More than 3 flush errors in the last 15 minutes. The worker is stashing bodies for retry; the stash is capped at 10 MB before it starts dropping the oldest. Check VictoriaMetrics / vmauth health."
     }
     labels    = { severity = "1" }
     is_paused = false
@@ -311,8 +334,10 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
     exec_err_state = "OK"
     for            = "10m"
     annotations = {
-      summary     = "Pending flush buffer growing"
-      description = "The worker has stashed more than 3 failed flush bodies waiting for retry. Something is preventing the VM write endpoint from draining them."
+      __dashboardUid__ = local.exporter_health_uid
+      __panelId__      = tostring(local.alert_panels.pending_flush)
+      summary          = "Pending flush buffer growing"
+      description      = "The worker has stashed more than 3 failed flush bodies waiting for retry. Something is preventing the VM write endpoint from draining them."
     }
     labels    = { severity = "3" }
     is_paused = false
@@ -371,8 +396,10 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
     exec_err_state = "OK"
     for            = "10m"
     annotations = {
-      summary     = "GraphQL subrequest count approaching Workers cap"
-      description = "A cron tick issued more than 40 GraphQL subrequests (Workers paid-plan cap is 50). Add more datasets into the same batched chunk or raise ACCOUNT_BATCH_CHUNK_SIZE before hitting the ceiling."
+      __dashboardUid__ = local.exporter_health_uid
+      __panelId__      = tostring(local.alert_panels.graphql_requests)
+      summary          = "GraphQL subrequest count approaching Workers cap"
+      description      = "A cron tick issued more than 40 GraphQL subrequests (Workers paid-plan cap is 50). Add more datasets into the same batched chunk or raise ACCOUNT_BATCH_CHUNK_SIZE before hitting the ceiling."
     }
     labels    = { severity = "3" }
     is_paused = false
@@ -431,8 +458,10 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
     exec_err_state = "OK"
     for            = "10m"
     annotations = {
-      summary     = "GraphQL error responses sustained"
-      description = "More than 5 GraphQL responses with errors[] in the last 15 minutes. This usually means a batched chunk contains an invalid field name; check the exporter-health dashboard."
+      __dashboardUid__ = local.exporter_health_uid
+      __panelId__      = tostring(local.alert_panels.graphql_err_response)
+      summary          = "GraphQL error responses sustained"
+      description      = "More than 5 GraphQL responses with errors[] in the last 15 minutes. This usually means a batched chunk contains an invalid field name; check the exporter-health dashboard."
     }
     labels    = { severity = "3" }
     is_paused = false
