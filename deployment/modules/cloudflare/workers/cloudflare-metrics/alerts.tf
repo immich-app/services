@@ -1,0 +1,437 @@
+locals {
+  # Must match the folder_name input passed to `module.grafana` in dashboards.tf.
+  grafana_folder_name = var.stage != "" ? "cloudflare-metrics (${var.stage})" : "cloudflare-metrics"
+  # Mirrors the regex inside the shared grafana module
+  # (devtools//tf/shared/modules/grafana/grafana.tf): lowercase, anything
+  # that isn't a-z or 0-9 becomes "-".
+  dashboards_folder_uid = replace(lower(local.grafana_folder_name), "/[^a-z\\d]/", "-")
+
+  prometheus_datasource_uid = "36979063-5384-4eb9-8679-565a727cbc13"
+}
+
+resource "grafana_rule_group" "cloudflare_metrics_alerts" {
+  org_id             = 1
+  name               = "Cloudflare Metrics Exporter"
+  folder_uid         = local.dashboards_folder_uid
+  interval_seconds   = 60
+  disable_provenance = true
+
+  # 1) Collector stopped running entirely — cron_summary hasn't been emitted
+  #    in the last 10 minutes. Fires for the scheduled handler being wedged,
+  #    crashing at startup, or losing its token.
+  rule {
+    name      = "Collector Not Running"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      datasource_uid = local.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
+        editorMode    = "code"
+        expr          = "absent_over_time(cloudflare_metrics_cron_summary_datasets[10m])"
+        instant       = true
+        intervalMs    = 60000
+        legendFormat  = "absent"
+        maxDataPoints = 43200
+        refId         = "A"
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        datasource = { type = "__expr__", uid = "__expr__" }
+        expression = "A"
+        refId      = "C"
+        type       = "threshold"
+        conditions = [{
+          evaluator = { params = [0], type = "gt" }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { params = [], type = "last" }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    no_data_state  = "Alerting"
+    exec_err_state = "Error"
+    for            = "5m"
+    annotations = {
+      summary     = "Cloudflare metrics collector is not running"
+      description = "cloudflare_metrics_cron_summary_datasets has been absent for 10 minutes — the scheduled handler is wedged, crashing, or missing its Cloudflare API token."
+    }
+    labels    = { severity = "1" }
+    is_paused = false
+  }
+
+  # 2) Per-tick cron exception. Any cron_error surfaces either a missing
+  #    config or a thrown exception during collection.
+  rule {
+    name      = "Collector Cron Error"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      datasource_uid = local.prometheus_datasource_uid
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+      model = jsonencode({
+        datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
+        editorMode    = "code"
+        expr          = "sum(increase(cloudflare_metrics_cron_error_count[10m]))"
+        instant       = true
+        intervalMs    = 60000
+        legendFormat  = "errors"
+        maxDataPoints = 43200
+        refId         = "A"
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        datasource = { type = "__expr__", uid = "__expr__" }
+        expression = "A"
+        refId      = "C"
+        type       = "threshold"
+        conditions = [{
+          evaluator = { params = [0], type = "gt" }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { params = [], type = "last" }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "1m"
+    annotations = {
+      summary     = "Cloudflare metrics collector threw an exception"
+      description = "cron_error_count was incremented in the last 10 minutes — collection threw or the handler booted without its Cloudflare credentials."
+    }
+    labels    = { severity = "1" }
+    is_paused = false
+  }
+
+  # 3) Sustained per-dataset errors. A handful here and there are expected
+  #    on datasets for products we don't use; this catches real breakage
+  #    like plan changes or renamed fields.
+  rule {
+    name      = "Collector Dataset Errors Sustained"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      datasource_uid = local.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
+        editorMode    = "code"
+        expr          = "sum(increase(cloudflare_metrics_collector_dataset_errors[15m]))"
+        instant       = true
+        intervalMs    = 60000
+        legendFormat  = "errors"
+        maxDataPoints = 43200
+        refId         = "A"
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        datasource = { type = "__expr__", uid = "__expr__" }
+        expression = "A"
+        refId      = "C"
+        type       = "threshold"
+        conditions = [{
+          evaluator = { params = [10], type = "gt" }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { params = [], type = "last" }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+    annotations = {
+      summary     = "Collector dataset errors sustained"
+      description = "More than 10 dataset-level errors in the last 15 minutes. Check the exporter-health dashboard to see which datasets are failing."
+    }
+    labels    = { severity = "3" }
+    is_paused = false
+  }
+
+  # 4) Flush to VictoriaMetrics is failing. This isn't immediately
+  #    data-loss — failed bodies get stashed and retried on the next tick —
+  #    but sustained failures will eventually hit the 10 MB stash cap and
+  #    drop points.
+  rule {
+    name      = "Metrics Flush Failing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      datasource_uid = local.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
+        editorMode    = "code"
+        expr          = "sum(increase(cloudflare_metrics_flush_errors[15m]))"
+        instant       = true
+        intervalMs    = 60000
+        legendFormat  = "errors"
+        maxDataPoints = 43200
+        refId         = "A"
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        datasource = { type = "__expr__", uid = "__expr__" }
+        expression = "A"
+        refId      = "C"
+        type       = "threshold"
+        conditions = [{
+          evaluator = { params = [3], type = "gt" }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { params = [], type = "last" }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+    annotations = {
+      summary     = "Metrics flush to VictoriaMetrics is failing"
+      description = "More than 3 flush errors in the last 15 minutes. The worker is stashing bodies for retry; the stash is capped at 10 MB before it starts dropping the oldest. Check VictoriaMetrics / vmauth health."
+    }
+    labels    = { severity = "1" }
+    is_paused = false
+  }
+
+  # 5) Pending flush buffer growing. Catches cases where failures are
+  #    briefly under the rate threshold but the backlog is still climbing.
+  rule {
+    name      = "Pending Flush Buffer Growing"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      datasource_uid = local.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
+        editorMode    = "code"
+        expr          = "max(cloudflare_metrics_flush_pending_buffers)"
+        instant       = true
+        intervalMs    = 60000
+        legendFormat  = "buffers"
+        maxDataPoints = 43200
+        refId         = "A"
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        datasource = { type = "__expr__", uid = "__expr__" }
+        expression = "A"
+        refId      = "C"
+        type       = "threshold"
+        conditions = [{
+          evaluator = { params = [3], type = "gt" }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { params = [], type = "last" }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+    annotations = {
+      summary     = "Pending flush buffer growing"
+      description = "The worker has stashed more than 3 failed flush bodies waiting for retry. Something is preventing the VM write endpoint from draining them."
+    }
+    labels    = { severity = "3" }
+    is_paused = false
+  }
+
+  # 6) Subrequest budget near the Workers 50/invocation cap. We currently
+  #    burn ~16 per tick; alert if we ever approach the ceiling so we know
+  #    to re-chunk before hitting the limit in production.
+  rule {
+    name      = "GraphQL Subrequest Budget Near Cap"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      datasource_uid = local.prometheus_datasource_uid
+      relative_time_range {
+        from = 600
+        to   = 0
+      }
+      model = jsonencode({
+        datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
+        editorMode    = "code"
+        expr          = "max(cloudflare_metrics_graphql_client_requests)"
+        instant       = true
+        intervalMs    = 60000
+        legendFormat  = "requests"
+        maxDataPoints = 43200
+        refId         = "A"
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        datasource = { type = "__expr__", uid = "__expr__" }
+        expression = "A"
+        refId      = "C"
+        type       = "threshold"
+        conditions = [{
+          evaluator = { params = [40], type = "gt" }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { params = [], type = "last" }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+    annotations = {
+      summary     = "GraphQL subrequest count approaching Workers cap"
+      description = "A cron tick issued more than 40 GraphQL subrequests (Workers paid-plan cap is 50). Add more datasets into the same batched chunk or raise ACCOUNT_BATCH_CHUNK_SIZE before hitting the ceiling."
+    }
+    labels    = { severity = "3" }
+    is_paused = false
+  }
+
+  # 7) GraphQL error-response rate. Our batched query shares chunks, so a
+  #    wrong field name surfaces as every dataset in that chunk failing.
+  #    Treat any sustained error-response rate as a deployment smell.
+  rule {
+    name      = "GraphQL Error Responses Sustained"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      datasource_uid = local.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
+        editorMode    = "code"
+        expr          = "sum(increase(cloudflare_metrics_graphql_client_error_responses[15m]))"
+        instant       = true
+        intervalMs    = 60000
+        legendFormat  = "error responses"
+        maxDataPoints = 43200
+        refId         = "A"
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        datasource = { type = "__expr__", uid = "__expr__" }
+        expression = "A"
+        refId      = "C"
+        type       = "threshold"
+        conditions = [{
+          evaluator = { params = [5], type = "gt" }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { params = [], type = "last" }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+    annotations = {
+      summary     = "GraphQL error responses sustained"
+      description = "More than 5 GraphQL responses with errors[] in the last 15 minutes. This usually means a batched chunk contains an invalid field name; check the exporter-health dashboard."
+    }
+    labels    = { severity = "3" }
+    is_paused = false
+  }
+}
