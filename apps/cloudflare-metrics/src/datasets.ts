@@ -371,6 +371,7 @@ export const HYPERDRIVE_QUERIES: DatasetQuery = {
   measurement: 'cf_hyperdrive_queries',
   field: 'hyperdriveQueriesAdaptiveGroups',
   dimensions: ['datetimeMinute', 'configId', 'cacheStatus', 'eventStatus', 'isFree'],
+  topLevelFields: ['count'],
   blocks: {
     sum: [
       'queryBytes',
@@ -389,6 +390,7 @@ export const HYPERDRIVE_QUERIES: DatasetQuery = {
     { source: 'isFree', as: 'is_free' },
   ],
   fields: {
+    count: { type: 'int', source: ['_top', 'count'] },
     query_bytes: { type: 'int', source: ['sum', 'queryBytes'] },
     result_bytes: { type: 'int', source: ['sum', 'resultBytes'] },
     query_latency_us: { type: 'int', source: ['sum', 'queryLatency'] },
@@ -445,6 +447,7 @@ export const PAGES_FUNCTIONS_INVOCATIONS: DatasetQuery = {
   dimensions: ['datetimeMinute', 'scriptName', 'status', 'usageModel'],
   blocks: {
     sum: ['requests', 'errors', 'clientDisconnects', 'duration', 'wallTime', 'subrequests', 'responseBodySize'],
+    quantiles: ['cpuTimeP50', 'cpuTimeP99', 'durationP50', 'durationP99'],
   },
   tags: [
     { source: 'scriptName', as: 'script_name' },
@@ -459,6 +462,10 @@ export const PAGES_FUNCTIONS_INVOCATIONS: DatasetQuery = {
     wall_time_us_sum: { type: 'int', source: ['sum', 'wallTime'] },
     subrequests: { type: 'int', source: ['sum', 'subrequests'] },
     response_body_size_bytes_sum: { type: 'int', source: ['sum', 'responseBodySize'] },
+    cpu_time_us_p50: { type: 'int', source: ['quantiles', 'cpuTimeP50'] },
+    cpu_time_us_p99: { type: 'int', source: ['quantiles', 'cpuTimeP99'] },
+    duration_ms_p50: { type: 'float', source: ['quantiles', 'durationP50'], scale: 1000 },
+    duration_ms_p99: { type: 'float', source: ['quantiles', 'durationP99'], scale: 1000 },
   },
 };
 

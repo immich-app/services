@@ -23,7 +23,7 @@
     {
       "id": 1,
       "type": "row",
-      "title": "Collector",
+      "title": "Collection (per tick)",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -35,6 +35,415 @@
     },
     {
       "id": 2,
+      "type": "stat",
+      "title": "Datasets / tick",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_cron_summary_datasets)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Points / tick",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_cron_summary_points)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Errors / tick",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_cron_summary_errors)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "GraphQL Requests / tick",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_graphql_client_requests)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "GraphQL Error Responses / tick",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_graphql_client_error_responses)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Pending Flush Buffers",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_flush_pending_buffers)",
+          "instant": true,
+          "range": false,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 8,
+      "type": "row",
+      "title": "Collector \u2014 per dataset",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
       "type": "timeseries",
       "title": "Rows per Dataset",
       "datasource": {
@@ -45,7 +454,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 1
+        "y": 6
       },
       "fieldConfig": {
         "defaults": {
@@ -63,7 +472,7 @@
               }
             ]
           },
-          "unit": "short",
+          "unit": "ops",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
@@ -123,7 +532,96 @@
       }
     },
     {
-      "id": 3,
+      "id": 10,
+      "type": "timeseries",
+      "title": "Points per Dataset",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "sum by (dataset) (rate(cloudflare_metrics_collector_dataset_points[5m]))",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{dataset}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
       "type": "timeseries",
       "title": "Errors per Dataset",
       "datasource": {
@@ -133,8 +631,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 1
+        "x": 0,
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -212,9 +710,9 @@
       }
     },
     {
-      "id": 4,
+      "id": 12,
       "type": "timeseries",
-      "title": "Collector Duration p99",
+      "title": "Duration per Dataset (last value)",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -222,8 +720,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 9
+        "x": 12,
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -276,7 +774,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (dataset) (cloudflare_metrics_collector_dataset_duration_ms_p99)",
+          "expr": "max by (dataset) (cloudflare_metrics_collector_dataset_duration)",
           "instant": false,
           "range": true,
           "legendFormat": "{{dataset}}",
@@ -301,111 +799,22 @@
       }
     },
     {
-      "id": 5,
-      "type": "timeseries",
-      "title": "Batch Request Rate",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 9
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "reqps",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "spanNulls": false,
-            "showPoints": "never",
-            "pointSize": 5,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
-          },
-          "editorMode": "code",
-          "expr": "sum (rate(cloudflare_metrics_collector_graphql_requests[5m]))",
-          "instant": false,
-          "range": true,
-          "legendFormat": "requests/s",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 6,
+      "id": 13,
       "type": "row",
-      "title": "Flush",
+      "title": "GraphQL",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 22
       },
       "panels": []
     },
     {
-      "id": 7,
+      "id": 14,
       "type": "timeseries",
-      "title": "Pending Buffers",
+      "title": "Requests per Tick",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -414,7 +823,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {
@@ -467,10 +876,10 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max(cloudflare_metrics_flush_pending_buffers)",
+          "expr": "max(cloudflare_metrics_graphql_client_requests)",
           "instant": false,
           "range": true,
-          "legendFormat": "pending",
+          "legendFormat": "requests",
           "refId": "A"
         }
       ],
@@ -492,9 +901,9 @@
       }
     },
     {
-      "id": 8,
+      "id": 15,
       "type": "timeseries",
-      "title": "Flush Errors",
+      "title": "Error Responses per Tick",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -503,7 +912,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {
@@ -556,10 +965,10 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (rate(cloudflare_metrics_flush_errors[5m]))",
+          "expr": "max(cloudflare_metrics_graphql_client_error_responses)",
           "instant": false,
           "range": true,
-          "legendFormat": "errors/s",
+          "legendFormat": "error responses",
           "refId": "A"
         }
       ],
@@ -581,7 +990,20 @@
       }
     },
     {
-      "id": 9,
+      "id": 16,
+      "type": "row",
+      "title": "Flush to VictoriaMetrics",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "panels": []
+    },
+    {
+      "id": 17,
       "type": "timeseries",
       "title": "Flush Bytes",
       "datasource": {
@@ -592,7 +1014,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 32
       },
       "fieldConfig": {
         "defaults": {
@@ -610,7 +1032,7 @@
               }
             ]
           },
-          "unit": "Bps",
+          "unit": "decbytes",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
@@ -645,10 +1067,10 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (rate(cloudflare_metrics_flush_bytes[5m]))",
+          "expr": "max(cloudflare_metrics_flush_bytes)",
           "instant": false,
           "range": true,
-          "legendFormat": "bytes/s",
+          "legendFormat": "bytes",
           "refId": "A"
         }
       ],
@@ -670,7 +1092,7 @@
       }
     },
     {
-      "id": 10,
+      "id": 18,
       "type": "timeseries",
       "title": "Flush Duration",
       "datasource": {
@@ -681,7 +1103,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 32
       },
       "fieldConfig": {
         "defaults": {
@@ -759,22 +1181,9 @@
       }
     },
     {
-      "id": 11,
-      "type": "row",
-      "title": "Resource Lookups",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 34
-      },
-      "panels": []
-    },
-    {
-      "id": 12,
+      "id": 19,
       "type": "timeseries",
-      "title": "Lookups per Resource",
+      "title": "Flush Errors",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -783,7 +1192,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 35
+        "y": 40
       },
       "fieldConfig": {
         "defaults": {
@@ -836,7 +1245,210 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (resource, status) (rate(cloudflare_metrics_resource_lookup[5m]))",
+          "expr": "sum (increase(cloudflare_metrics_flush_errors[5m]))",
+          "instant": false,
+          "range": true,
+          "legendFormat": "errors",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Pending Buffers",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 40
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_flush_pending_buffers)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "buffers",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_flush_pending_bytes)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "bytes",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "row",
+      "title": "Resource Lookups (REST)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "panels": []
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Lookup Calls",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 49
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "sum by (resource, status) (rate(cloudflare_metrics_resource_lookup_count[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{resource}} {{status}}",
@@ -861,9 +1473,9 @@
       }
     },
     {
-      "id": 13,
+      "id": 23,
       "type": "timeseries",
-      "title": "HTTP Responses",
+      "title": "Lookup Errors",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -872,7 +1484,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 35
+        "y": 49
       },
       "fieldConfig": {
         "defaults": {
@@ -925,10 +1537,314 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (path, status) (rate(cloudflare_metrics_http_response[5m]))",
+          "expr": "sum by (resource) (rate(cloudflare_metrics_resource_lookup_errors[5m]))",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{resource}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Zones Bulk Resolved",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 57
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_resource_lookup_requested)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "requested",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_resource_lookup_resolved)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "resolved",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_resource_lookup_failed)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "failed",
+          "refId": "C"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "row",
+      "title": "Worker HTTP",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 65
+      },
+      "panels": []
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "HTTP Responses",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 66
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "sum by (path, status) (rate(cloudflare_metrics_http_response_count[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{path}} {{status}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "Handle Duration",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 66
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max(cloudflare_metrics_handle_request_duration)",
+          "instant": false,
+          "range": true,
+          "legendFormat": "duration",
           "refId": "A"
         }
       ],

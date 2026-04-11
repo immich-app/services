@@ -141,7 +141,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_workers_scheduled_errors{script_name=~\"$script_name\",cron=~\"$cron\"}[24h]))",
+          "expr": "sum(increase(cf_workers_scheduled_invocations{script_name=~\"$script_name\",cron=~\"$cron\",status=\"error\"}[24h]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -207,7 +207,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(rate(cf_workers_scheduled_errors{script_name=~\"$script_name\",cron=~\"$cron\"}[5m])) / clamp_min(sum(rate(cf_workers_scheduled_invocations{script_name=~\"$script_name\",cron=~\"$cron\"}[5m])), 1)",
+          "expr": "sum(rate(cf_workers_scheduled_invocations{script_name=~\"$script_name\",cron=~\"$cron\",status=\"error\"}[5m])) / clamp_min(sum(rate(cf_workers_scheduled_invocations{script_name=~\"$script_name\",cron=~\"$cron\"}[5m])), 1)",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -375,10 +375,10 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_workers_scheduled_invocations{script_name=~\"$script_name\",cron=~\"$cron\"}[5m]))",
+          "expr": "sum by (script_name, status) (rate(cf_workers_scheduled_invocations{script_name=~\"$script_name\",cron=~\"$cron\"}[5m]))",
           "instant": false,
           "range": true,
-          "legendFormat": "{{script_name}}",
+          "legendFormat": "{{script_name}} {{status}}",
           "refId": "A"
         }
       ],
@@ -464,7 +464,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_workers_scheduled_errors{script_name=~\"$script_name\",cron=~\"$cron\"}[5m]))",
+          "expr": "sum by (script_name) (rate(cf_workers_scheduled_invocations{script_name=~\"$script_name\",cron=~\"$cron\",status=\"error\"}[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",

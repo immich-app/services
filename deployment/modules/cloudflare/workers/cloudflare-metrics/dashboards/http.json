@@ -300,7 +300,7 @@
     {
       "id": 6,
       "type": "stat",
-      "title": "Encrypted Req (24h)",
+      "title": "Cached Bytes (24h)",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -327,7 +327,7 @@
               }
             ]
           },
-          "unit": "short",
+          "unit": "decbytes",
           "noValue": "0"
         },
         "overrides": []
@@ -339,7 +339,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_http_requests_overview_encrypted_requests{zone_name=~\"$zone_name\"}[24h]))",
+          "expr": "sum(increase(cf_http_requests_overview_cached_bytes{zone_name=~\"$zone_name\"}[24h]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -366,7 +366,7 @@
     {
       "id": 7,
       "type": "stat",
-      "title": "Threats (24h)",
+      "title": "Visits (24h)",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -405,7 +405,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_http_requests_overview_threats{zone_name=~\"$zone_name\"}[24h]))",
+          "expr": "sum(increase(cf_http_requests_overview_visits{zone_name=~\"$zone_name\"}[24h]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",

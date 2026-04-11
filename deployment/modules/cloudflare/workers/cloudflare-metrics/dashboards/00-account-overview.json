@@ -405,7 +405,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_d1_queries_count[24h]))",
+          "expr": "sum(increase(cf_d1_queries_detail_query_count[24h]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -1285,7 +1285,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_name) (rate(cf_d1_queries_count[5m]))",
+          "expr": "sum by (database_name) (rate(cf_d1_queries_detail_query_count[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -1374,7 +1374,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (bucket_name) (cf_r2_storage_stored_bytes)",
+          "expr": "sum by (bucket_name) (cf_r2_storage_payload_bytes)",
           "instant": false,
           "range": true,
           "legendFormat": "{{bucket_name}}",

@@ -79,11 +79,24 @@ export interface ICloudflareGraphQLClient {
 }
 
 export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
+  /** Counter of HTTP requests issued to the Cloudflare GraphQL endpoint. */
+  private _requestCount = 0;
+  /** Counter of GraphQL responses that returned `errors[]`. */
+  private _errorResponseCount = 0;
+
   constructor(
     private readonly apiToken: string,
     private readonly endpoint: string = CLOUDFLARE_GRAPHQL_ENDPOINT,
     private readonly fetchImpl?: typeof fetch,
   ) {}
+
+  get requestCount(): number {
+    return this._requestCount;
+  }
+
+  get errorResponseCount(): number {
+    return this._errorResponseCount;
+  }
 
   async fetchAccountBatch(
     accountTag: string,
@@ -216,6 +229,7 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     if (typeof doFetch !== 'function') {
       throw new TypeError(`fetch is not a function (typeof=${typeof doFetch})`);
     }
+    this._requestCount++;
     const response = await doFetch(this.endpoint, {
       method: 'POST',
       headers: {
@@ -228,7 +242,11 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
       const body = await safeReadText(response);
       throw new CloudflareGraphQLError(`Cloudflare GraphQL HTTP error (${response.status})`, response.status, body);
     }
-    return (await response.json()) as GraphQLResponse<T>;
+    const parsed = (await response.json()) as GraphQLResponse<T>;
+    if (parsed.errors && parsed.errors.length > 0) {
+      this._errorResponseCount++;
+    }
+    return parsed;
   }
 }
 

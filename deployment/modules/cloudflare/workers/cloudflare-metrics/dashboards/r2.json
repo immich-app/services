@@ -141,7 +141,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_r2_operations_egress_bytes{bucket_name=~\"$bucket_name\"}[24h]))",
+          "expr": "sum(increase(cf_r2_operations_response_object_bytes{bucket_name=~\"$bucket_name\"}[24h]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -273,7 +273,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(cf_r2_storage_stored_bytes{bucket_name=~\"$bucket_name\"})",
+          "expr": "sum(cf_r2_storage_payload_bytes{bucket_name=~\"$bucket_name\"})",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -366,7 +366,7 @@
     {
       "id": 7,
       "type": "stat",
-      "title": "Upload Bytes (24h)",
+      "title": "Response Bytes (24h)",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -405,7 +405,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_r2_operations_upload_bytes{bucket_name=~\"$bucket_name\"}[24h]))",
+          "expr": "sum(increase(cf_r2_operations_response_bytes{bucket_name=~\"$bucket_name\"}[24h]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -596,7 +596,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (bucket_name) (rate(cf_r2_operations_egress_bytes{bucket_name=~\"$bucket_name\"}[5m]))",
+          "expr": "sum by (bucket_name) (rate(cf_r2_operations_response_object_bytes{bucket_name=~\"$bucket_name\"}[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{bucket_name}}",
@@ -698,7 +698,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (bucket_name, storage_class) (cf_r2_storage_stored_bytes{bucket_name=~\"$bucket_name\"})",
+          "expr": "sum by (bucket_name, storage_class) (cf_r2_storage_payload_bytes{bucket_name=~\"$bucket_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{bucket_name}} {{storage_class}}",

@@ -75,7 +75,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_d1_queries_count{database_name=~\"$database_name\"}[24h]))",
+          "expr": "sum(increase(cf_d1_queries_detail_query_count{database_name=~\"$database_name\"}[24h]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -141,7 +141,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_d1_queries_errors{database_name=~\"$database_name\"}[24h]))",
+          "expr": "sum(increase(cf_d1_queries_detail_query_count{database_name=~\"$database_name\",error!=\"\"}[24h]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -405,7 +405,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max(cf_d1_queries_query_duration_ms_p99{database_name=~\"$database_name\"})",
+          "expr": "max(cf_d1_queries_detail_query_duration_ms_p99{database_name=~\"$database_name\"})",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -507,7 +507,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_name) (rate(cf_d1_queries_count{database_name=~\"$database_name\"}[5m]))",
+          "expr": "sum by (database_name) (rate(cf_d1_queries_detail_query_count{database_name=~\"$database_name\"}[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -596,7 +596,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_name) (rate(cf_d1_queries_errors{database_name=~\"$database_name\"}[5m]))",
+          "expr": "sum by (database_name) (rate(cf_d1_queries_detail_query_count{database_name=~\"$database_name\",error!=\"\"}[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -889,7 +889,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (database_name) (cf_d1_queries_query_duration_ms_p50{database_name=~\"$database_name\"})",
+          "expr": "max by (database_name) (cf_d1_queries_detail_query_duration_ms_p50{database_name=~\"$database_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -978,7 +978,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (database_name) (cf_d1_queries_query_duration_ms_p95{database_name=~\"$database_name\"})",
+          "expr": "max by (database_name) (cf_d1_queries_detail_query_duration_ms_p95{database_name=~\"$database_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -1067,7 +1067,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (database_name) (cf_d1_queries_query_duration_ms_p99{database_name=~\"$database_name\"})",
+          "expr": "max by (database_name) (cf_d1_queries_detail_query_duration_ms_p99{database_name=~\"$database_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -1197,7 +1197,7 @@
           "uid": "36979063-5384-4eb9-8679-565a727cbc13"
         },
         "query": {
-          "query": "label_values(cf_d1_queries_count, database_name)",
+          "query": "label_values(cf_d1_queries_detail_query_count, database_name)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 2,
@@ -1207,7 +1207,7 @@
         "allValue": ".*",
         "multi": true,
         "hide": 0,
-        "definition": "label_values(cf_d1_queries_count, database_name)",
+        "definition": "label_values(cf_d1_queries_detail_query_count, database_name)",
         "options": [],
         "skipUrlSync": false,
         "current": {

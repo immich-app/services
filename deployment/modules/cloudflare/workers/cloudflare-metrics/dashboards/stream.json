@@ -98,7 +98,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (video_id) (rate(cf_stream_minutes_viewed_minutes[5m]))",
+          "expr": "sum by (video_id) (rate(cf_stream_minutes_viewed_minutes_viewed[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{video_id}}",
@@ -187,7 +187,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (rate(cf_stream_cmcd_ms_viewed[5m]))",
+          "expr": "sum (rate(cf_stream_cmcd_milliseconds_viewed[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "ms/s",

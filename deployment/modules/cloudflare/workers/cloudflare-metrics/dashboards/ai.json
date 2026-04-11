@@ -141,7 +141,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_ai_inference_total_neurons[24h]))",
+          "expr": "sum(increase(cf_ai_inference_neurons[24h]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -319,7 +319,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (model_name) (rate(cf_ai_inference_total_neurons[5m]))",
+          "expr": "sum by (model_name) (rate(cf_ai_inference_neurons[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{model_name}}",
@@ -510,7 +510,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (gateway) (rate(cf_ai_gateway_cache_requests[5m])) / clamp_min(sum by (gateway) (rate(cf_ai_gateway_requests_requests[5m])), 1)",
+          "expr": "sum by (gateway) (rate(cf_ai_gateway_cache_events[5m])) / clamp_min(sum by (gateway) (rate(cf_ai_gateway_requests_requests[5m])), 1)",
           "instant": false,
           "range": true,
           "legendFormat": "{{gateway}}",
@@ -688,7 +688,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (gateway) (cf_ai_gateway_size_max_rows)",
+          "expr": "max by (gateway) (cf_ai_gateway_size_rows_max)",
           "instant": false,
           "range": true,
           "legendFormat": "{{gateway}}",
@@ -790,7 +790,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (namespace) (rate(cf_ai_search_api_searches[5m]))",
+          "expr": "sum by (namespace) (rate(cf_ai_search_api_search_count[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{namespace}}",
@@ -879,7 +879,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (namespace) (rate(cf_ai_search_ingested_chunks[5m]))",
+          "expr": "sum by (namespace) (rate(cf_ai_search_ingested_num_chunks[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{namespace}}",
@@ -981,7 +981,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (instance) (rate(cf_auto_rag_config_api_searches[5m]))",
+          "expr": "sum by (instance) (rate(cf_auto_rag_config_api_search_count[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{instance}}",

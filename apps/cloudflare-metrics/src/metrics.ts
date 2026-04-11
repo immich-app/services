@@ -133,6 +133,27 @@ function getMetricsWriteUrl(environment: string): string {
 const pendingFlushBuffers: string[] = [];
 const MAX_PENDING_FLUSH_BYTES = 10 * 1024 * 1024;
 
+/**
+ * Stats recorded by the previous call to `InfluxMetricsProvider.flush`. Kept
+ * at module scope so the next cron tick can pull them in as self-telemetry
+ * (you can't observe a flush while you're inside it). `null` until the first
+ * flush completes.
+ */
+export interface LastFlushStats {
+  bytes: number;
+  durationMs: number;
+  status: 'ok' | 'error';
+  pendingBuffers: number;
+  pendingBytes: number;
+}
+let lastFlushStats: LastFlushStats | null = null;
+
+export function takeLastFlushStats(): LastFlushStats | null {
+  const stats = lastFlushStats;
+  lastFlushStats = null;
+  return stats;
+}
+
 export class InfluxMetricsProvider implements IMetricsProviderRepository {
   private metrics: string[] = [];
   private writeUrl: string;
@@ -171,6 +192,7 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
   }
 
   async flush() {
+    const startedAt = performance.now();
     const currentBody = this.metrics.join('\n');
     this.metrics = [];
 
@@ -185,11 +207,13 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
       return;
     }
     const body = parts.join('\n');
+    let status: 'ok' | 'error' = 'ok';
 
     if (this.environment !== 'prod') {
       console.log(body);
     }
     if (!this.influxApiToken) {
+      this.recordFlushStats(body, performance.now() - startedAt, status);
       return;
     }
     try {
@@ -202,11 +226,25 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
       if (!response.ok) {
         console.error('Failed to push metrics', response.status, response.statusText);
         this.stashFailedFlush(body);
+        status = 'error';
       }
     } catch (error) {
       console.error('Metric flush threw', error);
       this.stashFailedFlush(body);
+      status = 'error';
     }
+
+    this.recordFlushStats(body, performance.now() - startedAt, status);
+  }
+
+  private recordFlushStats(body: string, durationMs: number, status: 'ok' | 'error'): void {
+    lastFlushStats = {
+      bytes: body.length,
+      durationMs,
+      status,
+      pendingBuffers: pendingFlushBuffers.length,
+      pendingBytes: pendingFlushBuffers.reduce((acc, b) => acc + b.length, 0),
+    };
   }
 
   private stashFailedFlush(body: string): void {

@@ -652,7 +652,8 @@ export class CloudflareMetricsCollector {
     const dims = row.dimensions ?? {};
     switch (dataset.field) {
       case 'd1AnalyticsAdaptiveGroups':
-      case 'd1StorageAdaptiveGroups': {
+      case 'd1StorageAdaptiveGroups':
+      case 'd1QueriesAdaptiveGroups': {
         const id = normalizeTagValue(dims.databaseId);
         const name = id ? this.resourceCache.d1Databases.get(id) : undefined;
         if (name) {

@@ -187,7 +187,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (rate(cf_browser_rendering_browser_time_total_duration_ms[5m]))",
+          "expr": "sum (rate(cf_browser_rendering_browser_time_total_session_duration_ms[5m]))",
           "instant": false,
           "range": true,
           "legendFormat": "total ms/s",
@@ -365,7 +365,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (cf_browser_rendering_events_unique_events)",
+          "expr": "sum (cf_browser_rendering_events_events)",
           "instant": false,
           "range": true,
           "legendFormat": "events",

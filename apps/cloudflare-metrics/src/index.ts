@@ -3,7 +3,13 @@ import { CloudflareMetricsCollector } from './collector.js';
 import { ALL_DATASETS } from './datasets.js';
 import { DeferredRepository } from './deferred.js';
 import { CloudflareGraphQLClient } from './graphql-client.js';
-import { CloudflareMetricsRepository, HeaderMetricsProvider, InfluxMetricsProvider, Metric } from './metrics.js';
+import {
+  CloudflareMetricsRepository,
+  HeaderMetricsProvider,
+  InfluxMetricsProvider,
+  Metric,
+  takeLastFlushStats,
+} from './metrics.js';
 
 const DEFAULT_HEADERS: Record<string, string> = {
   'Content-Type': 'application/json',
@@ -61,7 +67,8 @@ export default {
             if (!env.CLOUDFLARE_API_TOKEN || !env.CLOUDFLARE_ACCOUNT_ID) {
               return errorResponse('Collector not configured', 503);
             }
-            const results = await runCollection(env, metrics);
+            const graphqlClient = new CloudflareGraphQLClient(env.CLOUDFLARE_API_TOKEN);
+            const results = await runCollection(env, metrics, graphqlClient);
             return jsonResponse({ results });
           }
 
@@ -107,6 +114,11 @@ export default {
       env.ENVIRONMENT ?? '',
     );
 
+    // Emit telemetry from the previous tick's flush (can't observe the flush
+    // we're about to make from inside it). `takeLastFlushStats` clears after
+    // read so a tick without a prior flush just skips these metrics.
+    emitLastFlushStats(metrics);
+
     if (!env.CLOUDFLARE_API_TOKEN || !env.CLOUDFLARE_ACCOUNT_ID) {
       console.error('[cron] Missing CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID — skipping collection');
       metrics.push(Metric.create('cron_error').addTag('reason', 'missing_config').intField('count', 1));
@@ -114,8 +126,11 @@ export default {
       return;
     }
 
+    const graphqlClient = new CloudflareGraphQLClient(env.CLOUDFLARE_API_TOKEN);
     try {
-      const results = await metrics.monitorAsyncFunction({ name: 'cron_collect' }, () => runCollection(env, metrics))();
+      const results = await metrics.monitorAsyncFunction({ name: 'cron_collect' }, () =>
+        runCollection(env, metrics, graphqlClient),
+      )();
       const totalPoints = results.reduce((acc, r) => acc + r.points, 0);
       const totalErrors = results.filter((r) => r.error).length;
       metrics.push(
@@ -134,12 +149,34 @@ export default {
       );
     }
 
+    metrics.push(
+      Metric.create('graphql_client')
+        .intField('requests', graphqlClient.requestCount)
+        .intField('error_responses', graphqlClient.errorResponseCount),
+    );
+
     ctx.waitUntil(influxProvider.flush());
   },
 };
 
-async function runCollection(env: Env, metrics: CloudflareMetricsRepository) {
-  const graphqlClient = new CloudflareGraphQLClient(env.CLOUDFLARE_API_TOKEN ?? '');
+function emitLastFlushStats(metrics: CloudflareMetricsRepository): void {
+  const stats = takeLastFlushStats();
+  if (!stats) {
+    return;
+  }
+  metrics.push(
+    Metric.create('flush')
+      .addTag('status', stats.status)
+      .intField('bytes', stats.bytes)
+      .intField('duration_ms', Math.round(stats.durationMs))
+      .intField('pending_buffers', stats.pendingBuffers)
+      .intField('pending_bytes', stats.pendingBytes)
+      .intField('errors', stats.status === 'error' ? 1 : 0)
+      .intField('count', 1),
+  );
+}
+
+async function runCollection(env: Env, metrics: CloudflareMetricsRepository, graphqlClient: CloudflareGraphQLClient) {
   const restClient = new CloudflareRestClient(env.CLOUDFLARE_API_TOKEN ?? '');
   const collector = new CloudflareMetricsCollector(graphqlClient, env.CLOUDFLARE_ACCOUNT_ID, metrics, { restClient });
   return collector.collectAll(ALL_DATASETS);

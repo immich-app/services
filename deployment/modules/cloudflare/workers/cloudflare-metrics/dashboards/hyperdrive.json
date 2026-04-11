@@ -168,7 +168,7 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Pool Size",
+      "title": "Pool Size (max)",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -207,7 +207,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max(cf_hyperdrive_pool_pool_size{config_id=~\"$config_id\"})",
+          "expr": "max(cf_hyperdrive_pool_current_pool_size{config_id=~\"$config_id\"})",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -234,7 +234,7 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "p99 Latency",
+      "title": "Waiting Clients",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -261,7 +261,7 @@
               }
             ]
           },
-          "unit": "ms",
+          "unit": "short",
           "noValue": "0"
         },
         "overrides": []
@@ -273,7 +273,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max(cf_hyperdrive_queries_query_time_ms_p99{config_id=~\"$config_id\"})",
+          "expr": "max(cf_hyperdrive_pool_waiting_clients{config_id=~\"$config_id\"})",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -491,7 +491,7 @@
     {
       "id": 9,
       "type": "row",
-      "title": "Latency",
+      "title": "Latency (avg per tick)",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -504,7 +504,7 @@
     {
       "id": 10,
       "type": "timeseries",
-      "title": "p50",
+      "title": "Query Latency (avg \u00b5s)",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -531,7 +531,7 @@
               }
             ]
           },
-          "unit": "ms",
+          "unit": "\u00b5s",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
@@ -566,7 +566,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (config_id) (cf_hyperdrive_queries_query_time_ms_p50{config_id=~\"$config_id\"})",
+          "expr": "sum by (config_id) (rate(cf_hyperdrive_queries_query_latency_us{config_id=~\"$config_id\"}[5m])) / clamp_min(sum by (config_id) (rate(cf_hyperdrive_queries_count{config_id=~\"$config_id\"}[5m])), 1)",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",
@@ -593,7 +593,7 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "p99",
+      "title": "Connection Latency (avg \u00b5s)",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -620,7 +620,7 @@
               }
             ]
           },
-          "unit": "ms",
+          "unit": "\u00b5s",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
@@ -655,7 +655,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (config_id) (cf_hyperdrive_queries_query_time_ms_p99{config_id=~\"$config_id\"})",
+          "expr": "sum by (config_id) (rate(cf_hyperdrive_queries_connection_latency_us{config_id=~\"$config_id\"}[5m])) / clamp_min(sum by (config_id) (rate(cf_hyperdrive_queries_count{config_id=~\"$config_id\"}[5m])), 1)",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",
@@ -757,7 +757,108 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (config_id) (cf_hyperdrive_pool_pool_size{config_id=~\"$config_id\"})",
+          "expr": "max by (config_id) (cf_hyperdrive_pool_current_pool_size{config_id=~\"$config_id\"})",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{config_id}} current",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max by (config_id) (cf_hyperdrive_pool_max_pool_size{config_id=~\"$config_id\"})",
+          "instant": false,
+          "range": true,
+          "legendFormat": "{{config_id}} max",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Waiting Clients",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "showPoints": "never",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "max by (config_id) (cf_hyperdrive_pool_waiting_clients{config_id=~\"$config_id\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",
