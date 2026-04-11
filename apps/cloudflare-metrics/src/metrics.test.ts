@@ -1,5 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { InfluxMetricsProvider, Metric } from './metrics.js';
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  __resetMetricsModuleStateForTests,
+  CloudflareMetricsRepository,
+  InfluxMetricsProvider,
+  Metric,
+  takeLastFlushStats,
+  type IMetricsProviderRepository,
+} from './metrics.js';
 
 describe('Metric', () => {
   it('stores int, float, and duration fields with their types', () => {
@@ -30,7 +37,129 @@ describe('Metric', () => {
   });
 });
 
+describe('CloudflareMetricsRepository', () => {
+  class Recorder implements IMetricsProviderRepository {
+    public readonly pushed: Metric[] = [];
+    pushMetric(metric: Metric) {
+      this.pushed.push(metric);
+    }
+    flush() {
+      /* noop */
+    }
+  }
+
+  it('prefixes `push()` metrics with the operation prefix and merges default tags', () => {
+    const provider = new Recorder();
+    const repo = new CloudflareMetricsRepository('svc', new Request('https://localhost/test'), [provider], 'test-env');
+    repo.push(Metric.create('event').addTag('kind', 'foo').intField('count', 1));
+    const [metric] = provider.pushed;
+    expect(metric.name).toBe('svc_event');
+    expect(metric.tags.get('kind')).toBe('foo');
+    expect(metric.tags.get('environment')).toBe('test-env');
+  });
+
+  it('forwards `pushRaw()` metrics untouched (no prefix, no default tags)', () => {
+    const provider = new Recorder();
+    const repo = new CloudflareMetricsRepository('svc', new Request('https://localhost/test'), [provider], 'test-env');
+    repo.pushRaw(Metric.create('cf_event').addTag('kind', 'foo').intField('count', 1));
+    const [metric] = provider.pushed;
+    expect(metric.name).toBe('cf_event');
+    expect(metric.tags.get('environment')).toBeUndefined();
+  });
+});
+
+describe('InfluxMetricsProvider flush self-telemetry', () => {
+  beforeEach(() => {
+    __resetMetricsModuleStateForTests();
+  });
+
+  it('takeLastFlushStats returns null before any flush has completed', () => {
+    expect(takeLastFlushStats()).toBeNull();
+  });
+
+  it('records stats with status=ok after a successful flush', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (() => Promise.resolve(new Response('', { status: 204 }))) as typeof fetch;
+    try {
+      const provider = new InfluxMetricsProvider('token', 'prod');
+      provider.pushMetric(Metric.create('foo').intField('v', 1));
+      await provider.flush();
+      const stats = takeLastFlushStats();
+      expect(stats?.status).toBe('ok');
+      expect(stats?.bytes).toBeGreaterThan(0);
+      expect(stats?.pendingBuffers).toBe(0);
+      expect(stats?.pendingBytes).toBe(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('records stats with status=error after a failed flush', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (() => Promise.resolve(new Response('bad', { status: 502 }))) as typeof fetch;
+    try {
+      const provider = new InfluxMetricsProvider('token', 'prod');
+      provider.pushMetric(Metric.create('foo').intField('v', 1));
+      await provider.flush();
+      const stats = takeLastFlushStats();
+      expect(stats?.status).toBe('error');
+      // The failed body gets stashed in the retry buffer — surface that
+      // so the next-tick self-telemetry can show it.
+      expect(stats?.pendingBuffers).toBe(1);
+      expect(stats?.pendingBytes).toBeGreaterThan(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('clears lastFlushStats after a single take', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (() => Promise.resolve(new Response('', { status: 204 }))) as typeof fetch;
+    try {
+      const provider = new InfluxMetricsProvider('token', 'prod');
+      provider.pushMetric(Metric.create('foo').intField('v', 1));
+      await provider.flush();
+      expect(takeLastFlushStats()).not.toBeNull();
+      expect(takeLastFlushStats()).toBeNull();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('evicts the oldest stashed flush body when the total exceeds the 10 MB cap', async () => {
+    const originalFetch = globalThis.fetch;
+    // Always fail so every flush stashes its body in the retry buffer.
+    globalThis.fetch = (() => Promise.resolve(new Response('', { status: 502 }))) as typeof fetch;
+    try {
+      // Each payload is ~4 MB of raw line protocol; three of them land us
+      // over the 10 MB cap and force an eviction.
+      const padding = 'x'.repeat(4 * 1024 * 1024);
+      const provider = new InfluxMetricsProvider('token', 'prod');
+
+      provider.pushMetric(Metric.create('first').addTag('pad', padding).intField('v', 1));
+      await provider.flush();
+
+      provider.pushMetric(Metric.create('second').addTag('pad', padding).intField('v', 2));
+      await provider.flush();
+
+      provider.pushMetric(Metric.create('third').addTag('pad', padding).intField('v', 3));
+      await provider.flush();
+
+      const stats = takeLastFlushStats();
+      // Two buffers should remain — the oldest got dropped to stay under the cap.
+      expect(stats?.pendingBuffers).toBe(2);
+      expect(stats?.pendingBytes).toBeLessThan(10 * 1024 * 1024 + 4 * 1024 * 1024);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
 describe('InfluxMetricsProvider line protocol', () => {
+  beforeEach(() => {
+    __resetMetricsModuleStateForTests();
+  });
+
   it('emits int and float fields with the correct suffixes', () => {
     const provider = new InfluxMetricsProvider('', '');
     const metric = Metric.create('cf_test')

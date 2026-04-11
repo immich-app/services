@@ -154,6 +154,18 @@ export function takeLastFlushStats(): LastFlushStats | null {
   return stats;
 }
 
+/**
+ * Test-only helper. Clears the module-level flush retry buffer and the
+ * stashed last-flush stats so each test starts from a clean slate — the
+ * real isolate lifetime is minutes to hours so production code naturally
+ * shares state across requests, but tests run against a single worker
+ * isolate across many `it` blocks and need to reset by hand.
+ */
+export function __resetMetricsModuleStateForTests(): void {
+  pendingFlushBuffers.length = 0;
+  lastFlushStats = null;
+}
+
 export class InfluxMetricsProvider implements IMetricsProviderRepository {
   private metrics: string[] = [];
   private writeUrl: string;
@@ -196,13 +208,16 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
     const currentBody = this.metrics.join('\n');
     this.metrics = [];
 
-    // Prepend any buffered bodies from previous failed flushes (oldest first).
-    const parts = [...pendingFlushBuffers];
+    // Build the POST body from every stashed retry + the current body,
+    // but leave `pendingFlushBuffers` untouched until we know the POST
+    // succeeded. Keeping the entries separate lets the eviction loop drop
+    // oldest-first when the total crosses the byte cap; if we merged
+    // them on every flush the array would only ever have one element and
+    // the cap would never fire.
+    const parts: string[] = [...pendingFlushBuffers];
     if (currentBody) {
       parts.push(currentBody);
     }
-    pendingFlushBuffers.length = 0;
-
     if (parts.length === 0) {
       return;
     }
@@ -213,6 +228,8 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
       console.log(body);
     }
     if (!this.influxApiToken) {
+      // No token (local/dev): treat as a successful flush for cleanup.
+      pendingFlushBuffers.length = 0;
       this.recordFlushStats(body, performance.now() - startedAt, status);
       return;
     }
@@ -223,14 +240,22 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
         headers: { Authorization: `Token ${this.influxApiToken}` },
       });
       await response.body?.cancel();
-      if (!response.ok) {
+      if (response.ok) {
+        // Success: every stashed body was included in this POST, so we
+        // can clear the whole backlog at once.
+        pendingFlushBuffers.length = 0;
+      } else {
         console.error('Failed to push metrics', response.status, response.statusText);
-        this.stashFailedFlush(body);
+        if (currentBody) {
+          this.stashFailedFlush(currentBody);
+        }
         status = 'error';
       }
     } catch (error) {
       console.error('Metric flush threw', error);
-      this.stashFailedFlush(body);
+      if (currentBody) {
+        this.stashFailedFlush(currentBody);
+      }
       status = 'error';
     }
 
@@ -248,7 +273,11 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
   }
 
   private stashFailedFlush(body: string): void {
-    // Evict oldest buffers if we're over the byte cap.
+    // Append the newly-failed body as its own entry so the eviction loop
+    // can drop the oldest when the backlog crosses the byte cap. Previously
+    // the flush path merged every stashed entry into a single body before
+    // re-stashing it, which left the array at length 1 and made the
+    // `length > 1` eviction guard unreachable.
     pendingFlushBuffers.push(body);
     let total = pendingFlushBuffers.reduce((acc, b) => acc + b.length, 0);
     while (total > MAX_PENDING_FLUSH_BYTES && pendingFlushBuffers.length > 1) {

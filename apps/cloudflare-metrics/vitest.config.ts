@@ -6,6 +6,14 @@ export default defineWorkersConfig({
     poolOptions: {
       workers: {
         wrangler: { configPath: './wrangler.toml' },
+        miniflare: {
+          // Inject a fake VictoriaMetrics token so the InfluxMetricsProvider
+          // takes the real fetch path in tests — otherwise it short-circuits
+          // in its "no token" branch and we can't observe flush behaviour.
+          bindings: {
+            VMETRICS_API_TOKEN: 'test-token',
+          },
+        },
       },
     },
   },
