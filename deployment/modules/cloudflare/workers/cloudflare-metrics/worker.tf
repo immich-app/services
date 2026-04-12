@@ -11,6 +11,9 @@ resource "terraform_data" "source_hash" {
 resource "cloudflare_worker_version" "worker" {
   account_id = var.cloudflare_account_id
   worker_id  = cloudflare_worker.worker.id
+  limits = {
+    cpu_ms = 500
+  }
   bindings = [
     {
       name = "ENVIRONMENT"
