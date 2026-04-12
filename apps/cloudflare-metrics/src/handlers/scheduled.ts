@@ -38,10 +38,13 @@ export async function handleScheduled(
     return;
   }
 
+  const isolateAgeSec = Math.round((Date.now() - isolateStartedAt) / 1000);
+  const isColdStart = isolateAgeSec < 120;
+
   const graphqlClient = new CloudflareGraphQLClient(env.CLOUDFLARE_API_TOKEN);
   try {
     const results = await metrics.monitorAsyncFunction({ name: 'cron_collect' }, () =>
-      runCollection(env, metrics, graphqlClient),
+      runCollection(env, metrics, graphqlClient, isColdStart),
     )();
     const totalPoints = results.reduce((acc, r) => acc + r.points, 0);
     const totalErrors = results.filter((r) => r.error).length;
@@ -49,9 +52,12 @@ export async function handleScheduled(
       Metric.create('cron_summary')
         .intField('datasets', results.length)
         .intField('points', totalPoints)
-        .intField('errors', totalErrors),
+        .intField('errors', totalErrors)
+        .intField('cold_start', isColdStart ? 1 : 0),
     );
-    console.log(`[cron] collected ${totalPoints} points across ${results.length} datasets (${totalErrors} errors)`);
+    console.log(
+      `[cron] collected ${totalPoints} points across ${results.length} datasets (${totalErrors} errors${isColdStart ? ', cold start backfill' : ''})`,
+    );
   } catch (error) {
     console.error('[cron] Collection failed:', error);
     metrics.push(
@@ -61,7 +67,6 @@ export async function handleScheduled(
     );
   }
 
-  const isolateAgeSec = Math.round((Date.now() - isolateStartedAt) / 1000);
   for (const m of [
     Metric.create('graphql_client')
       .intField('requests', graphqlClient.requestCount)
@@ -91,8 +96,20 @@ function emitLastFlushStats(metrics: CloudflareMetricsRepository): void {
   );
 }
 
-async function runCollection(env: Env, metrics: CloudflareMetricsRepository, graphqlClient: CloudflareGraphQLClient) {
+async function runCollection(
+  env: Env,
+  metrics: CloudflareMetricsRepository,
+  graphqlClient: CloudflareGraphQLClient,
+  isColdStart: boolean,
+) {
   const restClient = new CloudflareRestClient(env.CLOUDFLARE_API_TOKEN ?? '');
-  const collector = new CloudflareMetricsCollector(graphqlClient, env.CLOUDFLARE_ACCOUNT_ID, metrics, { restClient });
+  // On cold start (fresh isolate), widen the window to 15 minutes to backfill
+  // any data missed while the previous isolate was crashing. VM dedupes on
+  // (series, timestamp) so the overlap with already-written data is free.
+  const windowMs = isColdStart ? 15 * 60 * 1000 : undefined;
+  const collector = new CloudflareMetricsCollector(graphqlClient, env.CLOUDFLARE_ACCOUNT_ID, metrics, {
+    restClient,
+    windowMs,
+  });
   return collector.collectAll(ALL_DATASETS);
 }

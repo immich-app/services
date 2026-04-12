@@ -8,6 +8,10 @@ locals {
 
   prometheus_datasource_uid = "36979063-5384-4eb9-8679-565a727cbc13"
 
+  # The worker's own script name as it appears in cf_workers_invocations.
+  # Must match the cloudflare_worker.worker.name resource.
+  worker_script_name = "${var.app_name}-api${local.resource_suffix}"
+
   # All exporter-health alerts link back to panels on the exporter-health
   # dashboard. The panel IDs are pinned in the 9000 range inside the
   # dashboard generator (apps/cloudflare-metrics generate-dashboards.py) so
@@ -464,6 +468,71 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       description      = "More than 5 GraphQL responses with errors[] in the last 15 minutes. This usually means a batched chunk contains an invalid field name; check the exporter-health dashboard."
     }
     labels    = { severity = "3" }
+    is_paused = false
+  }
+
+  # 8) Collector worker crashing (exceededResources, OOM, etc). This queries
+  #    the Cloudflare-reported error count for our own worker script — data
+  #    that the collector itself writes to VictoriaMetrics from the analytics
+  #    API. Because it's 5-minute-lagged analytics data written by whichever
+  #    tick succeeds, it catches sustained crash loops that our self-telemetry
+  #    alerts miss (since self-telemetry isn't emitted when the handler crashes).
+  rule {
+    name      = "Collector Worker Crash Rate"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      datasource_uid = local.prometheus_datasource_uid
+      relative_time_range {
+        from = 1800
+        to   = 0
+      }
+      model = jsonencode({
+        datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
+        editorMode    = "code"
+        expr          = "sum(increase(cf_workers_invocations_errors{script_name=\"${local.worker_script_name}\"}[30m]))"
+        instant       = true
+        intervalMs    = 60000
+        legendFormat  = "errors"
+        maxDataPoints = 43200
+        refId         = "A"
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        datasource = { type = "__expr__", uid = "__expr__" }
+        expression = "A"
+        refId      = "C"
+        type       = "threshold"
+        conditions = [{
+          evaluator = { params = [3], type = "gt" }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { params = [], type = "last" }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "5m"
+    annotations = {
+      __dashboardUid__ = local.exporter_health_uid
+      __panelId__      = tostring(local.alert_panels.collector_liveness)
+      summary          = "Collector worker is crashing"
+      description      = "More than 3 cf_workers_invocations_errors for the collector's own script in the last 30 minutes. The worker is likely hitting exceededResources (CPU/memory limit) or another runtime crash. Check the isolate age panel and Cloudflare dashboard for the script."
+    }
+    labels    = { severity = "1" }
     is_paused = false
   }
 }
