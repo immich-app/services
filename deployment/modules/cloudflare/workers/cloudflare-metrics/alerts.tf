@@ -51,7 +51,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       model = jsonencode({
         datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
         editorMode    = "code"
-        expr          = "max(cloudflare_metrics_cron_summary_datasets)"
+        expr          = "max_over_time(cloudflare_metrics_cron_summary_datasets[10m])"
         instant       = true
         intervalMs    = 60000
         legendFormat  = "datasets"
