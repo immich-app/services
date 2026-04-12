@@ -1,6 +1,8 @@
 import type { ICloudflareRestClient } from './cloudflare-api.js';
 import type { CloudflareGraphQLClient } from './graphql-client.js';
-import { CloudflareMetricsRepository, type IMetricsProviderRepository, Metric } from './metrics.js';
+import type { IMetricsProviderRepository } from './metric-providers.js';
+import { Metric } from './metric.js';
+import { CloudflareMetricsRepository } from './metrics.js';
 import type { DatasetQuery, DatasetRow } from './types.js';
 
 /**

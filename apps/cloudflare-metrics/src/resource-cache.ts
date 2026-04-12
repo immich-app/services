@@ -1,5 +1,6 @@
 import type { ICloudflareRestClient } from './cloudflare-api.js';
-import { type CloudflareMetricsRepository, Metric } from './metrics.js';
+import { Metric } from './metric.js';
+import type { CloudflareMetricsRepository } from './metrics.js';
 
 /**
  * Shared lookup cache for resources that aren't exposed via GraphQL

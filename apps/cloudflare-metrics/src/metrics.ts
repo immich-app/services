@@ -2,17 +2,6 @@ import type { IMetricsProviderRepository } from './metric-providers.js';
 import { Metric } from './metric.js';
 import { type AsyncFn, type MonitorOptions, type Operation, monitorAsyncFunction } from './monitor.js';
 
-// Re-exports preserve the legacy import paths while consumers migrate to
-// the per-concern files. These will be trimmed back once every call site
-// imports from the canonical location.
-export {
-  __resetFlushStateForTests as __resetMetricsModuleStateForTests,
-  takeLastFlushStats,
-  type LastFlushStats,
-} from './flush-state.js';
-export { HeaderMetricsProvider, InfluxMetricsProvider, type IMetricsProviderRepository } from './metric-providers.js';
-export { Metric, type MetricFieldType } from './metric.js';
-
 /**
  * Repository contract for metric sinks in the worker. A single instance is
  * constructed at the top of each request / cron tick and fans pushed

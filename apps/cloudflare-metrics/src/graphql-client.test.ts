@@ -5,10 +5,9 @@ import {
   buildBatchedZoneQuery,
   buildDatasetSelection,
   buildFilterObject,
-  CloudflareGraphQLClient,
-  CloudflareGraphQLError,
   groupErrorsByAlias,
-} from './graphql-client.js';
+} from './graphql-builders.js';
+import { CloudflareGraphQLClient, CloudflareGraphQLError } from './graphql-client.js';
 import type { DatasetQuery } from './types.js';
 
 describe('buildDatasetSelection', () => {

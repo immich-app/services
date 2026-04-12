@@ -10,18 +10,6 @@ import type { AccountQueryResult, DatasetQuery, DatasetRow, GraphQLResponse } fr
 
 const CLOUDFLARE_GRAPHQL_ENDPOINT = 'https://api.cloudflare.com/client/v4/graphql';
 
-// Re-export the builder helpers so existing imports from `graphql-client.js`
-// keep working. A follow-up will switch call sites to import from
-// `graphql-builders.js` directly.
-export {
-  ACCOUNT_BATCH_CHUNK_SIZE,
-  buildBatchedAccountQuery,
-  buildBatchedZoneQuery,
-  buildDatasetSelection,
-  buildFilterObject,
-  groupErrorsByAlias,
-} from './graphql-builders.js';
-
 export class CloudflareGraphQLError extends Error {
   constructor(
     message: string,

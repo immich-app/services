@@ -1,7 +1,7 @@
 import { createExecutionContext, createScheduledController, env, SELF, waitOnExecutionContext } from 'cloudflare:test';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { __resetFlushStateForTests } from './flush-state.js';
 import worker from './index.js';
-import { __resetMetricsModuleStateForTests } from './metrics.js';
 
 describe('HTTP handler', () => {
   it('returns 200 for /health', async () => {
@@ -24,7 +24,7 @@ describe('HTTP handler', () => {
 
 describe('scheduled handler', () => {
   beforeEach(() => {
-    __resetMetricsModuleStateForTests();
+    __resetFlushStateForTests();
   });
 
   it('emits cron_error{reason=missing_config} when API token or account ID are missing', async () => {

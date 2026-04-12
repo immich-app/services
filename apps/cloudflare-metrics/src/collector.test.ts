@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { __resetCollectorCachesForTests, CloudflareMetricsCollector } from './collector.js';
+import { CloudflareMetricsCollector } from './collector.js';
 import {
   D1_QUERIES,
   DURABLE_OBJECTS_PERIODIC,
@@ -13,6 +13,7 @@ import {
 } from './datasets.js';
 import type { CloudflareGraphQLClient } from './graphql-client.js';
 import { type CloudflareMetricsRepository } from './metrics.js';
+import { __resetResourceCachesForTests } from './resource-cache.js';
 import {
   asGraphQLClient,
   buildMetricsRepo,
@@ -30,7 +31,7 @@ describe('CloudflareMetricsCollector', () => {
   beforeEach(() => {
     provider = new RecordingProvider();
     metrics = buildMetricsRepo(provider);
-    __resetCollectorCachesForTests();
+    __resetResourceCachesForTests();
   });
 
   it('computes a lagged query range so late-arriving buckets are included', () => {

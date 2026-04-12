@@ -3,12 +3,8 @@ import { buildMetric, normalizeTagValue } from './emit.js';
 import { CloudflareGraphQLError, type ICloudflareGraphQLClient } from './graphql-client.js';
 import { Metric } from './metric.js';
 import type { CloudflareMetricsRepository } from './metrics.js';
-import { __resetResourceCachesForTests, ResourceCacheService } from './resource-cache.js';
+import { ResourceCacheService } from './resource-cache.js';
 import type { CollectionResult, DatasetQuery, DatasetRow } from './types.js';
-
-// Re-export the test reset helper under its original name so existing
-// tests continue to work without import churn.
-export { __resetResourceCachesForTests as __resetCollectorCachesForTests } from './resource-cache.js';
 
 export interface CollectorOptions {
   /**
@@ -392,10 +388,6 @@ export class CloudflareMetricsCollector {
     );
   }
 }
-
-// Keep the unused-import guard from typescript happy when we reference this
-// export purely for test compatibility.
-void __resetResourceCachesForTests;
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) {

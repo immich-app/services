@@ -1,8 +1,11 @@
 import { CloudflareRestClient } from '../cloudflare-api.js';
 import { CloudflareMetricsCollector } from '../collector.js';
 import { ALL_DATASETS } from '../datasets.js';
+import { takeLastFlushStats } from '../flush-state.js';
 import { CloudflareGraphQLClient } from '../graphql-client.js';
-import { CloudflareMetricsRepository, InfluxMetricsProvider, Metric, takeLastFlushStats } from '../metrics.js';
+import { InfluxMetricsProvider } from '../metric-providers.js';
+import { Metric } from '../metric.js';
+import { CloudflareMetricsRepository } from '../metrics.js';
 
 /**
  * Cron handler for the cloudflare-metrics worker. Runs once per cron tick

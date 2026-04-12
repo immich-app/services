@@ -1,5 +1,7 @@
 import { DeferredRepository } from '../deferred.js';
-import { CloudflareMetricsRepository, HeaderMetricsProvider, InfluxMetricsProvider, Metric } from '../metrics.js';
+import { HeaderMetricsProvider, InfluxMetricsProvider } from '../metric-providers.js';
+import { Metric } from '../metric.js';
+import { CloudflareMetricsRepository } from '../metrics.js';
 
 /**
  * HTTP handler for the cloudflare-metrics worker. Currently only exposes

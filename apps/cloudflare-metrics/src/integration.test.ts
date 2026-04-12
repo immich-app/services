@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { CloudflareMetricsCollector } from './collector.js';
 import { ALL_DATASETS } from './datasets.js';
 import { CloudflareGraphQLClient } from './graphql-client.js';
-import { CloudflareMetricsRepository, type IMetricsProviderRepository, Metric } from './metrics.js';
+import type { IMetricsProviderRepository } from './metric-providers.js';
+import { Metric } from './metric.js';
+import { CloudflareMetricsRepository } from './metrics.js';
 import type { DatasetRow } from './types.js';
 
 /**

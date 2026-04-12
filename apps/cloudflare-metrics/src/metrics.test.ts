@@ -1,12 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import {
-  __resetMetricsModuleStateForTests,
-  CloudflareMetricsRepository,
-  InfluxMetricsProvider,
-  Metric,
-  takeLastFlushStats,
-  type IMetricsProviderRepository,
-} from './metrics.js';
+import { __resetFlushStateForTests, takeLastFlushStats } from './flush-state.js';
+import { InfluxMetricsProvider, type IMetricsProviderRepository } from './metric-providers.js';
+import { Metric } from './metric.js';
+import { CloudflareMetricsRepository } from './metrics.js';
 
 describe('Metric', () => {
   it('stores int, float, and duration fields with their types', () => {
@@ -70,7 +66,7 @@ describe('CloudflareMetricsRepository', () => {
 
 describe('InfluxMetricsProvider flush self-telemetry', () => {
   beforeEach(() => {
-    __resetMetricsModuleStateForTests();
+    __resetFlushStateForTests();
   });
 
   it('takeLastFlushStats returns null before any flush has completed', () => {
@@ -157,7 +153,7 @@ describe('InfluxMetricsProvider flush self-telemetry', () => {
 
 describe('InfluxMetricsProvider line protocol', () => {
   beforeEach(() => {
-    __resetMetricsModuleStateForTests();
+    __resetFlushStateForTests();
   });
 
   it('emits int and float fields with the correct suffixes', () => {

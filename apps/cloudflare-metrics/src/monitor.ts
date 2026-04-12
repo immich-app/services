@@ -1,4 +1,4 @@
-import { Metric } from './metrics.js';
+import { Metric } from './metric.js';
 
 export type AsyncFn = (...args: any[]) => Promise<any>;
 export type Class = { new (...args: any[]): any };
