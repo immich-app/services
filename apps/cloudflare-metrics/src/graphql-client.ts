@@ -30,39 +30,23 @@ export interface ScheduledWorkerInvocation {
 }
 
 export interface BatchedDatasetResult {
-  /** Rows keyed by dataset.key (or 'workers_scheduled' for the special feed). */
   rows: Record<string, DatasetRow[]>;
-  /** Per-alias error messages for fields that the server rejected. */
   errors: Record<string, string>;
-  /** Raw scheduled-invocation feed when the batch requested it. */
   scheduledInvocations?: ScheduledWorkerInvocation[];
 }
 
 export interface BatchedZoneDatasetResult {
-  /** Rows keyed by zoneTag. */
   rows: Record<string, DatasetRow[]>;
-  /** Per-zone error messages for zones the server rejected. */
   errors: Record<string, string>;
 }
 
 export interface ICloudflareGraphQLClient {
-  /**
-   * Batched account-scope dataset fetch. All datasets passed in must share
-   * the same filter granularity (datetime vs date). The special
-   * `workersInvocationsScheduled` feed can be requested alongside the
-   * datetime batch via `options.includeScheduledInvocations`.
-   */
   fetchAccountBatch(
     accountTag: string,
     datasets: readonly DatasetQuery[],
     range: { start: Date; end: Date },
     options?: { includeScheduledInvocations?: boolean },
   ): Promise<BatchedDatasetResult>;
-  /**
-   * Batched zone-scope fetch for a single dataset across multiple zones.
-   * Each zoneTag becomes an aliased `zones(filter: {...})` block in one
-   * GraphQL operation.
-   */
   fetchZoneBatch(
     zoneTags: readonly string[],
     dataset: DatasetQuery,
@@ -70,15 +54,8 @@ export interface ICloudflareGraphQLClient {
   ): Promise<BatchedZoneDatasetResult>;
 }
 
-/**
- * Repository implementation that talks to the real Cloudflare GraphQL
- * Analytics API. Owns the HTTP transport, batching under the query-size
- * cap, and the request/error counters used by self-telemetry.
- */
 export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
-  /** Counter of HTTP requests issued to the Cloudflare GraphQL endpoint. */
   private _requestCount = 0;
-  /** Counter of GraphQL responses that returned `errors[]`. */
   private _errorResponseCount = 0;
 
   constructor(
@@ -101,10 +78,7 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     range: { start: Date; end: Date },
     options: { includeScheduledInvocations?: boolean } = {},
   ): Promise<BatchedDatasetResult> {
-    // Cloudflare's GraphQL endpoint enforces a "too many nodes, zones and
-    // accounts" limit on combined query complexity. Chunk well under the
-    // empirical ~50-dataset ceiling to leave headroom for datasets with
-    // extra blocks/dimensions.
+    // Chunk under the ~50-dataset ceiling enforced by Cloudflare's GraphQL endpoint.
     const chunks = chunkArray(datasets, ACCOUNT_BATCH_CHUNK_SIZE);
     if (chunks.length === 0 && options.includeScheduledInvocations) {
       chunks.push([]);
@@ -112,8 +86,6 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     const result: BatchedDatasetResult = { rows: {}, errors: {} };
 
     for (const [i, chunk] of chunks.entries()) {
-      // Only attach the scheduled-invocations field to the first chunk so we
-      // don't fetch it multiple times.
       const includeScheduled = i === 0 && (options.includeScheduledInvocations ?? false);
       const chunkResult = await this.fetchAccountBatchChunk(accountTag, chunk, range, includeScheduled);
       Object.assign(result.rows, chunkResult.rows);
@@ -216,11 +188,6 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     return result;
   }
 
-  /**
-   * Executes a GraphQL query and returns both data and errors, tolerating
-   * partial responses. Used by the batched fetch paths where one field
-   * failing shouldn't kill the whole batch.
-   */
   async executeAllowPartial<T>(query: string, variables: Record<string, unknown>): Promise<GraphQLResponse<T>> {
     const doFetch = this.fetchImpl ?? globalThis.fetch;
     if (typeof doFetch !== 'function') {

@@ -3,13 +3,6 @@ import { HeaderMetricsProvider, InfluxMetricsProvider } from '../metric-provider
 import { Metric } from '../metric.js';
 import { CloudflareMetricsRepository } from '../metrics.js';
 
-/**
- * HTTP handler for the cloudflare-metrics worker. Currently only exposes
- * `/health` for smoke testing; the actual collection runs under the
- * scheduled handler. This module stays small on purpose — any new
- * endpoint should be added as its own handler function and dispatched
- * from `handleFetch` below.
- */
 export async function handleFetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const deferredRepository = new DeferredRepository(ctx);
   const headerProvider = new HeaderMetricsProvider();

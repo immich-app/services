@@ -7,55 +7,19 @@ import { ResourceCacheService } from './resource-cache.js';
 import type { CollectionResult, DatasetQuery, DatasetRow } from './types.js';
 
 export interface CollectorOptions {
-  /**
-   * How far behind "now" the end of the collection window should be. Cloudflare
-   * analytics data is typically delayed by a few minutes, so we lag the window
-   * to make sure each bucket is fully populated before we query it.
-   */
+  /** Cloudflare analytics data lags by a few minutes; this offsets the window end. */
   lagMs?: number;
-  /**
-   * Size of the query window. Defaults to matching the cron interval so each
-   * run covers exactly one bucket worth of data.
-   */
   windowMs?: number;
-  /**
-   * Clock override for tests.
-   */
   now?: () => Date;
-  /**
-   * Optional REST client for resolving resource names (D1, queues, zones)
-   * that aren't surfaced via GraphQL dimensions. When provided, the
-   * collector will fetch the lists once at the start of `collectAll` and
-   * enrich metric tags with the resolved names.
-   */
   restClient?: ICloudflareRestClient;
 }
 
-/**
- * Collection window defaults. The cron fires every 1 minute, so each tick
- * picks up the freshest bucket plus a 2-minute overlap buffer so one
- * missed cron doesn't drop data. 5 min lag keeps us out of buckets
- * Cloudflare hasn't finalised yet (the analytics pipeline delay is
- * typically 2–5 minutes).
- *
- *   [ now - (lag + window), now - lag )
- *   = [ now - 8m, now - 5m )
- *
- * VictoriaMetrics dedupes on (series, timestamp) so the 2-minute overlap
- * between consecutive runs is free.
- */
+// 5m lag avoids querying buckets Cloudflare hasn't finalised yet (pipeline
+// delay is typically 2-5m). 3m window overlaps consecutive 1m cron ticks
+// so a missed tick doesn't drop data; VictoriaMetrics dedupes the overlap.
 const DEFAULT_LAG_MS = 5 * 60 * 1000;
 const DEFAULT_WINDOW_MS = 3 * 60 * 1000;
 
-/**
- * Orchestration layer for a single cron tick. Owns the `ResourceCacheService`,
- * batches datasets by scope and filter granularity, dispatches GraphQL
- * fetches, and hands rows off to `emit.ts` for translation into metrics.
- *
- * Per-dataset outcomes are returned as `CollectionResult[]` and also
- * surfaced as `cloudflare_metrics_collector_dataset` self-telemetry so
- * dashboards can see rows/points/errors/duration per dataset.
- */
 export class CloudflareMetricsCollector {
   private readonly lagMs: number;
   private readonly windowMs: number;
@@ -85,8 +49,6 @@ export class CloudflareMetricsCollector {
     const range = this.getRange();
     const results: CollectionResult[] = [];
 
-    // Group account-scope datasets by filter granularity so each group can
-    // share a single `$filter` variable in a batched query.
     const accountDatasets = datasets.filter((d) => (d.scope ?? 'account') === 'account');
     const datetimeDatasets = accountDatasets.filter((d) => (d.filterGranularity ?? 'datetime') === 'datetime');
     const dateDatasets = accountDatasets.filter((d) => d.filterGranularity === 'date');
@@ -103,11 +65,6 @@ export class CloudflareMetricsCollector {
     return results;
   }
 
-  /**
-   * Runs a batched `fetchAccountBatch` and emits metrics for each dataset in
-   * the response. Per-dataset errors surfaced in the GraphQL `errors` array
-   * don't abort the whole batch — other datasets still land in VictoriaMetrics.
-   */
   private async collectAccountBatch(
     datasets: readonly DatasetQuery[],
     range: { start: Date; end: Date },
@@ -153,9 +110,8 @@ export class CloudflareMetricsCollector {
       }
       const rows = batchResult.rows[dataset.key] ?? [];
       if (dataset.field === 'httpRequestsOverviewAdaptiveGroups') {
-        // Pages projects get their own zone tag in analytics but are not
-        // returned by `/zones?account.id=...`; resolve them individually
-        // before emitting so the metric tags carry a human-readable name.
+        // Pages projects have zone tags in analytics but aren't in the
+        // bulk /zones list; resolve them individually for human-readable names.
         await this.resolveZonesForRows(rows);
       }
       const points = this.emitRows(dataset, rows);
@@ -177,11 +133,6 @@ export class CloudflareMetricsCollector {
     return results;
   }
 
-  /**
-   * Walks the bucketed scheduled-invocation events from a batch result and
-   * emits `cf_workers_scheduled` metric points. Returns a CollectionResult
-   * describing the per-dataset outcome for dashboards.
-   */
   private emitScheduledInvocations(
     batchResult: Awaited<ReturnType<ICloudflareGraphQLClient['fetchAccountBatch']>>,
   ): CollectionResult {
@@ -267,17 +218,9 @@ export class CloudflareMetricsCollector {
     return { dataset: key, rows: events.length, points, durationMs };
   }
 
-  /**
-   * Fetches a zone-scoped dataset across every bulk-listed zone in ONE
-   * batched GraphQL request. Per-zone errors in the response don't fail
-   * the whole batch; they're surfaced in a `partial` status.
-   */
   private async collectZoneBatch(dataset: DatasetQuery, range: { start: Date; end: Date }): Promise<CollectionResult> {
     const startedAt = performance.now();
-    // Only iterate bulk-listed zones (the real account zones), not the
-    // dozens of lazily-resolved Cloudflare Pages project zones. Batching
-    // into a single query makes the subrequest cost constant regardless of
-    // how many zones we have.
+    // Only bulk-listed zones (real account zones), not Pages project zones.
     const cache = this.resourceCache.getCache();
     const zones = [...cache.zones].filter(([tag]) => cache.bulkZoneTags.has(tag));
     if (zones.length === 0) {
@@ -362,10 +305,6 @@ export class CloudflareMetricsCollector {
     return emitted;
   }
 
-  /**
-   * Collects the set of zone tags referenced by HTTP overview rows and
-   * asks the resource-cache service to resolve any we don't already know.
-   */
   private async resolveZonesForRows(rows: DatasetRow[]): Promise<void> {
     const missing = new Set<string>();
     for (const row of rows) {

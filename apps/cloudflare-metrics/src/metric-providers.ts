@@ -7,21 +7,11 @@ import {
 } from './flush-state.js';
 import { Metric } from './metric.js';
 
-/**
- * Interface implemented by every metric sink the repository can write to.
- * Each cron tick fans out to every registered provider, then `flush()` is
- * called once to drain any buffered data.
- */
 export interface IMetricsProviderRepository {
   pushMetric(metric: Metric): void;
   flush(): void | Promise<void>;
 }
 
-/**
- * In-memory provider that converts duration fields into a single
- * `Server-Timing` header string. Used by the HTTP handler so request
- * timings show up in browser dev tools alongside normal metrics.
- */
 export class HeaderMetricsProvider implements IMetricsProviderRepository {
   private _metrics: string[] = [];
 
@@ -50,17 +40,6 @@ function getMetricsWriteUrl(environment: string): string {
   return `https://cf-workers.monitoring.${environment || 'dev'}.immich.cloud/write`;
 }
 
-/**
- * VictoriaMetrics-backed provider. Collects pushed metrics into an
- * in-memory line-protocol buffer, POSTs the whole buffer once per flush,
- * and persists failed bodies across cron ticks via the module-level
- * `pendingFlushBuffers` state so a transient outage doesn't drop data.
- *
- * Flushes are observed from the NEXT cron tick via `takeLastFlushStats()`
- * — it's impossible to emit a metric about a flush from inside the flush
- * itself, so the stats land in `flush-state.ts` and the scheduled
- * handler picks them up on its way in.
- */
 export class InfluxMetricsProvider implements IMetricsProviderRepository {
   private metrics: string[] = [];
   private writeUrl: string;
@@ -103,12 +82,8 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
     const currentBody = this.metrics.join('\n');
     this.metrics = [];
 
-    // Build the POST body from every stashed retry + the current body,
-    // but leave `pendingFlushBuffers` untouched until we know the POST
-    // succeeded. Keeping the entries separate lets the eviction loop drop
-    // oldest-first when the total crosses the byte cap; if we merged
-    // them on every flush the array would only ever have one element and
-    // the cap would never fire.
+    // Keep stashed retries separate until the POST succeeds so the
+    // eviction loop can drop oldest-first when the byte cap is crossed.
     const parts: string[] = [...pendingFlushBuffers];
     if (currentBody) {
       parts.push(currentBody);
@@ -123,7 +98,7 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
       console.log(body);
     }
     if (!this.influxApiToken) {
-      // No token (local/dev): treat as a successful flush for cleanup.
+      // No token (local/dev): treat as successful for cleanup.
       pendingFlushBuffers.length = 0;
       this.recordFlushStats(body, performance.now() - startedAt, status);
       return;
@@ -136,8 +111,6 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
       });
       await response.body?.cancel();
       if (response.ok) {
-        // Success: every stashed body was included in this POST, so we
-        // can clear the whole backlog at once.
         pendingFlushBuffers.length = 0;
       } else {
         console.error('Failed to push metrics', response.status, response.statusText);
@@ -169,11 +142,6 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
   }
 
   private stashFailedFlush(body: string): void {
-    // Append the newly-failed body as its own entry so the eviction loop
-    // can drop the oldest when the backlog crosses the byte cap. Previously
-    // the flush path merged every stashed entry into a single body before
-    // re-stashing it, which left the array at length 1 and made the
-    // `length > 1` eviction guard unreachable.
     pendingFlushBuffers.push(body);
     let total = pendingFlushBuffers.reduce((acc, b) => acc + b.length, 0);
     while (total > MAX_PENDING_FLUSH_BYTES && pendingFlushBuffers.length > 1) {

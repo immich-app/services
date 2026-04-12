@@ -1,15 +1,5 @@
 export type MetricFieldType = 'int' | 'float' | 'duration';
 
-/**
- * Tagged, typed metric point used by the cloudflare-metrics worker. Mutable
- * builder-style API: `Metric.create('cf_workers').addTag(...).intField(...)`.
- *
- * The `_timestamp` captured in the constructor is a monotonic timer used by
- * `durationField()` as a "now" anchor; the real wall-clock timestamp written
- * to the metrics backend comes from `setExportTimestamp()` when the metric
- * represents a historical data point (e.g. a Cloudflare analytics bucket
- * from several minutes ago).
- */
 export class Metric {
   private _tags = new Map<string, string>();
   private _timestamp = performance.now();
@@ -74,10 +64,8 @@ export class Metric {
     return this;
   }
 
-  /**
-   * Override the timestamp written to the metrics backend. When unset the
-   * metrics provider uses the time at which the point is flushed.
-   */
+  // Override the wall-clock timestamp written to the metrics backend (vs
+  // _timestamp which is a monotonic anchor for durationField).
   setExportTimestamp(date: Date) {
     this._exportTimestamp = date;
     return this;

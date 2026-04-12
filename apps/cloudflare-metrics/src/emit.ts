@@ -2,17 +2,6 @@ import { Metric } from './metric.js';
 import type { ResourceCache } from './resource-cache.js';
 import type { DatasetQuery, DatasetRow } from './types.js';
 
-/**
- * Pure helpers for translating a Cloudflare GraphQL `DatasetRow` into a
- * tagged `Metric`. Separated from the collector so the mapping is
- * trivially unit-testable and so the collector's orchestration code stays
- * focused on fetch → emit → record.
- */
-
-/**
- * Build a Metric for a single dataset row. Returns `null` when the row
- * has no usable timestamp or every field it claims is null.
- */
 export function buildMetric(
   dataset: DatasetQuery,
   row: DatasetRow,
@@ -68,11 +57,6 @@ export function buildMetric(
   return metric;
 }
 
-/**
- * Resolve the wall-clock timestamp for a dataset row. Uses the dataset's
- * declared timestamp dimension (defaults to `datetimeMinute`), or returns
- * `null` if the row doesn't carry a value the collector can parse.
- */
 export function resolveTimestamp(dataset: DatasetQuery, row: DatasetRow): Date | null {
   const dimension = dataset.timestampDimension ?? 'datetimeMinute';
   const raw = row.dimensions?.[dimension];
@@ -91,7 +75,6 @@ export function resolveTimestamp(dataset: DatasetQuery, row: DatasetRow): Date |
   return date;
 }
 
-/** Coerce a GraphQL dimension value to a non-empty tag string, or `undefined`. */
 export function normalizeTagValue(raw: unknown): string | undefined {
   if (raw === null || raw === undefined) {
     return undefined;
@@ -105,12 +88,6 @@ export function normalizeTagValue(raw: unknown): string | undefined {
   return undefined;
 }
 
-/**
- * Adds `<resource>_name` tags based on pre-loaded REST lookups.
- * Keyed on the dataset's GraphQL field so that per-dataset dimensions
- * (e.g. `databaseId` vs `queueId` vs `zoneTag`) only get enriched where
- * relevant.
- */
 export function applyResourceTags(metric: Metric, dataset: DatasetQuery, row: DatasetRow, cache: ResourceCache): void {
   const dims = row.dimensions ?? {};
   switch (dataset.field) {

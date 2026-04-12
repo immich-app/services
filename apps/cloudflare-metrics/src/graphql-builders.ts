@@ -1,20 +1,11 @@
 import type { DatasetQuery, GraphQLResponse } from './types.js';
 
-/** Default row limit on every `*AdaptiveGroups` selection. */
 export const DEFAULT_DATASET_LIMIT = 9999;
 
-/**
- * Cloudflare GraphQL rejects batched queries above ~50 aliased datasets
- * with a "too many nodes, zones and accounts" error. Empirically we land
- * safely at 25 per chunk — well under the ceiling, which leaves headroom
- * for datasets with extra blocks/dimensions.
- */
+// Cloudflare GraphQL rejects batched queries above ~50 aliased datasets;
+// 25 per chunk leaves headroom for datasets with extra blocks/dimensions.
 export const ACCOUNT_BATCH_CHUNK_SIZE = 25;
 
-/**
- * Split an array into fixed-size chunks. Pure helper used by the
- * batched-fetch path in `graphql-client.ts`.
- */
 export function chunkArray<T>(items: readonly T[], size: number): T[][] {
   if (size <= 0) {
     return items.length > 0 ? [[...items]] : [];
@@ -26,12 +17,6 @@ export function chunkArray<T>(items: readonly T[], size: number): T[][] {
   return chunks;
 }
 
-/**
- * Emits the inner selection for a single dataset — the aliased field, its
- * arguments, and the selection set — without the surrounding
- * `viewer.accounts { ... }` wrapper. Used by the batched query builders so
- * one query can carry many dataset selections.
- */
 export function buildDatasetSelection(dataset: DatasetQuery, alias?: string): string {
   const dimensionSelection = dataset.dimensions.join(' ');
   const blockSelections = (Object.entries(dataset.blocks) as Array<[string, readonly string[] | undefined]>)
@@ -56,12 +41,6 @@ const SCHEDULED_INVOCATIONS_SELECTION = `workers_scheduled: workersInvocationsSc
         cpuTimeUs
       }`;
 
-/**
- * Builds a single GraphQL query that pulls many account-scope datasets in
- * one HTTP request by aliasing each dataset. All datasets in the batch must
- * share the same filter granularity (datetime or date) because they share
- * the `$filter` variable.
- */
 export function buildBatchedAccountQuery(
   datasets: readonly DatasetQuery[],
   includeScheduledInvocations = false,
@@ -79,10 +58,6 @@ export function buildBatchedAccountQuery(
 }`;
 }
 
-/**
- * Builds a single GraphQL query that fetches one dataset across many
- * zones. Each zoneTag becomes its own aliased `zones(...)` block.
- */
 export function buildBatchedZoneQuery(zoneTags: readonly string[], dataset: DatasetQuery): string {
   const safeZoneTags = zoneTags.map((tag) => {
     if (!/^[a-zA-Z0-9_-]+$/.test(tag)) {
@@ -104,11 +79,6 @@ ${selections}
 }`;
 }
 
-/**
- * Builds the filter JSON object passed via `$filter` in both batched and
- * unbatched queries. Picks date-vs-datetime fields based on the dataset's
- * declared filter granularity; all datasets in a batch must agree on this.
- */
 export function buildFilterObject(
   dataset: DatasetQuery | null,
   range: { start: Date; end: Date },
@@ -124,13 +94,6 @@ export function buildFilterObject(
   return filter;
 }
 
-/**
- * Converts the GraphQL `errors[]` array into a map from alias → message.
- * Cloudflare's error payloads include a `path` that begins with the
- * viewer → accounts/zones → aliased field; we walk it until we find an
- * alias we recognise. Errors without a resolvable alias are grouped under
- * an empty key and handled by the caller.
- */
 export function groupErrorsByAlias(
   errors: GraphQLResponse<unknown>['errors'] | null | undefined,
 ): Record<string, string> {

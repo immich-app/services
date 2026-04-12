@@ -2,11 +2,6 @@ import type { IMetricsProviderRepository } from './metric-providers.js';
 import { Metric } from './metric.js';
 import { type AsyncFn, type MonitorOptions, type Operation, monitorAsyncFunction } from './monitor.js';
 
-/**
- * Repository contract for metric sinks in the worker. A single instance is
- * constructed at the top of each request / cron tick and fans pushed
- * metrics out to one or more `IMetricsProviderRepository` implementations.
- */
 export interface IMetricsRepository {
   monitorAsyncFunction<T extends AsyncFn>(
     operation: Operation,
@@ -16,13 +11,6 @@ export interface IMetricsRepository {
   push(metric: Metric): void;
 }
 
-/**
- * Metrics facade used by handlers. Owns the per-request default tags
- * (environment, colo, continent, asOrg) and the operation prefix applied
- * to normal `push()` calls. `pushRaw()` is the escape hatch for
- * fully-qualified Cloudflare analytics metrics where the measurement
- * name and tags already come from the upstream dataset.
- */
 export class CloudflareMetricsRepository implements IMetricsRepository {
   private readonly defaultTags: Record<string, string>;
 
@@ -68,12 +56,8 @@ export class CloudflareMetricsRepository implements IMetricsRepository {
     }
   }
 
-  /**
-   * Push a metric without prefixing it or merging in default tags. Used for
-   * Cloudflare analytics data where the measurement name is fully qualified
-   * (e.g. `cf_workers_invocations`) and the tags come from the upstream
-   * dataset dimensions rather than the running worker's request context.
-   */
+  // Push without prefixing or merging default tags — for Cloudflare analytics
+  // data where measurement names and tags come from the upstream dataset.
   pushRaw(metric: Metric) {
     for (const provider of this.metricsProviders) {
       provider.pushMetric(metric);

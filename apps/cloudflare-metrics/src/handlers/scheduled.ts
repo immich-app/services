@@ -7,19 +7,6 @@ import { InfluxMetricsProvider } from '../metric-providers.js';
 import { Metric } from '../metric.js';
 import { CloudflareMetricsRepository } from '../metrics.js';
 
-/**
- * Cron handler for the cloudflare-metrics worker. Runs once per cron tick
- * (every minute by default) and performs the full collect + flush cycle:
- *
- *   1. Emit self-telemetry from the previous tick's flush (bytes, errors,
- *      pending buffer depth).
- *   2. Short-circuit with a `cron_error{reason=missing_config}` metric
- *      when required credentials are missing.
- *   3. Run the collector against every dataset in the registry.
- *   4. Record the graphql client's per-tick request + error-response
- *      counts as `graphql_client_*`.
- *   5. Flush buffered metrics to VictoriaMetrics.
- */
 export async function handleScheduled(
   _controller: ScheduledController,
   env: Env,

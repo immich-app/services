@@ -43,21 +43,9 @@ export interface ICloudflareRestClient {
   listD1Databases(accountId: string): Promise<D1Database[]>;
   listQueues(accountId: string): Promise<Queue[]>;
   listZones(accountId: string): Promise<Zone[]>;
-  /**
-   * Fetches a single zone by id. Returns `null` when the zone is not found
-   * (so callers can treat missing zones as a best-effort miss rather than an
-   * error). Other HTTP errors are thrown as `CloudflareRestError`.
-   */
   getZone(zoneId: string): Promise<Zone | null>;
 }
 
-/**
- * Thin client for the Cloudflare v4 REST API, used to resolve resource
- * metadata (names, tags) that isn't exposed via the GraphQL Analytics API.
- *
- * Only the endpoints we need for tag enrichment are implemented; everything
- * else should go through the GraphQL client in `graphql-client.ts`.
- */
 export class CloudflareRestClient implements ICloudflareRestClient {
   constructor(
     private readonly apiToken: string,
