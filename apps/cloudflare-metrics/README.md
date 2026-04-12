@@ -1,216 +1,177 @@
 # cloudflare-metrics
 
-A Cloudflare Worker that periodically pulls data from the [Cloudflare GraphQL
-Analytics API](https://developers.cloudflare.com/analytics/graphql-api/),
-enriches it with resource names from the Cloudflare REST API, and writes it
-to our VictoriaMetrics stack as InfluxDB line protocol.
+Cloudflare Worker that pulls analytics from the Cloudflare GraphQL API every minute, enriches with resource names from the REST API, and writes to VictoriaMetrics as InfluxDB line protocol.
 
-Runs on a `*/5 * * * *` cron trigger and uses a lagged sliding window so one
-missed cron tick doesn't drop data.
-
----
-
-## What's here
-
-### Architecture
+## Architecture
 
 ```
-  Cloudflare GraphQL Analytics API
-  Cloudflare REST API (D1/queues/zones)
-               │
-               ▼
-  ┌─────────────────────────┐
-  │ CloudflareGraphQLClient │  fetchAccountBatch (one request, many datasets)
-  │ CloudflareRestClient    │  fetchZoneBatch (one request, many zones)
-  └───────────┬─────────────┘
-              ▼
-  ┌─────────────────────────┐
-  │ CloudflareMetricsCollector │
-  │  - populates resource cache │  (d1/queue/zone id → name)
-  │  - batches account datasets │
-  │  - batches zone datasets    │
-  │  - enriches tags            │
-  │  - aggregates scheduled     │
-  │    invocations client-side  │
-  └───────────┬─────────────┘
-              ▼
-  ┌─────────────────────────┐
-  │ InfluxMetricsProvider   │  flushes InfluxDB line protocol
-  └───────────┬─────────────┘
-              ▼
-  https://cf-workers.monitoring.<env>.immich.cloud/write
+  Cloudflare GraphQL Analytics API ──► CloudflareGraphQLClient
+  Cloudflare REST API (D1/queues/zones) ──► CloudflareRestClient
+                    │
+                    ▼
+           CloudflareMetricsCollector
+            ├─ ResourceCacheService (id → name lookups)
+            ├─ emit.ts (row → Metric translation)
+            └─ graphql-builders.ts (query construction)
+                    │
+                    ▼
+           InfluxMetricsProvider ──► VictoriaMetrics /write
 ```
 
-### Collection window
+## Collection window
 
-- **Granularity**: `datetimeMinute` — the finest grouping the API exposes. Each
-  metric point is tagged with its minute bucket as the export timestamp.
-- **Cron**: every 5 minutes.
-- **Lag**: 5 minutes (Cloudflare's analytics pipeline is typically 2–5 minutes
-  behind real time; we lag queries to land in fully-populated buckets).
-- **Window**: 12 minutes per run, so each cron tick overlaps the previous run
-  by ~7 minutes. VictoriaMetrics dedupes on `(series, timestamp)` so overlap
-  is free and missing one cron tick still leaves every bucket written.
+| Setting | Value       | Why                                                           |
+| ------- | ----------- | ------------------------------------------------------------- |
+| Cron    | `* * * * *` | Every minute                                                  |
+| Lag     | 5 min       | Cloudflare's analytics pipeline is 2–5 min behind real time   |
+| Window  | 3 min       | Overlaps consecutive ticks so a missed cron doesn't drop data |
+| Dedup   | Free        | VictoriaMetrics dedupes on `(series, timestamp)`              |
 
-### Query batching
+## Datasets
 
-Cloudflare Workers caps outbound subrequests at 50 per invocation. We stay
-well under that by leveraging GraphQL aliases:
+78 datasets across account-scope and zone-scope, covering:
 
-| Kind                   | Before batching    | After batching                                         |
-| ---------------------- | ------------------ | ------------------------------------------------------ |
-| Account-scope datasets | ~23 requests       | 1–2 requests (by filter granularity)                   |
-| Zone-scope datasets    | 1 request per zone | 1 request for all zones                                |
-| Scheduled invocations  | 1 separate request | piggybacks on datetime batch                           |
-| REST bulk lookups      | 3                  | 3                                                      |
-| Per-zone Pages lookups | up to ~17 cold     | ~0 warm (module-level cache), throttled to 20/run cold |
-| Metric flush           | 1                  | 1                                                      |
-| **Per-tick total**     | ~67 (threw at 50)  | **~9 warm / ≤27 cold**                                 |
+- **Workers**: invocations, subrequests, overview, scheduled (client-side aggregated), analytics engine, builds, VPC, placement, workflows
+- **D1**: queries (summary + detail with p50/p95/p99), storage
+- **R2**: operations, storage, sippy
+- **KV**: operations, storage
+- **Durable Objects**: invocations, periodic, storage, SQL storage, subrequests
+- **Queues**: operations, backlog, consumer concurrency
+- **Hyperdrive**: queries (with count), pool sizes
+- **HTTP (zone-scope)**: overview, detail (per-zone batched), cache reserve, logpush health
+- **Pages Functions**: invocations with CPU/duration p50/p99
+- **AI**: inference, gateway (requests/cache/errors/size), search, autoRAG
+- **Vectorize**: operations, queries, storage, writes
+- **Browser**: rendering API/sessions/time/events, isolation sessions/actions
+- **Stream/Video/Calls**: minutes viewed, CMCD, buffer/playback/quality events, live input, realtime kit, calls usage/TURN
+- **Images/toMarkdown**: request counts, conversion stats
+- **RUM**: pageload, performance (with FCP/page-load p50/p95/p99), web vitals (CLS/FCP/FID/INP/LCP/TTFB averages + p75/p95)
+- **Pipelines**: ingestion, delivery, operator, sink
+- **Containers, Turnstile**
+- **DNS, Email Routing/Sending, DMARC** (zone-scope)
+- **API Gateway sessions, Workers Zone invocations/subrequests** (zone-scope)
 
-### Datasets
+See `src/datasets.ts` for the full registry. Each dataset declares its GraphQL field, dimensions, aggregation blocks, tag mappings, and field mappings.
 
-24 GraphQL datasets + 1 client-side aggregate, grouped roughly by product:
+### Skipped datasets
 
-**Workers**
+| Dataset                               | Reason                                                                     |
+| ------------------------------------- | -------------------------------------------------------------------------- |
+| `firewallEventsAdaptiveGroups`        | Plan-gated (Business/Enterprise only)                                      |
+| `cdnNetworkAnalyticsAdaptiveGroups`   | Plan-gated                                                                 |
+| `zarazTrack/TriggersAdaptiveGroups`   | Incompatible filter shape (`datetimeMinute_geq` instead of `datetime_geq`) |
+| `cloudchamberMetricsAdaptiveGroups`   | Duplicate schema of `containersMetrics`                                    |
+| `cacheReserveRequestsAdaptiveGroups`  | Plan-gated (zone-scope)                                                    |
+| `healthCheckEventsAdaptiveGroups`     | Plan-gated (zone-scope)                                                    |
+| `loadBalancingRequestsAdaptiveGroups` | Plan-gated (zone-scope)                                                    |
+| `nelReportsAdaptiveGroups`            | Plan-gated (zone-scope)                                                    |
+| `pageShieldReportsAdaptiveGroups`     | Plan-gated (zone-scope)                                                    |
+| `waitingRoomAnalyticsAdaptiveGroups`  | Plan-gated (zone-scope)                                                    |
 
-- `cf_workers_invocations` — `workersInvocationsAdaptive`: requests, errors,
-  subrequests, CPU time, wall time, response size (sum/max/p50/p99) by script,
-  status, version, usage model
-- `cf_workers_subrequests` — `workersSubrequestsAdaptiveGroups`: outbound
-  subrequest counts and sizes by hostname, cache status, HTTP status
-- `cf_workers_overview` — `workersOverviewRequestsAdaptiveGroups`: account-wide
-  cpu time by usage model / status
-- `cf_workers_scheduled` — `workersInvocationsScheduled` (client-side bucketed):
-  cron invocations, cpu time sum/avg/max per (script, cron, status, minute)
-- `cf_pages_functions_invocations` — `pagesFunctionsInvocationsAdaptiveGroups`
+## Query batching
 
-**D1**
+Cloudflare Workers caps subrequests at 50 per invocation. Account-scope datasets are batched into chunks of 25 using GraphQL aliases. Zone-scope datasets are batched across all zones in a single request per dataset.
 
-- `cf_d1_queries` — `d1AnalyticsAdaptiveGroups`: read/write queries, rows
-  read/written, query duration. Tagged with `database_name` + `database_id`.
-- `cf_d1_queries_detail` — `d1QueriesAdaptiveGroups`: per-query count, rows
-  scanned/returned/written, duration p50/p95/p99 grouped by database + error.
-- `cf_d1_storage` — `d1StorageAdaptiveGroups`: database size by `database_name`.
+| Metric                         | Cold start | Warm (cached)        |
+| ------------------------------ | ---------- | -------------------- |
+| REST lookups (D1/queues/zones) | 3          | 0 (10-min TTL cache) |
+| GraphQL account batches        | 3 chunks   | 3 chunks             |
+| GraphQL date-granularity batch | 1          | 1                    |
+| Zone-scope datasets            | ~11        | ~11                  |
+| Metric flush                   | 1          | 1                    |
+| **Total subrequests**          | **~19**    | **~16**              |
 
-**R2**
+## Resource name enrichment
 
-- `cf_r2_operations` — `r2OperationsAdaptiveGroups`: requests, egress by
-  bucket/action/status/storage class
-- `cf_r2_storage` — `r2StorageAdaptiveGroups`: object count, payload + metadata
-  bytes, upload count by bucket
+IDs in the analytics API are enriched with human-readable names via REST lookups:
 
-**KV**
+- `database_name` on `cf_d1_*` metrics (from `/accounts/{id}/d1/database`)
+- `queue_name` on `cf_queue_*` metrics (from `/accounts/{id}/queues`)
+- `zone_name` on `cf_http_*` metrics (from `/zones?account.id={id}` + per-zone fallback for Pages projects)
 
-- `cf_kv_operations` — `kvOperationsAdaptiveGroups`: requests, object bytes by
-  namespace/action/result
-- `cf_kv_storage` — `kvStorageAdaptiveGroups`: key count and total bytes
+Module-level caches survive across isolate invocations (typically 10+ minutes on the paid plan). A 10-minute TTL triggers periodic re-fetches. Failed lookups fall back to stale cached names.
 
-**Durable Objects**
+## Self-telemetry
 
-- `cf_durable_objects_invocations` — requests, errors, response size, wall time
-- `cf_durable_objects_periodic` — active time, cpu, duration, errors, rows R/W,
-  storage R/W units, subrequests, websocket msgs, active ws connections
-- `cf_durable_objects_storage` — account-wide stored bytes
-- `cf_durable_objects_sql_storage` — per-namespace SQLite stored bytes
-- `cf_durable_objects_subrequests` — uncached request body size per script
+The worker emits its own health metrics alongside the Cloudflare data:
 
-**Queues**
+- `cloudflare_metrics_cron_summary` — datasets/points/errors per tick
+- `cloudflare_metrics_cron_error{reason}` — early-exit errors
+- `cloudflare_metrics_collector_dataset{dataset,status}` — per-dataset rows/points/duration/errors
+- `cloudflare_metrics_resource_lookup{resource,status}` — REST lookup outcomes
+- `cloudflare_metrics_graphql_client` — requests/error_responses per tick
+- `cloudflare_metrics_flush{status}` — bytes/duration/pending buffers (from previous tick)
+- `cloudflare_metrics_http_response{method,path,status}` — HTTP handler counts
+- `cloudflare_metrics_handle_request` — handler duration/invocation
 
-- `cf_queue_operations` — billable ops, bytes by queue/action/consumer/outcome.
-  Tagged with `queue_name`.
-- `cf_queue_backlog` — backlog bytes/messages per queue.
-- `cf_queue_consumer` — `queueConsumerMetricsAdaptiveGroups`: consumer
-  concurrency per queue.
+## Dashboards
 
-**Hyperdrive**
+20 Grafana dashboards managed via Terraform, in `deployment/.../dashboards/`:
 
-- `cf_hyperdrive_queries` — query/connection/origin/client latency, query/result
-  bytes by config
-- `cf_hyperdrive_pool` — current/max pool size, waiting clients
+| Dashboard                                      | Template variables              |
+| ---------------------------------------------- | ------------------------------- |
+| Account Overview                               | —                               |
+| Workers                                        | `$script_name`, `$status`       |
+| Workers Scheduled                              | `$script_name`, `$cron`         |
+| D1                                             | `$database_name`                |
+| R2                                             | `$bucket_name`                  |
+| KV                                             | `$namespace_id`                 |
+| Durable Objects                                | `$script_name`, `$namespace_id` |
+| Queues                                         | `$queue_name`                   |
+| Hyperdrive                                     | `$config_id`                    |
+| HTTP / Zones                                   | `$zone_name`                    |
+| Pages Functions                                | `$script_name`                  |
+| AI, Vectorize, Browser, Stream, RUM, Pipelines | —                               |
+| DNS                                            | `$zone_name`                    |
+| Email                                          | `$zone_name`                    |
+| Exporter Health                                | —                               |
 
-**HTTP (Zone-level)**
+## Alerts
 
-- `cf_http_requests_overview` — `httpRequestsOverviewAdaptiveGroups`: requests,
-  bytes, cached requests/bytes, page views, visits by zone/country/protocol/status.
-  Tagged with `zone_name` (including lazily-resolved Pages projects).
-- `cf_http_requests_detail` — `httpRequestsAdaptiveGroups`, **zone-scoped**:
-  detailed per-zone breakdown by method/status/cache/country/protocol with
-  count, bytes, visits, TTFB, origin response time. Batched: one GraphQL query
-  covers all bulk-listed zones via aliased `zones(filter: {zoneTag: "..."})`
-  blocks.
+7 Grafana alert rules in `deployment/.../alerts.tf`, all linked to the exporter-health dashboard:
 
-### Resource name enrichment
+| Rule                               | Condition                          | Severity |
+| ---------------------------------- | ---------------------------------- | -------- |
+| Collector Not Running              | No `cron_summary_datasets` for 10m | 1        |
+| Collector Cron Error               | `cron_error_count > 0` in 10m      | 1        |
+| Dataset Errors Sustained           | `>10` errors in 15m                | 3        |
+| Metrics Flush Failing              | `>3` flush errors in 15m           | 1        |
+| Pending Flush Buffer Growing       | `>3` stashed bodies for 10m        | 3        |
+| GraphQL Subrequest Budget Near Cap | `>40` requests/tick for 10m        | 3        |
+| GraphQL Error Responses Sustained  | `>5` error responses in 15m        | 3        |
 
-IDs in the analytics API (`databaseId`, `queueId`, `zoneTag`) are augmented
-with human-readable names via three REST calls per cron and a lazy per-zone
-fallback:
+## File structure
 
-- `GET /accounts/{id}/d1/database` → `database_name` tag on all `cf_d1_*` metrics
-- `GET /accounts/{id}/queues` → `queue_name` tag on all `cf_queue_*` metrics
-- `GET /zones?account.id={id}` → `zone_name` tag on all `cf_http_*` metrics
-- `GET /zones/{id}` (per unknown `zoneTag`, throttled, module-level cached) →
-  resolves Cloudflare Pages project zones that aren't in the bulk list
+```
+src/
+  index.ts                    Entry point (wires handlers)
+  handlers/
+    http.ts                   /health endpoint
+    scheduled.ts              Cron handler (collect + flush)
+  collector.ts                Orchestration (collectAll → batched account/zone fetches)
+  resource-cache.ts           REST resource lookups + module-level caching
+  emit.ts                     DatasetRow → Metric translation + tag enrichment
+  graphql-client.ts           CloudflareGraphQLClient (HTTP transport + chunking)
+  graphql-builders.ts         Query construction (pure functions)
+  cloudflare-api.ts           CloudflareRestClient (D1/queues/zones REST)
+  metrics.ts                  CloudflareMetricsRepository facade
+  metric.ts                   Metric data class
+  metric-providers.ts         InfluxMetricsProvider + HeaderMetricsProvider
+  flush-state.ts              Retry buffer + last-flush stats (module-level state)
+  datasets.ts                 78 DatasetQuery definitions
+  types.ts                    Shared types
+  deferred.ts                 DeferredRepository (waitUntil helper)
+  monitor.ts                  monitorAsyncFunction (duration/invocation wrapper)
+```
 
-When a lookup fails the metric still gets the ID tag and falls back gracefully
-(e.g. `zone_name` defaults to the zone tag rather than leaving the legend blank).
-
-Per-cron self-metrics live under `cloudflare_metrics_resource_lookup{resource,status,error?}`
-so failures are observable in VictoriaMetrics/Grafana.
-
-### Self-metrics
-
-The worker uses the same `CloudflareMetricsRepository` pattern as the other
-workers in this repo, emitting:
-
-- `cloudflare_metrics_handle_request` / `cloudflare_metrics_cron_collect` —
-  duration / invocation / errors for fetch and scheduled handlers.
-- `cloudflare_metrics_cron_summary` — datasets, points, errors per cron run.
-- `cloudflare_metrics_cron_error` — tagged `reason` when the cron exits early
-  (e.g. missing config).
-- `cloudflare_metrics_collector_dataset{dataset,status}` — per-dataset rows,
-  points, duration, and error tagged with the error class on failure.
-- `cloudflare_metrics_resource_lookup{resource,status,error?}` — D1/queue/zone
-  REST lookup outcomes.
-- `cloudflare_metrics_http_response` — HTTP response counts by method/path/status.
-
-### Infrastructure
-
-- **Worker**: `apps/cloudflare-metrics/` — TypeScript, built with Wrangler, cron
-  trigger every 5 minutes.
-- **Terraform**: `deployment/modules/cloudflare/workers/cloudflare-metrics/` —
-  worker, version, deployment, cron trigger, Grafana dashboard module, and a
-  scoped `cloudflare_api_token` with `Account Analytics Read` + `D1 Read` +
-  `Queues Read` + `Zone Read`. The token is provisioned through a
-  `cloudflare.bootstrap` provider alias (the same one `devtools/tf/.../api-keys`
-  uses) and rotated via a `terraform_data.analytics_token_generation` counter
-  so we can get around Cloudflare provider v5 issue
-  [#5045](https://github.com/cloudflare/terraform-provider-cloudflare/issues/5045)
-  wiping `cloudflare_api_token.value` from state on refresh.
-- **Dashboard**: `deployment/.../dashboards/cloudflare-metrics-overview.json`
-  (generated by `grafana_dashboard` via the shared module). Rows: Overview,
-  Workers, D1, R2, KV, Durable Objects, Queues, HTTP (zone-level), Exporter
-  Health, Workers Scheduled (Cron), D1 Query Detail, Queue Consumers, HTTP
-  Requests Detail.
-
-### Testing
+## Development
 
 ```bash
-pnpm run test              # 58 unit tests covering every layer
-pnpm run test:integration  # gated on CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID
+pnpm run dev               # wrangler dev (local)
+pnpm run test              # 71 unit tests
+pnpm run test:integration  # live API tests (needs CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID)
 pnpm run check             # tsc --noEmit
 pnpm run build             # wrangler deploy --dry-run
-```
-
-Integration tests hit the real Cloudflare API and validate that every dataset
-in the registry comes back with the expected shape (including the
-`fetchAccountBatch` partial-response path).
-
-### Local development
-
-```bash
-cd apps/cloudflare-metrics
-pnpm run dev               # wrangler dev
-pnpm run tail              # wrangler tail (requires auth)
 ```
 
 Local `.dev.vars`:
@@ -222,122 +183,8 @@ VMETRICS_API_TOKEN=...
 ENVIRONMENT=dev
 ```
 
----
+## Infrastructure
 
-## What's missing
-
-### Cloudflare GraphQL datasets we haven't wired up
-
-**Plan-gated (blocked)**
-
-- `firewallEventsAdaptiveGroups` — WAF / rate-limit / custom rules event counts
-  by rule/action/country. Returns `authz` / "does not have access to the path"
-  at both account and zone scope on our current plan (requires Business or
-  Enterprise). When the plan level changes, adding it is a single
-  `DatasetQuery` entry using `scope: 'zone'` — see the TODO comment in
-  `src/datasets.ts` above `HTTP_REQUESTS_DETAIL`.
-
-**Applicable but not yet implemented (low-hanging fruit)**
-
-- `workersBuildsBuildMinutesAdaptiveGroups` — Workers Builds CI minutes. Empty
-  on our account right now; wire it up when we start using Workers Builds.
-- `workersAnalyticsEngineAdaptiveGroups` — when/if Immich starts writing to
-  Analytics Engine datasets.
-
-**Zone-level datasets we could add via `scope: 'zone'`**
-We currently query exactly one zone-level dataset (`httpRequestsAdaptiveGroups`)
-and use the batched-zones query pattern for it. The same pattern could add:
-
-- `firewallEvents(Adaptive|Groups)` (once plan permits) — per-zone WAF events
-- `cacheReserveOperations/Requests/StorageAdaptiveGroups` — Cache Reserve
-- `loadBalancingRequests(Adaptive|Groups)` — Load Balancer traffic
-- `healthCheckEvents(Adaptive|Groups)` — per-zone synthetic health checks
-- `waitingRoomAnalytics(Adaptive|Groups)` — Waiting Room queues
-- `pageShieldReportsAdaptiveGroups` — JS supply-chain alerts
-- `dnsAnalytics(Adaptive|Groups)` at the zone level
-- `workersZoneInvocationsAdaptiveGroups` /
-  `workersZoneSubrequestsAdaptiveGroups` — worker route stats per zone
-- `apiGateway*` (4 datasets) — API Gateway analytics
-- `emailRouting(Adaptive|Groups)` / `emailSending(Adaptive|Groups)` — if Immich
-  starts using Cloudflare Email Routing
-- `dmarcReports*` — DMARC aggregate reports
-
-### Cloudflare products not relevant today but easy to add later
-
-Datasets exist in the API but our account has no data for these because we
-don't use the products. Adding a dataset entry is trivial when we do:
-
-- **AI / AI Gateway**: `aiInferenceAdaptive(Groups)`, `aiGateway*` (Cache,
-  Errors, Requests, Size, AutoRAG)
-- **Vectorize**: `vectorizeV2Operations/Queries/Storage/WritesAdaptiveGroups`
-- **Browser Rendering** / **Browser Isolation**
-- **Workflows**: `workflowsAdaptive(Groups)`
-- **Stream / Calls / Video**: `callsStatus`, `liveInputEvents`, `streamCMCD`,
-  `videoBuffer/Playback/Quality`, `realtimeKitUsage`
-- **Images / Media transformations**: `imagesRequestsAdaptiveGroups`,
-  `mediaUniqueTransformations`, `toMarkdownConversion`
-- **RUM**: `rumPageloadEvents`, `rumPerformanceEvents`, `rumWebVitals`
-- **Zero Trust / Access / Gateway / WARP**: `accessLoginRequests`, all
-  `gateway*`, `warpDevice*`, `cloudflareTunnelsAnalytics`, `zeroTrustPrivateNetworkDiscovery`
-- **Magic WAN / Transit / IDPS** (a lot of `magic*` and `mconnTelemetry*` datasets)
-- **Pipelines** (data ingest): `pipelinesIngestion/Delivery/Operator/Sink/UserErrors`
-- **Containers / Cloudchamber**: `containersMetricsAdaptiveGroups`,
-  `cloudchamberMetricsAdaptiveGroups`
-- **Turnstile** / **Zaraz**: `turnstileAdaptiveGroups`, `zaraz*`
-
-### Things that aren't in the GraphQL API at all
-
-The following would require a separate REST client and different token
-permissions if we ever want them:
-
-- **Billing / invoicing** — `/accounts/{id}/billing*`. Monthly spend, quota
-  usage against plan caps, invoice history.
-- **Plan details and limits** — plan tier, feature gates, current quota usage.
-- **Worker deployment history** — `/accounts/{id}/workers/scripts/{name}/deployments`
-- **R2 Sippy migration progress** — if we ever use Sippy
-- **Uptime / synthetic monitoring results** from the Cloudflare Health Check
-  API (distinct from the per-zone `healthCheckEvents` dataset).
-
-### Architectural TODOs
-
-- **Cross-invocation caching beyond zone names.** D1/queue lists are re-fetched
-  every cron tick; a module-level cache (like `globalZoneNameCache`) would
-  save 2 subrequests per invocation and reduce the cold-start budget even
-  further.
-- **Datasets with explicit `datetime` filter only.** A few datasets (notably
-  `d1QueriesAdaptiveGroups`) support per-query text grouping via a `query`
-  dimension. We skip it because of cardinality, but we could expose it behind
-  a flag once we decide how to bound the cardinality (e.g. hashed query
-  fingerprint + retention).
-- **Firewall-gated plan upgrades** — if we move to Business/Enterprise we
-  should enable `firewallEventsAdaptiveGroups` and the richer fields in
-  `httpRequestsAdaptiveGroups` (bot scores, WAF attack scores, ja3/ja4
-  fingerprints).
-- **Per-zone HTTP detail currently skips Pages projects.** `collectZoneBatch`
-  only iterates zones in `resourceCache.bulkZoneTags` to avoid running ~20
-  per-zone queries against Pages projects that Cloudflare doesn't return from
-  the bulk `/zones` list. If we ever want HTTP detail for Pages zones, we'd
-  need a separate strategy (e.g. query them in a second batch capped at N).
-- **Grafana dashboard is a single file.** As we add more datasets the
-  `cloudflare-metrics-overview.json` file will become unwieldy; consider
-  splitting into per-product dashboards wired up by the shared Grafana module's
-  `for_each fileset` pattern.
-- **No alerting rules yet.** The metrics are there but we haven't set up
-  Grafana alerts (or Prometheus alerting rules) for things like error spikes,
-  queue backlog growth, D1 query duration regressions, or the exporter's own
-  failures (`collector_dataset{status="error"}` / `resource_lookup{status="error"}`).
-
-### Infra-side TODOs
-
-- **Production deployment.** Currently only the dev PR-28 stage is deployed.
-  Once reviewed, merging will roll the worker to `prod` automatically via the
-  existing `deploy-prod` CI job — but the Terraform-managed token is per-stage,
-  so the prod apply will create a new token rather than reusing the dev one.
-- **VictoriaMetrics dedup setting.** We proved the pipeline writes at 1-minute
-  granularity after fixing the hardcoded `"interval": "5m"` on the dashboard
-  panels. If the dev VM cluster is ever configured with
-  `-dedup.minScrapeInterval >= 1m`, the 1-minute data will be collapsed.
-  Prod is untested.
-- **Log sink for `logpush=true`.** The worker has `logpush = true` set but we
-  haven't wired up a destination; `wrangler tail` still works for ad-hoc
-  debugging.
+- **Worker**: `apps/cloudflare-metrics/` — TypeScript, Wrangler, every-minute cron
+- **Terraform**: `deployment/modules/cloudflare/workers/cloudflare-metrics/` — worker, version, deployment, cron trigger, dashboards, alerts, and a scoped API token with Account Analytics Read + D1 Read + Queues Read + Zone Read
+- **CI**: unit tests on every PR, path-filtered integration tests (gated on 1Password credentials), build + deploy-dev on PR, deploy-prod on merge to main
