@@ -7,11 +7,16 @@ import { InfluxMetricsProvider } from '../metric-providers.js';
 import { Metric } from '../metric.js';
 import { CloudflareMetricsRepository } from '../metrics.js';
 
+// Lazy-init on first handler call because Date.now() at module scope
+// returns a frozen value in Workers (deploy time, not wall clock).
+let isolateStartedAt: number | null = null;
+
 export async function handleScheduled(
   _controller: ScheduledController,
   env: Env,
   ctx: ExecutionContext,
 ): Promise<void> {
+  isolateStartedAt ??= Date.now();
   const influxProvider = new InfluxMetricsProvider(env.VMETRICS_API_TOKEN ?? '', env.ENVIRONMENT ?? '');
   const request = new Request('https://localhost/cron');
   const metrics = new CloudflareMetricsRepository(
@@ -56,11 +61,15 @@ export async function handleScheduled(
     );
   }
 
-  metrics.push(
+  const isolateAgeSec = Math.round((Date.now() - isolateStartedAt) / 1000);
+  for (const m of [
     Metric.create('graphql_client')
       .intField('requests', graphqlClient.requestCount)
       .intField('error_responses', graphqlClient.errorResponseCount),
-  );
+    Metric.create('isolate').intField('age_seconds', isolateAgeSec),
+  ]) {
+    metrics.push(m);
+  }
 
   ctx.waitUntil(influxProvider.flush());
 }
