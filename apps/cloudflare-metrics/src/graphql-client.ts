@@ -1,22 +1,26 @@
+import {
+  ACCOUNT_BATCH_CHUNK_SIZE,
+  buildBatchedAccountQuery,
+  buildBatchedZoneQuery,
+  buildFilterObject,
+  chunkArray,
+  groupErrorsByAlias,
+} from './graphql-builders.js';
 import type { AccountQueryResult, DatasetQuery, DatasetRow, GraphQLResponse } from './types.js';
 
 const CLOUDFLARE_GRAPHQL_ENDPOINT = 'https://api.cloudflare.com/client/v4/graphql';
-const DEFAULT_DATASET_LIMIT = 9999;
-// Cloudflare GraphQL rejects batched queries above ~50 aliased datasets with a
-// "too many nodes, zones and accounts" error. Keep well under that so chunks
-// with higher-dimensionality datasets don't bump the ceiling either.
-export const ACCOUNT_BATCH_CHUNK_SIZE = 25;
 
-function chunkArray<T>(items: readonly T[], size: number): T[][] {
-  if (size <= 0) {
-    return items.length > 0 ? [[...items]] : [];
-  }
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size) as T[]);
-  }
-  return chunks;
-}
+// Re-export the builder helpers so existing imports from `graphql-client.js`
+// keep working. A follow-up will switch call sites to import from
+// `graphql-builders.js` directly.
+export {
+  ACCOUNT_BATCH_CHUNK_SIZE,
+  buildBatchedAccountQuery,
+  buildBatchedZoneQuery,
+  buildDatasetSelection,
+  buildFilterObject,
+  groupErrorsByAlias,
+} from './graphql-builders.js';
 
 export class CloudflareGraphQLError extends Error {
   constructor(
@@ -78,6 +82,11 @@ export interface ICloudflareGraphQLClient {
   ): Promise<BatchedZoneDatasetResult>;
 }
 
+/**
+ * Repository implementation that talks to the real Cloudflare GraphQL
+ * Analytics API. Owns the HTTP transport, batching under the query-size
+ * cap, and the request/error counters used by self-telemetry.
+ */
 export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
   /** Counter of HTTP requests issued to the Cloudflare GraphQL endpoint. */
   private _requestCount = 0;
@@ -105,9 +114,9 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     options: { includeScheduledInvocations?: boolean } = {},
   ): Promise<BatchedDatasetResult> {
     // Cloudflare's GraphQL endpoint enforces a "too many nodes, zones and
-    // accounts" limit on combined query complexity. Empirically ~50 aliased
-    // datasets is the ceiling; we chunk well below that to leave headroom
-    // for datasets with extra blocks/dimensions.
+    // accounts" limit on combined query complexity. Chunk well under the
+    // empirical ~50-dataset ceiling to leave headroom for datasets with
+    // extra blocks/dimensions.
     const chunks = chunkArray(datasets, ACCOUNT_BATCH_CHUNK_SIZE);
     if (chunks.length === 0 && options.includeScheduledInvocations) {
       chunks.push([]);
@@ -256,163 +265,4 @@ async function safeReadText(response: Response): Promise<string | undefined> {
   } catch {
     return undefined;
   }
-}
-
-/**
- * Emits the inner selection for a single dataset — the aliased field, its
- * arguments, and the selection set — without the surrounding
- * `viewer.accounts { ... }` wrapper. Used by the batched query builders so
- * one query can carry many dataset selections.
- */
-export function buildDatasetSelection(dataset: DatasetQuery, alias?: string): string {
-  const dimensionSelection = dataset.dimensions.join(' ');
-  const blockSelections = (Object.entries(dataset.blocks) as Array<[string, readonly string[] | undefined]>)
-    .filter(([, fields]) => fields && fields.length > 0)
-    .map(([block, fields]) => `${block} { ${(fields ?? []).join(' ')} }`)
-    .join(' ');
-  const topLevelSelection = (dataset.topLevelFields ?? []).join(' ');
-  const limit = dataset.limit ?? DEFAULT_DATASET_LIMIT;
-  const aliasPrefix = alias && alias !== dataset.field ? `${alias}: ` : '';
-  return `${aliasPrefix}${dataset.field}(limit: ${limit}, filter: $filter${orderByClause(dataset)}) {
-        dimensions { ${dimensionSelection} }
-        ${topLevelSelection}
-        ${blockSelections}
-      }`;
-}
-
-const SCHEDULED_INVOCATIONS_SELECTION = `workers_scheduled: workersInvocationsScheduled(limit: ${DEFAULT_DATASET_LIMIT}, filter: $filter) {
-        scriptName
-        cron
-        status
-        datetime
-        cpuTimeUs
-      }`;
-
-/**
- * Builds a single GraphQL query that pulls many account-scope datasets in
- * one HTTP request by aliasing each dataset. All datasets in the batch must
- * share the same filter granularity (datetime or date) because they share
- * the `$filter` variable.
- */
-export function buildBatchedAccountQuery(
-  datasets: readonly DatasetQuery[],
-  includeScheduledInvocations = false,
-): string {
-  const selections = datasets.map((d) => buildDatasetSelection(d, d.key));
-  if (includeScheduledInvocations) {
-    selections.push(SCHEDULED_INVOCATIONS_SELECTION);
-  }
-  return `query CloudflareMetricsAccountBatch($accountTag: String!, $filter: JSON!) {
-  viewer {
-    accounts(filter: { accountTag: $accountTag }) {
-      ${selections.join('\n      ')}
-    }
-  }
-}`;
-}
-
-/**
- * Builds a single GraphQL query that fetches one dataset across many
- * zones. Each zoneTag becomes its own aliased `zones(...)` block.
- */
-export function buildBatchedZoneQuery(zoneTags: readonly string[], dataset: DatasetQuery): string {
-  const safeZoneTags = zoneTags.map((tag) => {
-    if (!/^[a-zA-Z0-9_-]+$/.test(tag)) {
-      throw new Error(`Invalid zoneTag for batched query: ${tag}`);
-    }
-    return tag;
-  });
-  const selections = safeZoneTags
-    .map(
-      (tag, index) => `    z${index}: zones(filter: { zoneTag: "${tag}" }) {
-      ${buildDatasetSelection(dataset, dataset.field)}
-    }`,
-    )
-    .join('\n');
-  return `query CloudflareMetricsZoneBatch($filter: JSON!) {
-  viewer {
-${selections}
-  }
-}`;
-}
-
-/**
- * Builds the filter JSON object passed via `$filter` in both batched and
- * unbatched queries. Picks date-vs-datetime fields based on the dataset's
- * declared filter granularity; all datasets in a batch must agree on this.
- */
-export function buildFilterObject(
-  dataset: DatasetQuery | null,
-  range: { start: Date; end: Date },
-): Record<string, unknown> {
-  const filter: Record<string, unknown> = dataset?.extraFilter ? { ...dataset.extraFilter } : {};
-  if ((dataset?.filterGranularity ?? 'datetime') === 'date') {
-    filter.date_geq = formatDateOnly(range.start);
-    filter.date_leq = formatDateOnly(range.end);
-  } else {
-    filter.datetime_geq = range.start.toISOString();
-    filter.datetime_leq = range.end.toISOString();
-  }
-  return filter;
-}
-
-/**
- * Converts the GraphQL `errors[]` array into a map from alias → message.
- * Cloudflare's error payloads include a `path` that begins with the
- * viewer → accounts/zones → aliased field; we walk it until we find an
- * alias we recognise. Errors without a resolvable alias are grouped under
- * an empty key and handled by the caller.
- */
-export function groupErrorsByAlias(
-  errors: GraphQLResponse<unknown>['errors'] | null | undefined,
-): Record<string, string> {
-  const result: Record<string, string> = {};
-  if (!errors) {
-    return result;
-  }
-  for (const error of errors) {
-    const alias = findAliasInPath(error.path);
-    if (alias) {
-      const existing = result[alias];
-      result[alias] = existing ? `${existing}; ${error.message}` : error.message;
-    }
-  }
-  return result;
-}
-
-function findAliasInPath(path: readonly (string | number)[] | undefined): string | undefined {
-  if (!path) {
-    return undefined;
-  }
-  // Typical path shape:
-  //   ['viewer', 'accounts', 0, '<alias>']
-  //   ['viewer', '<alias>', 0, '<innerField>']   (zone batches)
-  // Return the first path segment after a list index that isn't part of
-  // the `dimensions` / `sum` / etc. internals.
-  for (let i = 0; i < path.length; i++) {
-    const segment = path[i];
-    if (typeof segment !== 'string') {
-      continue;
-    }
-    if (segment === 'viewer' || segment === 'accounts' || segment === 'zones') {
-      continue;
-    }
-    return segment;
-  }
-  return undefined;
-}
-
-function orderByClause(dataset: DatasetQuery): string {
-  const timestampDim = dataset.timestampDimension ?? 'datetimeMinute';
-  // Grouping implicitly takes place on the dimensions, so orderBy helps
-  // make sure we get the most recent buckets within the limit.
-  if (dataset.dimensions.includes(timestampDim)) {
-    return `, orderBy: [${timestampDim}_ASC]`;
-  }
-  return '';
-}
-
-function formatDateOnly(date: Date): string {
-  // YYYY-MM-DD
-  return date.toISOString().slice(0, 10);
 }
