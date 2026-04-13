@@ -1565,10 +1565,10 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (dataset) (increase(cloudflare_metrics_collector_dataset_errors[5m]))",
+          "expr": "sum by (dataset, error, error_scope) (increase(cloudflare_metrics_collector_dataset_errors[5m]))",
           "instant": false,
           "range": true,
-          "legendFormat": "{{dataset}}",
+          "legendFormat": "{{dataset}} ({{error_scope}}: {{error}})",
           "refId": "A"
         }
       ],

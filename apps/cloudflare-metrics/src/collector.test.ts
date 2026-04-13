@@ -222,7 +222,9 @@ describe('CloudflareMetricsCollector', () => {
     const errorMetric = provider.metrics.find(
       (m) => m.tags.get('dataset') === 'workers_invocations' && m.tags.get('status') === 'error',
     );
-    expect(errorMetric?.tags.get('error')).toBe('Error');
+    expect(errorMetric?.tags.get('error')).toBe('graphql_field_error');
+    expect(errorMetric?.tags.get('error_scope')).toBe('field');
+    expect(errorMetric?.tags.get('error_message')).toBe('boom');
   });
 
   it('accepts date-granularity datasets and synthesizes a midnight UTC timestamp', async () => {

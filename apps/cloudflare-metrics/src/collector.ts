@@ -83,11 +83,11 @@ export class CloudflareMetricsCollector {
       const message = errorMessage(error);
       console.error('[collector] account batch fetch failed:', message);
       for (const dataset of datasets) {
-        this.pushDatasetErrorMetric(dataset.key, error, durationMs);
+        this.pushDatasetErrorMetric(dataset.key, error, durationMs, 'batch');
         results.push({ dataset: dataset.key, rows: 0, points: 0, durationMs, error: message });
       }
       if (options.includeScheduledInvocations) {
-        this.pushDatasetErrorMetric('workers_scheduled', error, durationMs);
+        this.pushDatasetErrorMetric('workers_scheduled', error, durationMs, 'batch');
         results.push({ dataset: 'workers_scheduled', rows: 0, points: 0, durationMs, error: message });
       }
       return results;
@@ -244,7 +244,7 @@ export class CloudflareMetricsCollector {
       const durationMs = performance.now() - startedAt;
       const message = errorMessage(error);
       console.error(`[collector] ${dataset.key} zone batch fetch failed:`, message);
-      this.pushDatasetErrorMetric(dataset.key, error, durationMs);
+      this.pushDatasetErrorMetric(dataset.key, error, durationMs, 'zone');
       return { dataset: dataset.key, rows: 0, points: 0, durationMs, error: message };
     }
 
@@ -316,12 +316,19 @@ export class CloudflareMetricsCollector {
     await this.resourceCache.resolveMissingZones(missing);
   }
 
-  private pushDatasetErrorMetric(datasetKey: string, error: unknown, durationMs: number): void {
+  private pushDatasetErrorMetric(
+    datasetKey: string,
+    error: unknown,
+    durationMs: number,
+    scope: 'batch' | 'field' | 'zone' = 'field',
+  ): void {
     this.metrics.push(
       Metric.create('collector_dataset')
         .addTag('dataset', datasetKey)
         .addTag('status', 'error')
         .addTag('error', errorTag(error))
+        .addTag('error_scope', scope)
+        .addTag('error_message', truncateTag(errorMessage(error), 128))
         .intField('errors', 1)
         .durationField('duration', durationMs),
     );
@@ -329,6 +336,12 @@ export class CloudflareMetricsCollector {
 }
 
 function errorMessage(error: unknown): string {
+  if (error instanceof CloudflareGraphQLError) {
+    // Include the response body snippet when available — it often contains
+    // the real reason (rate limit, auth, etc).
+    const body = error.responseBody?.slice(0, 200) ?? '';
+    return body ? `${error.message}: ${body}` : error.message;
+  }
   if (error instanceof Error) {
     return error.message;
   }
@@ -340,7 +353,32 @@ function errorTag(error: unknown): string {
     return `graphql_${error.statusCode}`;
   }
   if (error instanceof Error) {
-    return error.name;
+    // Classify common Cloudflare GraphQL error messages into stable tags.
+    const msg = error.message.toLowerCase();
+    if (msg.includes('rate limit') || msg.includes('throttl')) {
+      return 'rate_limited';
+    }
+    if (msg.includes('timeout') || msg.includes('timed out')) {
+      return 'timeout';
+    }
+    if (msg.includes('unauthorized') || msg.includes('forbidden') || msg.includes('authentication')) {
+      return 'auth_error';
+    }
+    if (msg.includes('not found') || msg.includes('does not exist')) {
+      return 'not_found';
+    }
+    if (msg.includes('internal server error') || msg.includes('internal error')) {
+      return 'internal_error';
+    }
+    return error.name === 'Error' ? 'graphql_field_error' : error.name;
   }
   return 'unknown';
+}
+
+/** Truncate a string for use as a metric tag value. */
+function truncateTag(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return value.slice(0, maxLength - 3) + '...';
 }
