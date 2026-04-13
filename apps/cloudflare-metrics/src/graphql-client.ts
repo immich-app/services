@@ -153,6 +153,9 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     const totalFields = datasets.length + (includeScheduledInvocations ? 1 : 0);
     if (attempt < 2 && totalFields > 0 && Object.keys(result.errors).length >= totalFields) {
       console.warn(`[graphql] all ${totalFields} fields errored, retrying chunk (attempt ${attempt + 1})`);
+      // Undo the error response count from this attempt — the retry will
+      // re-increment if it also fails, keeping the counter accurate.
+      this._errorResponseCount--;
       await sleep(1000);
       return this.fetchAccountBatchChunk(accountTag, datasets, range, includeScheduledInvocations, attempt + 1);
     }
@@ -200,6 +203,7 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     // Retry once when all zones errored.
     if (attempt < 2 && zoneTags.length > 0 && Object.keys(result.errors).length >= zoneTags.length) {
       console.warn(`[graphql] all ${zoneTags.length} zones errored for ${dataset.key}, retrying (attempt ${attempt + 1})`);
+      this._errorResponseCount--;
       await sleep(1000);
       return this.fetchZoneBatch(zoneTags, dataset, range, attempt + 1);
     }
