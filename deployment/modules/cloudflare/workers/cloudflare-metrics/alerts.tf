@@ -535,4 +535,66 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
     labels    = { severity = "1" }
     is_paused = false
   }
+
+  # 9) CPU time approaching the limit. With the ceiling at 30s, sustained
+  #    p99 > 1s means the worker is doing more work than expected and could
+  #    eventually hit exceededResources again if it keeps climbing.
+  rule {
+    name      = "Collector CPU Time High"
+    condition = "C"
+
+    data {
+      ref_id         = "A"
+      datasource_uid = local.prometheus_datasource_uid
+      relative_time_range {
+        from = 900
+        to   = 0
+      }
+      model = jsonencode({
+        datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
+        editorMode    = "code"
+        expr          = "max(cf_workers_invocations_cpu_time_us_p99{script_name=\"${local.worker_script_name}\"})"
+        instant       = true
+        intervalMs    = 60000
+        legendFormat  = "cpu_p99"
+        maxDataPoints = 43200
+        refId         = "A"
+      })
+    }
+    data {
+      ref_id         = "C"
+      datasource_uid = "__expr__"
+      relative_time_range {
+        from = 0
+        to   = 0
+      }
+      model = jsonencode({
+        datasource = { type = "__expr__", uid = "__expr__" }
+        expression = "A"
+        refId      = "C"
+        type       = "threshold"
+        conditions = [{
+          evaluator = { params = [1000000], type = "gt" }
+          operator  = { type = "and" }
+          query     = { params = ["C"] }
+          reducer   = { params = [], type = "last" }
+          type      = "query"
+        }]
+        intervalMs    = 1000
+        maxDataPoints = 43200
+      })
+    }
+
+    no_data_state  = "OK"
+    exec_err_state = "OK"
+    for            = "10m"
+    annotations = {
+      __dashboardUid__ = local.exporter_health_uid
+      __panelId__      = tostring(local.alert_panels.collector_liveness)
+      summary          = "Collector CPU time is high"
+      description      = "p99 CPU time for the collector worker has been above 1s for 10 minutes. The CPU limit is 30s but sustained high usage may indicate a problem. Check the workers dashboard for the script."
+    }
+    labels    = { severity = "3" }
+    is_paused = false
+  }
 }
