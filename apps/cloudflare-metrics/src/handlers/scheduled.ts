@@ -81,7 +81,9 @@ export async function handleScheduled(
   for (const m of [
     Metric.create('graphql_client')
       .intField('requests', graphqlClient.requestCount)
-      .intField('error_responses', graphqlClient.errorResponseCount),
+      .intField('error_responses', graphqlClient.errorResponseCount)
+      .intField('retries', graphqlClient.retryCount)
+      .intField('retry_successes', graphqlClient.retrySuccessCount),
     Metric.create('isolate').intField('age_seconds', isolateAgeSec),
   ]) {
     metrics.push(m);
