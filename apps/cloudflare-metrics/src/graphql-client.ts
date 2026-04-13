@@ -107,6 +107,7 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     datasets: readonly DatasetQuery[],
     range: { start: Date; end: Date },
     includeScheduledInvocations: boolean,
+    attempt = 1,
   ): Promise<BatchedDatasetResult> {
     const query = buildBatchedAccountQuery(datasets, includeScheduledInvocations);
     const variables = {
@@ -147,6 +148,15 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
       }
     }
 
+    // Retry once when all fields errored — likely a transient Cloudflare
+    // analytics backend issue that resolves on the next attempt.
+    const totalFields = datasets.length + (includeScheduledInvocations ? 1 : 0);
+    if (attempt < 2 && totalFields > 0 && Object.keys(result.errors).length >= totalFields) {
+      console.warn(`[graphql] all ${totalFields} fields errored, retrying chunk (attempt ${attempt + 1})`);
+      await sleep(1000);
+      return this.fetchAccountBatchChunk(accountTag, datasets, range, includeScheduledInvocations, attempt + 1);
+    }
+
     return result;
   }
 
@@ -154,6 +164,7 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     zoneTags: readonly string[],
     dataset: DatasetQuery,
     range: { start: Date; end: Date },
+    attempt = 1,
   ): Promise<BatchedZoneDatasetResult> {
     if (zoneTags.length === 0) {
       return { rows: {}, errors: {} };
@@ -185,6 +196,14 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
         result.errors[zoneTag] = message;
       }
     }
+
+    // Retry once when all zones errored.
+    if (attempt < 2 && zoneTags.length > 0 && Object.keys(result.errors).length >= zoneTags.length) {
+      console.warn(`[graphql] all ${zoneTags.length} zones errored for ${dataset.key}, retrying (attempt ${attempt + 1})`);
+      await sleep(1000);
+      return this.fetchZoneBatch(zoneTags, dataset, range, attempt + 1);
+    }
+
     return result;
   }
 
@@ -212,6 +231,10 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     }
     return parsed;
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function safeReadText(response: Response): Promise<string | undefined> {
