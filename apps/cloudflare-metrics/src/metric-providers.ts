@@ -29,7 +29,7 @@ export class HeaderMetricsProvider implements IMetricsProviderRepository {
   }
 
   flush() {
-    console.log(this._metrics.join(', '));
+    // Header metrics are consumed via getTimingHeader(); nothing to log.
   }
 }
 
@@ -94,9 +94,8 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
     const body = parts.join('\n');
     let status: 'ok' | 'error' = 'ok';
 
-    if (this.environment !== 'prod') {
-      console.log(body);
-    }
+    // Non-prod body logging removed — payloads of ~3000 lines per tick
+    // blow the 256KB log budget and waste CPU on string serialization.
     if (!this.influxApiToken) {
       // No token (local/dev): treat as successful for cleanup.
       pendingFlushBuffers.length = 0;

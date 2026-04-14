@@ -1,6 +1,23 @@
 import { Metric } from './metric.js';
 import type { ResourceCache } from './resource-cache.js';
-import type { DatasetQuery, DatasetRow } from './types.js';
+import type { DatasetQuery, DatasetRow, FieldSpec } from './types.js';
+
+// Precomputed per-dataset field entries to avoid Object.entries() per row.
+// Keyed by dataset identity — safe because dataset objects are module-level
+// constants that live for the lifetime of the isolate.
+type FieldEntry = readonly [string, string, string, FieldSpec];
+const fieldEntriesCache = new WeakMap<DatasetQuery, FieldEntry[]>();
+
+function getFieldEntries(dataset: DatasetQuery): FieldEntry[] {
+  let cached = fieldEntriesCache.get(dataset);
+  if (!cached) {
+    cached = Object.entries(dataset.fields).map(
+      ([name, spec]) => [name, spec.source[0], spec.source[1], spec] as const,
+    );
+    fieldEntriesCache.set(dataset, cached);
+  }
+  return cached;
+}
 
 export function buildMetric(
   dataset: DatasetQuery,
@@ -17,8 +34,9 @@ export function buildMetric(
   metric.addTag('account_id', accountTag);
   metric.setExportTimestamp(timestamp);
 
+  const dims = row.dimensions;
   for (const tag of dataset.tags) {
-    const raw = row.dimensions?.[tag.source];
+    const raw = dims?.[tag.source];
     const value = normalizeTagValue(raw);
     if (value !== undefined) {
       metric.addTag(tag.as, value);
@@ -27,15 +45,15 @@ export function buildMetric(
 
   applyResourceTags(metric, dataset, row, resourceCache);
 
+  const rowAny = row as unknown as Record<string, unknown>;
   let hasField = false;
-  for (const [fieldName, spec] of Object.entries(dataset.fields)) {
-    const [block, key] = spec.source;
+  for (const entry of getFieldEntries(dataset)) {
+    const [fieldName, block, key, spec] = entry;
     let raw: number | null | undefined;
     if (block === '_top') {
-      // Read a top-level scalar (e.g. `count` on *AdaptiveGroups rows)
-      raw = (row as unknown as Record<string, number | null | undefined>)[key];
+      raw = rowAny[key] as number | null | undefined;
     } else {
-      const blockData = (row as unknown as Record<string, Record<string, number | null> | undefined>)[block];
+      const blockData = rowAny[block] as Record<string, number | null> | undefined;
       raw = blockData?.[key];
     }
     if (raw === null || raw === undefined) {

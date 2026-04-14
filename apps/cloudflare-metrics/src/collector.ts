@@ -49,8 +49,17 @@ export class CloudflareMetricsCollector {
     const range = this.getRange();
     const results: CollectionResult[] = [];
 
-    const accountDatasets = datasets.filter((d) => (d.scope ?? 'account') === 'account');
-    const zoneDatasets = datasets.filter((d) => d.scope === 'zone');
+    // Single-pass classification — avoids two .filter() allocations over the
+    // ~79-dataset registry on every tick.
+    const accountDatasets: DatasetQuery[] = [];
+    const zoneDatasets: DatasetQuery[] = [];
+    for (const d of datasets) {
+      if (d.scope === 'zone') {
+        zoneDatasets.push(d);
+      } else {
+        accountDatasets.push(d);
+      }
+    }
 
     results.push(...(await this.collectAccountBatch(accountDatasets, range, { includeScheduledInvocations: true })));
     for (const dataset of zoneDatasets) {
@@ -216,9 +225,19 @@ export class CloudflareMetricsCollector {
   private async collectZoneBatch(dataset: DatasetQuery, range: { start: Date; end: Date }): Promise<CollectionResult> {
     const startedAt = performance.now();
     // Only bulk-listed zones (real account zones), not Pages project zones.
+    // Iterate the bulk tag set directly and do a single Map lookup per tag —
+    // avoids spreading the full zones map and an extra filter pass.
     const cache = this.resourceCache.getCache();
-    const zones = [...cache.zones].filter(([tag]) => cache.bulkZoneTags.has(tag));
-    if (zones.length === 0) {
+    const zoneTags: string[] = [];
+    const zoneNames: string[] = [];
+    for (const tag of cache.bulkZoneTags) {
+      const name = cache.zones.get(tag);
+      if (name !== undefined) {
+        zoneTags.push(tag);
+        zoneNames.push(name);
+      }
+    }
+    if (zoneTags.length === 0) {
       this.metrics.push(
         Metric.create('collector_dataset')
           .addTag('dataset', dataset.key)
@@ -230,8 +249,6 @@ export class CloudflareMetricsCollector {
       );
       return { dataset: dataset.key, rows: 0, points: 0, durationMs: 0 };
     }
-
-    const zoneTags = zones.map(([tag]) => tag);
     let batchResult: Awaited<ReturnType<ICloudflareGraphQLClient['fetchZoneBatch']>>;
     try {
       batchResult = await this.client.fetchZoneBatch(zoneTags, dataset, range);
@@ -246,7 +263,9 @@ export class CloudflareMetricsCollector {
     let totalRows = 0;
     let totalPoints = 0;
     let zoneErrors = 0;
-    for (const [zoneTag, zoneName] of zones) {
+    for (let i = 0; i < zoneTags.length; i++) {
+      const zoneTag = zoneTags[i];
+      const zoneName = zoneNames[i];
       if (batchResult.errors[zoneTag]) {
         zoneErrors++;
         console.error(`[collector] ${dataset.key} zone ${zoneTag} error:`, batchResult.errors[zoneTag]);
@@ -255,7 +274,13 @@ export class CloudflareMetricsCollector {
       const rows = batchResult.rows[zoneTag] ?? [];
       totalRows += rows.length;
       for (const row of rows) {
-        row.dimensions = { ...row.dimensions, zoneTag };
+        // Mutate in-place — we own the row (just parsed from JSON) and
+        // avoiding the spread is a meaningful saving in the hot path.
+        if (row.dimensions) {
+          row.dimensions.zoneTag = zoneTag;
+        } else {
+          row.dimensions = { zoneTag };
+        }
         const metric = buildMetric(dataset, row, this.accountTag, cache);
         if (metric) {
           metric.addTag('zone_tag', zoneTag);
@@ -267,14 +292,14 @@ export class CloudflareMetricsCollector {
     }
 
     const durationMs = performance.now() - startedAt;
-    const status = zoneErrors === 0 ? 'success' : zoneErrors === zones.length ? 'error' : 'partial';
+    const status = zoneErrors === 0 ? 'success' : zoneErrors === zoneTags.length ? 'error' : 'partial';
     this.metrics.push(
       Metric.create('collector_dataset')
         .addTag('dataset', dataset.key)
         .addTag('status', status)
         .intField('rows', totalRows)
         .intField('points', totalPoints)
-        .intField('zones', zones.length)
+        .intField('zones', zoneTags.length)
         .intField('zone_errors', zoneErrors)
         .durationField('duration', durationMs),
     );
@@ -283,7 +308,7 @@ export class CloudflareMetricsCollector {
       rows: totalRows,
       points: totalPoints,
       durationMs,
-      error: zoneErrors === zones.length ? 'all zones errored' : undefined,
+      error: zoneErrors === zoneTags.length ? 'all zones errored' : undefined,
     };
   }
 
