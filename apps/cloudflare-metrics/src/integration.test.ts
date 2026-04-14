@@ -57,26 +57,23 @@ const INTEGRATION_TIMEOUT_MS = 60_000;
 describe.skipIf(!hasCredentials)('Cloudflare GraphQL integration', () => {
   const client = buildClient();
 
-  // Account-scoped datasets are fetched in a single batched request per
-  // filter granularity, then iterated individually so we can assert on the
-  // shape per dataset. Zone-scoped datasets are tested separately below.
+  // Account-scoped datasets are fetched in a single batched request,
+  // then iterated individually so we can assert on the shape per dataset.
+  // Zone-scoped datasets are tested separately below.
   const accountDatasets = ALL_DATASETS.filter((d) => (d.scope ?? 'account') === 'account');
 
   it(
     'fetches every account-scope dataset in a single batched request',
     async () => {
-      const datetimeDatasets = accountDatasets.filter((d) => (d.filterGranularity ?? 'datetime') === 'datetime');
-      const dateDatasets = accountDatasets.filter((d) => d.filterGranularity === 'date');
       const range = wideRange();
 
-      const datetimeResult = await client.fetchAccountBatch(env.CLOUDFLARE_ACCOUNT_ID ?? '', datetimeDatasets, range, {
+      const result = await client.fetchAccountBatch(env.CLOUDFLARE_ACCOUNT_ID ?? '', accountDatasets, range, {
         includeScheduledInvocations: true,
       });
-      const dateResult = await client.fetchAccountBatch(env.CLOUDFLARE_ACCOUNT_ID ?? '', dateDatasets, range);
 
       for (const dataset of accountDatasets) {
-        const rows = (datetimeResult.rows[dataset.key] ?? dateResult.rows[dataset.key]) as DatasetRow[] | undefined;
-        const err = datetimeResult.errors[dataset.key] ?? dateResult.errors[dataset.key];
+        const rows = result.rows[dataset.key] as DatasetRow[] | undefined;
+        const err = result.errors[dataset.key];
         if (err) {
           // Plan-gated datasets (e.g. firewallEventsAdaptiveGroups) return an
           // authz error; we don't include those in the registry but if they
@@ -104,7 +101,7 @@ describe.skipIf(!hasCredentials)('Cloudflare GraphQL integration', () => {
           }
         }
       }
-      expect(datetimeResult.scheduledInvocations).toBeDefined();
+      expect(result.scheduledInvocations).toBeDefined();
     },
     INTEGRATION_TIMEOUT_MS,
   );

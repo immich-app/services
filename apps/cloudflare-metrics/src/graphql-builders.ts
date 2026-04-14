@@ -84,13 +84,8 @@ export function buildFilterObject(
   range: { start: Date; end: Date },
 ): Record<string, unknown> {
   const filter: Record<string, unknown> = dataset?.extraFilter ? { ...dataset.extraFilter } : {};
-  if ((dataset?.filterGranularity ?? 'datetime') === 'date') {
-    filter.date_geq = formatDateOnly(range.start);
-    filter.date_leq = formatDateOnly(range.end);
-  } else {
-    filter.datetime_geq = range.start.toISOString();
-    filter.datetime_leq = range.end.toISOString();
-  }
+  filter.datetime_geq = range.start.toISOString();
+  filter.datetime_leq = range.end.toISOString();
   return filter;
 }
 
@@ -138,15 +133,7 @@ function orderByClause(dataset: DatasetQuery): string {
   // Grouping implicitly takes place on the dimensions, so orderBy helps
   // make sure we get the most recent buckets within the limit.
   if (dataset.dimensions.includes(timestampDim)) {
-    // Date-granularity datasets query the full day — order DESC so the
-    // most recent snapshots come first and stay within the limit.
-    const direction = (dataset.filterGranularity ?? 'datetime') === 'date' ? 'DESC' : 'ASC';
-    return `, orderBy: [${timestampDim}_${direction}]`;
+    return `, orderBy: [${timestampDim}_ASC]`;
   }
   return '';
-}
-
-function formatDateOnly(date: Date): string {
-  // YYYY-MM-DD
-  return date.toISOString().slice(0, 10);
 }

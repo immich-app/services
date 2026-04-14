@@ -44,23 +44,15 @@ export class CloudflareMetricsCollector {
     return { start, end };
   }
 
-  async collectAll(
-    datasets: readonly DatasetQuery[],
-    options: { includeDateDatasets?: boolean } = {},
-  ): Promise<CollectionResult[]> {
+  async collectAll(datasets: readonly DatasetQuery[]): Promise<CollectionResult[]> {
     await this.resourceCache.populate();
     const range = this.getRange();
     const results: CollectionResult[] = [];
 
     const accountDatasets = datasets.filter((d) => (d.scope ?? 'account') === 'account');
-    const datetimeDatasets = accountDatasets.filter((d) => (d.filterGranularity ?? 'datetime') === 'datetime');
-    const dateDatasets = accountDatasets.filter((d) => d.filterGranularity === 'date');
     const zoneDatasets = datasets.filter((d) => d.scope === 'zone');
 
-    results.push(...(await this.collectAccountBatch(datetimeDatasets, range, { includeScheduledInvocations: true })));
-    if (dateDatasets.length > 0 && (options.includeDateDatasets ?? true)) {
-      results.push(...(await this.collectAccountBatch(dateDatasets, range, { includeScheduledInvocations: false })));
-    }
+    results.push(...(await this.collectAccountBatch(accountDatasets, range, { includeScheduledInvocations: true })));
     for (const dataset of zoneDatasets) {
       results.push(await this.collectZoneBatch(dataset, range));
     }

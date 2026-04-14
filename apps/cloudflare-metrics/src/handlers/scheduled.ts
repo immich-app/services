@@ -141,14 +141,9 @@ async function runCollection(
 ) {
   const restClient = new CloudflareRestClient(env.CLOUDFLARE_API_TOKEN ?? '');
   const windowMs = computeWindowMs(isColdStart, prevEndMs);
-  // Date-granularity datasets (storage snapshots) return the full day's data
-  // on every query, producing thousands of rows late in the day. Only run
-  // them once per hour (at the top of the hour) to avoid blowing the CPU budget.
-  const minute = new Date().getUTCMinutes();
-  const includeDateDatasets = minute === 0;
   const collector = new CloudflareMetricsCollector(graphqlClient, env.CLOUDFLARE_ACCOUNT_ID, metrics, {
     restClient,
     windowMs,
   });
-  return collector.collectAll(ALL_DATASETS, { includeDateDatasets });
+  return collector.collectAll(ALL_DATASETS);
 }

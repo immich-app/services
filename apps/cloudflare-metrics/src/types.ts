@@ -29,7 +29,6 @@ export interface DatasetQuery {
   tags: readonly TagSpec[];
   fields: Record<string, FieldSpec>;
   timestampDimension?: string;
-  filterGranularity?: 'datetime' | 'date';
   limit?: number;
   extraFilter?: Record<string, unknown>;
 }

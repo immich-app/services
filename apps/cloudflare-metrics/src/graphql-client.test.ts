@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ALL_DATASETS, D1_QUERIES, DURABLE_OBJECTS_STORAGE, WORKERS_INVOCATIONS } from './datasets.js';
+import { ALL_DATASETS, D1_QUERIES, WORKERS_INVOCATIONS } from './datasets.js';
 import {
   buildBatchedAccountQuery,
   buildBatchedZoneQuery,
@@ -111,13 +111,6 @@ describe('buildFilterObject', () => {
     expect(buildFilterObject(WORKERS_INVOCATIONS, range)).toEqual({
       datetime_geq: '2026-04-10T12:00:00.000Z',
       datetime_leq: '2026-04-10T12:10:00.000Z',
-    });
-  });
-
-  it('uses date_geq / date_leq for date-granularity datasets', () => {
-    expect(buildFilterObject(DURABLE_OBJECTS_STORAGE, range)).toEqual({
-      date_geq: '2026-04-10',
-      date_leq: '2026-04-10',
     });
   });
 
