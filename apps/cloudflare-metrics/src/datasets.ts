@@ -536,15 +536,8 @@ export const HTTP_REQUESTS_DETAIL: DatasetQuery = {
   ],
   topLevelFields: ['count'],
   blocks: {
-    sum: [
-      'edgeRequestBytes',
-      'edgeResponseBytes',
-      'visits',
-      'crossZoneSubrequests',
-      'edgeTimeToFirstByteMs',
-      'originResponseDurationMs',
-    ],
-    avg: ['edgeTimeToFirstByteMs', 'originResponseDurationMs', 'sampleInterval'],
+    sum: ['edgeRequestBytes', 'edgeResponseBytes', 'visits'],
+    avg: ['sampleInterval'],
   },
   tags: [
     { source: 'clientCountryName', as: 'client_country' },
@@ -558,11 +551,6 @@ export const HTTP_REQUESTS_DETAIL: DatasetQuery = {
     edge_request_bytes: { type: 'int', source: ['sum', 'edgeRequestBytes'] },
     edge_response_bytes: { type: 'int', source: ['sum', 'edgeResponseBytes'] },
     visits: { type: 'int', source: ['sum', 'visits'] },
-    cross_zone_subrequests: { type: 'int', source: ['sum', 'crossZoneSubrequests'] },
-    edge_ttfb_ms_sum: { type: 'float', source: ['sum', 'edgeTimeToFirstByteMs'] },
-    origin_response_ms_sum: { type: 'float', source: ['sum', 'originResponseDurationMs'] },
-    edge_ttfb_ms_avg: { type: 'float', source: ['avg', 'edgeTimeToFirstByteMs'] },
-    origin_response_ms_avg: { type: 'float', source: ['avg', 'originResponseDurationMs'] },
     sample_interval: { type: 'float', source: ['avg', 'sampleInterval'] },
   },
 };
