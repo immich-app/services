@@ -1374,7 +1374,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (bucket_name) (cf_r2_storage_payload_bytes)",
+          "expr": "last_over_time((sum by (bucket_name) (cf_r2_storage_payload_bytes))[6h:])",
           "instant": false,
           "range": true,
           "legendFormat": "{{bucket_name}}",
@@ -1463,7 +1463,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (namespace_id) (cf_kv_storage_key_count)",
+          "expr": "last_over_time((sum by (namespace_id) (cf_kv_storage_key_count))[6h:])",
           "instant": false,
           "range": true,
           "legendFormat": "{{namespace_id}}",
@@ -1782,7 +1782,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 Account Overview",
+  "title": "Cloudflare — Account Overview",
   "uid": "cf-account-overview",
   "version": 1,
   "weekStart": ""

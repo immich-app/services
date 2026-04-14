@@ -289,7 +289,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (index_name) (cf_vectorize_storage_vector_count)",
+          "expr": "last_over_time((max by (index_name) (cf_vectorize_storage_vector_count))[6h:])",
           "instant": false,
           "range": true,
           "legendFormat": "{{index_name}}",
@@ -417,7 +417,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 Vectorize",
+  "title": "Cloudflare — Vectorize",
   "uid": "cf-vectorize",
   "version": 1,
   "weekStart": ""

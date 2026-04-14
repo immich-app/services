@@ -141,7 +141,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(cf_kv_storage_key_count{namespace_id=~\"$namespace_id\"})",
+          "expr": "last_over_time((sum(cf_kv_storage_key_count{namespace_id=~\"$namespace_id\"}))[6h:])",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -207,7 +207,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(cf_kv_storage_byte_count{namespace_id=~\"$namespace_id\"})",
+          "expr": "last_over_time((sum(cf_kv_storage_byte_count{namespace_id=~\"$namespace_id\"}))[6h:])",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -632,7 +632,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (namespace_id) (cf_kv_storage_key_count{namespace_id=~\"$namespace_id\"})",
+          "expr": "last_over_time((sum by (namespace_id) (cf_kv_storage_key_count{namespace_id=~\"$namespace_id\"}))[6h:])",
           "instant": false,
           "range": true,
           "legendFormat": "{{namespace_id}}",
@@ -721,7 +721,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (namespace_id) (cf_kv_storage_byte_count{namespace_id=~\"$namespace_id\"})",
+          "expr": "last_over_time((sum by (namespace_id) (cf_kv_storage_byte_count{namespace_id=~\"$namespace_id\"}))[6h:])",
           "instant": false,
           "range": true,
           "legendFormat": "{{namespace_id}}",
@@ -789,7 +789,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 KV",
+  "title": "Cloudflare — KV",
   "uid": "cf-kv",
   "version": 1,
   "weekStart": ""

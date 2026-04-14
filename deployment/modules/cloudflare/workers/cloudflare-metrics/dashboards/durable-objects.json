@@ -273,7 +273,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(cf_durable_objects_storage_stored_bytes)",
+          "expr": "last_over_time((sum(cf_durable_objects_storage_stored_bytes))[6h:])",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -339,7 +339,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(cf_durable_objects_sql_storage_stored_bytes)",
+          "expr": "last_over_time((sum(cf_durable_objects_sql_storage_stored_bytes))[6h:])",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -597,7 +597,7 @@
               }
             ]
           },
-          "unit": "\u00b5s",
+          "unit": "µs",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "linear",
@@ -1001,7 +1001,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (cf_durable_objects_storage_stored_bytes)",
+          "expr": "last_over_time((sum by (script_name) (cf_durable_objects_storage_stored_bytes))[6h:])",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -1090,7 +1090,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (cf_durable_objects_sql_storage_stored_bytes)",
+          "expr": "last_over_time((sum by (script_name) (cf_durable_objects_sql_storage_stored_bytes))[6h:])",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -1186,7 +1186,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 Durable Objects",
+  "title": "Cloudflare — Durable Objects",
   "uid": "cf-durable-objects",
   "version": 1,
   "weekStart": ""

@@ -207,7 +207,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(cf_r2_storage_object_count{bucket_name=~\"$bucket_name\"})",
+          "expr": "last_over_time((sum(cf_r2_storage_object_count{bucket_name=~\"$bucket_name\"}))[6h:])",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -273,7 +273,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(cf_r2_storage_payload_bytes{bucket_name=~\"$bucket_name\"})",
+          "expr": "last_over_time((sum(cf_r2_storage_payload_bytes{bucket_name=~\"$bucket_name\"}))[6h:])",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -339,7 +339,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(cf_r2_storage_metadata_bytes{bucket_name=~\"$bucket_name\"})",
+          "expr": "last_over_time((sum(cf_r2_storage_metadata_bytes{bucket_name=~\"$bucket_name\"}))[6h:])",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -698,7 +698,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (bucket_name, storage_class) (cf_r2_storage_payload_bytes{bucket_name=~\"$bucket_name\"})",
+          "expr": "last_over_time((sum by (bucket_name, storage_class) (cf_r2_storage_payload_bytes{bucket_name=~\"$bucket_name\"}))[6h:])",
           "instant": false,
           "range": true,
           "legendFormat": "{{bucket_name}} {{storage_class}}",
@@ -787,7 +787,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (bucket_name, storage_class) (cf_r2_storage_object_count{bucket_name=~\"$bucket_name\"})",
+          "expr": "last_over_time((sum by (bucket_name, storage_class) (cf_r2_storage_object_count{bucket_name=~\"$bucket_name\"}))[6h:])",
           "instant": false,
           "range": true,
           "legendFormat": "{{bucket_name}} {{storage_class}}",
@@ -855,7 +855,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 R2",
+  "title": "Cloudflare — R2",
   "uid": "cf-r2",
   "version": 1,
   "weekStart": ""

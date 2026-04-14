@@ -339,7 +339,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(cf_d1_storage_database_size_bytes{database_name=~\"$database_name\"})",
+          "expr": "last_over_time((sum(cf_d1_storage_database_size_bytes{database_name=~\"$database_name\"}))[6h:])",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -1156,7 +1156,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_name) (cf_d1_storage_database_size_bytes{database_name=~\"$database_name\"})",
+          "expr": "last_over_time((sum by (database_name) (cf_d1_storage_database_size_bytes{database_name=~\"$database_name\"}))[6h:])",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -1224,7 +1224,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 D1",
+  "title": "Cloudflare — D1",
   "uid": "cf-d1",
   "version": 1,
   "weekStart": ""
