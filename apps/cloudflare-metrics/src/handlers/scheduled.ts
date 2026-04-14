@@ -66,6 +66,21 @@ export async function handleScheduled(
         .intField('errors', totalErrors)
         .intField('cold_start', isColdStart ? 1 : 0),
     );
+    // Log per-dataset breakdown for storage datasets to debug missing data.
+    const storageDatasets = [
+      'd1_storage',
+      'r2_storage',
+      'kv_storage',
+      'vectorize_storage',
+      'ai_gateway_size',
+      'durable_objects_storage',
+      'durable_objects_sql_storage',
+    ];
+    for (const r of results) {
+      if (storageDatasets.includes(r.dataset)) {
+        console.log(`[cron] ${r.dataset}: ${r.rows} rows, ${r.points} points${r.error ? `, error: ${r.error}` : ''}`);
+      }
+    }
     console.log(
       `[cron] collected ${totalPoints} points across ${results.length} datasets (${totalErrors} errors${wasBackfill ? ', backfill' : ''})`,
     );
