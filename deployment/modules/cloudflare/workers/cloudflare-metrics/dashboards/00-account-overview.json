@@ -1496,7 +1496,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 49
       },
       "panels": []
     },
@@ -1512,7 +1512,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 37
+        "y": 50
       },
       "fieldConfig": {
         "defaults": {
@@ -1601,7 +1601,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 37
+        "y": 50
       },
       "fieldConfig": {
         "defaults": {
@@ -1690,7 +1690,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 37
+        "y": 50
       },
       "fieldConfig": {
         "defaults": {
@@ -1766,6 +1766,891 @@
           "sort": "desc"
         }
       }
+    },
+    {
+      "id": 28,
+      "type": "row",
+      "title": "Estimated Costs (excl. free tier)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "panels": []
+    },
+    {
+      "id": 29,
+      "type": "stat",
+      "title": "Workers (24h)",
+      "description": "Estimated daily cost before free tier.\nFree tier: 10M requests + 30M CPU-ms/mo included",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "mappings": [],
+          "noValue": "$0.00",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(cf_workers_invocations_requests[24h])) / 1e6 * 0.30) + (sum(increase(cf_workers_invocations_cpu_time_us_sum[24h])) / 1000 / 1e6 * 0.02)",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "stat",
+      "title": "D1 (24h)",
+      "description": "Estimated daily cost before free tier.\nFree tier: 25B reads + 50M writes + 5GB storage/mo included",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "mappings": [],
+          "noValue": "$0.00",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(cf_d1_queries_rows_read[24h])) / 1e6 * 0.001) + (sum(increase(cf_d1_queries_rows_written[24h])) / 1e6 * 1.00) + (last_over_time((sum(cf_d1_storage_database_size_bytes))[6h:]) / 1073741824 * 0.75 / 30)",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "type": "stat",
+      "title": "R2 (24h)",
+      "description": "Estimated daily cost before free tier.\nFree tier: 1M Class A + 10M Class B + 10GB storage/mo included",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "mappings": [],
+          "noValue": "$0.00",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[24h])) / 1e6 * 4.50) + (sum(increase(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[24h])) / 1e6 * 0.36) + (last_over_time((sum(cf_r2_storage_payload_bytes))[6h:]) / 1073741824 * 0.015 / 30)",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "type": "stat",
+      "title": "KV (24h)",
+      "description": "Estimated daily cost before free tier.\nFree tier: 10M reads + 1M writes + 1GB storage/mo included",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "mappings": [],
+          "noValue": "$0.00",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(cf_kv_operations_requests{action_type=\"read\"}[24h])) / 1e6 * 0.50) + (sum(increase(cf_kv_operations_requests{action_type!=\"read\"}[24h])) / 1e6 * 5.00) + (last_over_time((sum(cf_kv_storage_byte_count))[6h:]) / 1073741824 * 0.50 / 30)",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "type": "stat",
+      "title": "Durable Objects (24h)",
+      "description": "Estimated daily cost before free tier.\nFree tier: 1M requests + 400K GB-s + 1GB storage/mo included",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "mappings": [],
+          "noValue": "$0.00",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(cf_durable_objects_invocations_requests[24h])) / 1e6 * 0.15) + (sum(increase(cf_durable_objects_periodic_duration_ms[24h])) / 1000 / 1e6 * 12.50) + (last_over_time((sum(cf_durable_objects_storage_stored_bytes))[6h:]) / 1073741824 * 0.20 / 30)",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "type": "stat",
+      "title": "Queues (24h)",
+      "description": "Estimated daily cost before free tier.\nFree tier: 1M operations/mo included",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 37
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "mappings": [],
+          "noValue": "$0.00",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(cf_queue_operations_billable_operations[24h])) / 1e6 * 0.40",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "type": "stat",
+      "title": "Vectorize (24h)",
+      "description": "Estimated daily cost before free tier.\nFree tier: 50M queried dims + 10M stored dims/mo included",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 41
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "mappings": [],
+          "noValue": "$0.00",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(cf_vectorize_queries_queried_vector_dimensions[24h])) / 1e6 * 0.01) + (last_over_time((sum(cf_vectorize_storage_stored_vector_dimensions))[6h:]) / 1e8 * 0.05 / 30)",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "type": "stat",
+      "title": "Workers AI (24h)",
+      "description": "Estimated daily cost before free tier.\nFree tier: 10K neurons/day included",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 41
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "mappings": [],
+          "noValue": "$0.00",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(cf_ai_inference_neurons[24h])) / 1000 * 0.011",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "type": "stat",
+      "title": "Total (24h)",
+      "description": "Estimated total daily cost before free tier deductions.\nBase plan: $5/mo.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 41
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 4,
+          "mappings": [],
+          "noValue": "$0.00",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "((sum(increase(cf_workers_invocations_requests[24h])) / 1e6 * 0.30) + (sum(increase(cf_workers_invocations_cpu_time_us_sum[24h])) / 1000 / 1e6 * 0.02)) + ((sum(increase(cf_d1_queries_rows_read[24h])) / 1e6 * 0.001) + (sum(increase(cf_d1_queries_rows_written[24h])) / 1e6 * 1.00) + (last_over_time((sum(cf_d1_storage_database_size_bytes))[6h:]) / 1073741824 * 0.75 / 30)) + ((sum(increase(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[24h])) / 1e6 * 4.50) + (sum(increase(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[24h])) / 1e6 * 0.36) + (last_over_time((sum(cf_r2_storage_payload_bytes))[6h:]) / 1073741824 * 0.015 / 30)) + ((sum(increase(cf_kv_operations_requests{action_type=\"read\"}[24h])) / 1e6 * 0.50) + (sum(increase(cf_kv_operations_requests{action_type!=\"read\"}[24h])) / 1e6 * 5.00) + (last_over_time((sum(cf_kv_storage_byte_count))[6h:]) / 1073741824 * 0.50 / 30)) + ((sum(increase(cf_durable_objects_invocations_requests[24h])) / 1e6 * 0.15) + (sum(increase(cf_durable_objects_periodic_duration_ms[24h])) / 1000 / 1e6 * 12.50) + (last_over_time((sum(cf_durable_objects_storage_stored_bytes))[6h:]) / 1073741824 * 0.20 / 30)) + (sum(increase(cf_queue_operations_billable_operations[24h])) / 1e6 * 0.40) + ((sum(increase(cf_vectorize_queries_queried_vector_dimensions[24h])) / 1e6 * 0.01) + (last_over_time((sum(cf_vectorize_storage_stored_vector_dimensions))[6h:]) / 1e8 * 0.05 / 30)) + (sum(increase(cf_ai_inference_neurons[24h])) / 1000 * 0.011)",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "type": "timeseries",
+      "title": "Estimated Cost per Hour (by product)",
+      "description": "Hourly cost rate per product, stacked. Excludes free tier allowances and storage costs (which are constant).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum",
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(cf_workers_invocations_requests[1h])) / 1e6 * 0.30) + (sum(increase(cf_workers_invocations_cpu_time_us_sum[1h])) / 1000 / 1e6 * 0.02)",
+          "legendFormat": "Workers",
+          "refId": "A",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(cf_d1_queries_rows_read[1h])) / 1e6 * 0.001) + (sum(increase(cf_d1_queries_rows_written[1h])) / 1e6 * 1.00)",
+          "legendFormat": "D1",
+          "refId": "B",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[1h])) / 1e6 * 4.50) + (sum(increase(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[1h])) / 1e6 * 0.36)",
+          "legendFormat": "R2",
+          "refId": "C",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(cf_kv_operations_requests{action_type=\"read\"}[1h])) / 1e6 * 0.50) + (sum(increase(cf_kv_operations_requests{action_type!=\"read\"}[1h])) / 1e6 * 5.00)",
+          "legendFormat": "KV",
+          "refId": "D",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "(sum(increase(cf_durable_objects_invocations_requests[1h])) / 1e6 * 0.15) + (sum(increase(cf_durable_objects_periodic_duration_ms[1h])) / 1000 / 1e6 * 12.50)",
+          "legendFormat": "Durable Objects",
+          "refId": "E",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(cf_queue_operations_billable_operations[1h])) / 1e6 * 0.40",
+          "legendFormat": "Queues",
+          "refId": "F",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(cf_vectorize_queries_queried_vector_dimensions[1h])) / 1e6 * 0.01",
+          "legendFormat": "Vectorize",
+          "refId": "G",
+          "instant": false,
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "sum(increase(cf_ai_inference_neurons[1h])) / 1000 * 0.011",
+          "legendFormat": "Workers AI",
+          "refId": "H",
+          "instant": false,
+          "range": true
+        }
+      ]
     }
   ],
   "tags": [
