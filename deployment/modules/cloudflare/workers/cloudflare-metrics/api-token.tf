@@ -17,6 +17,7 @@ locals {
     "D1 Read",
     "Queues Read",
     "Zone Read",
+    "Zone Analytics Read",
   ]
 
   # Some permission group names exist at multiple scopes (e.g. account and
@@ -37,7 +38,7 @@ locals {
 # recreate the token whenever we need the value to be freshly available to
 # downstream resources.
 resource "terraform_data" "analytics_token_generation" {
-  input = "6"
+  input = "7"
 }
 
 resource "cloudflare_api_token" "analytics_read" {
@@ -65,6 +66,7 @@ resource "cloudflare_api_token" "analytics_read" {
       effect = "allow"
       permission_groups = [
         { id = local.cf_permission_group_ids["Zone Read"] },
+        { id = local.cf_permission_group_ids["Zone Analytics Read"] },
       ]
       resources = jsonencode({
         "com.cloudflare.api.account.zone.*" = "*"
