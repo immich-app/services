@@ -14,6 +14,7 @@ data "cloudflare_api_token_permission_groups_list" "all" {
 locals {
   cloudflare_metrics_permission_group_names = [
     "Account Analytics Read",
+    "Analytics Read",
     "D1 Read",
     "Queues Read",
     "Zone Read",
@@ -65,7 +66,7 @@ resource "cloudflare_api_token" "analytics_read" {
       effect = "allow"
       permission_groups = [
         { id = local.cf_permission_group_ids["Zone Read"] },
-        { id = local.cf_permission_group_ids["Account Analytics Read"] },
+        { id = local.cf_permission_group_ids["Analytics Read"] },
       ]
       resources = jsonencode({
         "com.cloudflare.api.account.zone.*" = "*"
