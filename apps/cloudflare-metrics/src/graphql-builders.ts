@@ -138,7 +138,10 @@ function orderByClause(dataset: DatasetQuery): string {
   // Grouping implicitly takes place on the dimensions, so orderBy helps
   // make sure we get the most recent buckets within the limit.
   if (dataset.dimensions.includes(timestampDim)) {
-    return `, orderBy: [${timestampDim}_ASC]`;
+    // Date-granularity datasets query the full day — order DESC so the
+    // most recent snapshots come first and stay within the limit.
+    const direction = (dataset.filterGranularity ?? 'datetime') === 'date' ? 'DESC' : 'ASC';
+    return `, orderBy: [${timestampDim}_${direction}]`;
   }
   return '';
 }
