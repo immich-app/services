@@ -48,7 +48,8 @@ resource "cloudflare_worker_version" "worker" {
   ]
   lifecycle {
     replace_triggered_by = [
-      terraform_data.source_hash
+      terraform_data.source_hash,
+      cloudflare_api_token.analytics_read,
     ]
   }
 }
