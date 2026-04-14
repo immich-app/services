@@ -44,7 +44,10 @@ export class CloudflareMetricsCollector {
     return { start, end };
   }
 
-  async collectAll(datasets: readonly DatasetQuery[]): Promise<CollectionResult[]> {
+  async collectAll(
+    datasets: readonly DatasetQuery[],
+    options: { includeDateDatasets?: boolean } = {},
+  ): Promise<CollectionResult[]> {
     await this.resourceCache.populate();
     const range = this.getRange();
     const results: CollectionResult[] = [];
@@ -55,7 +58,7 @@ export class CloudflareMetricsCollector {
     const zoneDatasets = datasets.filter((d) => d.scope === 'zone');
 
     results.push(...(await this.collectAccountBatch(datetimeDatasets, range, { includeScheduledInvocations: true })));
-    if (dateDatasets.length > 0) {
+    if (dateDatasets.length > 0 && (options.includeDateDatasets ?? true)) {
       results.push(...(await this.collectAccountBatch(dateDatasets, range, { includeScheduledInvocations: false })));
     }
     for (const dataset of zoneDatasets) {
