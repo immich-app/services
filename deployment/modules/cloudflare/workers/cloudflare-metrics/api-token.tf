@@ -17,7 +17,6 @@ locals {
     "D1 Read",
     "Queues Read",
     "Zone Read",
-    "Zone Analytics Read",
   ]
 
   # Some permission group names exist at multiple scopes (e.g. account and
@@ -66,7 +65,7 @@ resource "cloudflare_api_token" "analytics_read" {
       effect = "allow"
       permission_groups = [
         { id = local.cf_permission_group_ids["Zone Read"] },
-        { id = local.cf_permission_group_ids["Zone Analytics Read"] },
+        { id = local.cf_permission_group_ids["Account Analytics Read"] },
       ]
       resources = jsonencode({
         "com.cloudflare.api.account.zone.*" = "*"
