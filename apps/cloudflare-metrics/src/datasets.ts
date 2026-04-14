@@ -179,6 +179,7 @@ export const R2_STORAGE: DatasetQuery = {
   key: 'r2_storage',
   measurement: 'cf_r2_storage',
   field: 'r2StorageAdaptiveGroups',
+  filterGranularity: 'date',
   dimensions: ['datetimeMinute', 'bucketName', 'storageClass'],
   blocks: { max: ['objectCount', 'payloadSize', 'metadataSize', 'uploadCount'] },
   tags: [
