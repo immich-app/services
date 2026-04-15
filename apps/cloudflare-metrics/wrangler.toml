@@ -5,10 +5,7 @@ compatibility_date = "2025-09-16"
 compatibility_flags = ["nodejs_compat"]
 
 [limits]
-# Workaround for a Cloudflare terraform provider bug where cpu_ms = 30000
-# silently falls back to the default 50ms limit. 29999 is applied correctly.
-# Setting 30000 directly via the Cloudflare UI works fine.
-cpu_ms = 29999
+cpu_ms = 30000
 
 [triggers]
 crons = ["* * * * *"]

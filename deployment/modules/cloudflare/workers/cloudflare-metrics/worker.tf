@@ -12,7 +12,7 @@ resource "cloudflare_worker_version" "worker" {
   account_id = var.cloudflare_account_id
   worker_id  = cloudflare_worker.worker.id
   limits = {
-    cpu_ms = 29999
+    cpu_ms = 30000
   }
   bindings = [
     {
@@ -84,7 +84,7 @@ resource "terraform_data" "force_standard_usage_model" {
       curl -sf -X PATCH \
         "https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/workers/services/${cloudflare_worker.worker.name}/environments/production/settings" \
         -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-        -F 'settings={"usage_model":"standard","limits":{"cpu_ms":29999}}' \
+        -F 'settings={"usage_model":"standard","limits":{"cpu_ms":30000}}' \
         -o /dev/null
     EOT
 
