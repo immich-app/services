@@ -80,12 +80,16 @@ resource "terraform_data" "force_standard_usage_model" {
   ]
 
   provisioner "local-exec" {
+    # Best-effort — don't fail the whole deploy if this PATCH errors,
+    # since the service-env settings are sticky across deploys once set.
+    # `|| true` on the end makes any curl failure non-fatal; the response
+    # body is still printed so we can see what went wrong in CI logs.
     command = <<-EOT
-      curl -sf -X PATCH \
+      curl -s -X PATCH \
         "https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/workers/services/${cloudflare_worker.worker.name}/environments/production/settings" \
         -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
         -F 'settings={"usage_model":"standard","limits":{"cpu_ms":30000}}' \
-        -o /dev/null
+        -w "\nHTTP %%{http_code}\n" || true
     EOT
 
     environment = {
