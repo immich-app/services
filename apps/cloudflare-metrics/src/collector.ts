@@ -15,10 +15,13 @@ export interface CollectorOptions {
 }
 
 // 5m lag avoids querying buckets Cloudflare hasn't finalised yet (pipeline
-// delay is typically 2-5m). 3m window overlaps consecutive 1m cron ticks
-// so a missed tick doesn't drop data; VictoriaMetrics dedupes the overlap.
+// delay is typically 2-5m). 5m window gives us ~5 consecutive ticks worth
+// of overlap so a missed minute is still covered by neighbouring ticks.
+// Cloudflare drops/delays ~25% of our cron triggers in practice; a wider
+// window makes multi-minute gaps less likely to turn into data loss.
+// VictoriaMetrics dedupes the overlap so there's no storage cost.
 const DEFAULT_LAG_MS = 5 * 60 * 1000;
-const DEFAULT_WINDOW_MS = 3 * 60 * 1000;
+const DEFAULT_WINDOW_MS = 5 * 60 * 1000;
 
 export class CloudflareMetricsCollector {
   private readonly lagMs: number;
