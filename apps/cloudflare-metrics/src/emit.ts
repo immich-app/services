@@ -19,6 +19,63 @@ function getFieldEntries(dataset: DatasetQuery): FieldEntry[] {
   return cached;
 }
 
+// Precomputed per-dataset resource tag enricher. The original code ran a
+// `switch(dataset.field)` on every row — bypass that per-row work by
+// resolving the correct enricher once per dataset and caching the closure.
+type TagEnricher = (metric: Metric, row: DatasetRow, cache: ResourceCache) => void;
+const noopEnricher: TagEnricher = () => {};
+const tagEnricherCache = new WeakMap<DatasetQuery, TagEnricher>();
+
+function getTagEnricher(dataset: DatasetQuery): TagEnricher {
+  let cached = tagEnricherCache.get(dataset);
+  if (cached) {
+    return cached;
+  }
+  switch (dataset.field) {
+    case 'd1AnalyticsAdaptiveGroups':
+    case 'd1StorageAdaptiveGroups':
+    case 'd1QueriesAdaptiveGroups': {
+      cached = (metric, row, cache) => {
+        const id = row.dimensions?.databaseId;
+        if (typeof id === 'string' && id !== '') {
+          const name = cache.d1Databases.get(id);
+          if (name) {
+            metric.addTag('database_name', name);
+          }
+        }
+      };
+      break;
+    }
+    case 'queueMessageOperationsAdaptiveGroups':
+    case 'queueBacklogAdaptiveGroups': {
+      cached = (metric, row, cache) => {
+        const id = row.dimensions?.queueId;
+        if (typeof id === 'string' && id !== '') {
+          const name = cache.queues.get(id);
+          if (name) {
+            metric.addTag('queue_name', name);
+          }
+        }
+      };
+      break;
+    }
+    case 'httpRequestsOverviewAdaptiveGroups': {
+      cached = (metric, row, cache) => {
+        const tag = row.dimensions?.zoneTag;
+        if (typeof tag === 'string' && tag !== '') {
+          metric.addTag('zone_name', cache.zones.get(tag) ?? tag);
+        }
+      };
+      break;
+    }
+    default: {
+      cached = noopEnricher;
+    }
+  }
+  tagEnricherCache.set(dataset, cached);
+  return cached;
+}
+
 export function buildMetric(
   dataset: DatasetQuery,
   row: DatasetRow,
@@ -43,7 +100,7 @@ export function buildMetric(
     }
   }
 
-  applyResourceTags(metric, dataset, row, resourceCache);
+  getTagEnricher(dataset)(metric, row, resourceCache);
 
   const rowAny = row as unknown as Record<string, unknown>;
   let hasField = false;
