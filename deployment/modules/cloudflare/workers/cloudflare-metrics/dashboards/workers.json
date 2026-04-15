@@ -1156,10 +1156,10 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (status) (rate(cf_workers_subrequests_subrequests{script_name=~\"$script_name\"}[5m]))",
+          "expr": "sum by (http_response_status) (cf_workers_subrequests_subrequests{script_name=~\"$script_name\"})",
           "instant": false,
           "range": true,
-          "legendFormat": "{{status}}",
+          "legendFormat": "{{http_response_status}}",
           "refId": "A"
         }
       ],
