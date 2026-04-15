@@ -1,4 +1,3 @@
-import { Point } from '@influxdata/influxdb-client';
 import {
   type LastFlushStats,
   MAX_PENDING_FLUSH_BYTES,
@@ -33,6 +32,25 @@ export class HeaderMetricsProvider implements IMetricsProviderRepository {
   }
 }
 
+// InfluxDB line protocol escape rules. Keep these simple — we do a cheap
+// `includes` check first and only fall into the regex replace when needed.
+// Measurement: escape `,` and ` `.
+// Tag key / tag value / field key: escape `,`, `=`, ` `.
+function escapeMeasurement(s: string): string {
+  if (!s.includes(',') && !s.includes(' ')) return s;
+  return s.replace(/,/g, '\\,').replace(/ /g, '\\ ');
+}
+
+function escapeTagKey(s: string): string {
+  if (!s.includes(',') && !s.includes('=') && !s.includes(' ')) return s;
+  return s.replace(/,/g, '\\,').replace(/=/g, '\\=').replace(/ /g, '\\ ');
+}
+
+function escapeTagValue(s: string): string {
+  if (!s.includes(',') && !s.includes('=') && !s.includes(' ')) return s;
+  return s.replace(/,/g, '\\,').replace(/=/g, '\\=').replace(/ /g, '\\ ');
+}
+
 function getMetricsWriteUrl(environment: string): string {
   if (environment === 'prod') {
     return 'https://cf-workers.monitoring.immich.cloud/write';
@@ -52,25 +70,35 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
   }
 
   pushMetric(metric: Metric) {
-    const point = new Point(metric.name);
+    // Build InfluxDB line protocol directly to avoid the overhead of the
+    // Point class (validation, type coercion, repeated escaping passes) on
+    // the hot path. Our inputs are already well-formed — no string fields,
+    // no nulls, no duplicate keys.
+    let line = escapeMeasurement(metric.name);
     for (const [key, value] of metric.tags) {
-      point.tag(key, value);
+      line += ',' + escapeTagKey(key) + '=' + escapeTagValue(value);
     }
+    let fieldPart = '';
     for (const [key, { value, type }] of metric.fields) {
+      if (fieldPart) fieldPart += ',';
+      fieldPart += escapeTagKey(key) + '=';
       if (type === 'float') {
-        point.floatField(key, value);
+        fieldPart += value.toString();
       } else {
-        point.intField(key, value);
+        // int/duration → write as integer with `i` suffix
+        fieldPart += Math.round(value).toString() + 'i';
       }
     }
+    if (!fieldPart) {
+      return; // no fields → skip
+    }
+    line += ' ' + fieldPart;
     const exportTimestamp = metric.exportTimestamp;
     if (exportTimestamp) {
-      point.timestamp(exportTimestamp);
+      // Line protocol uses nanosecond precision
+      line += ' ' + (exportTimestamp.getTime() * 1_000_000).toString();
     }
-    const line = point.toLineProtocol()?.toString();
-    if (line) {
-      this.metrics.push(line);
-    }
+    this.metrics.push(line);
   }
 
   get pendingCount(): number {

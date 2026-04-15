@@ -122,14 +122,14 @@ describe('InfluxMetricsProvider flush self-telemetry', () => {
     }
   });
 
-  it('evicts the oldest stashed flush body when the total exceeds the 10 MB cap', async () => {
+  it('evicts the oldest stashed flush body when the total exceeds the cap', async () => {
     const originalFetch = globalThis.fetch;
     // Always fail so every flush stashes its body in the retry buffer.
     globalThis.fetch = (() => Promise.resolve(new Response('', { status: 502 }))) as typeof fetch;
     try {
-      // Each payload is ~4 MB of raw line protocol; three of them land us
-      // over the 10 MB cap and force an eviction.
-      const padding = 'x'.repeat(4 * 1024 * 1024);
+      // Each payload is ~400 KB of raw line protocol; three of them land us
+      // over the 1 MB cap and force an eviction.
+      const padding = 'x'.repeat(400 * 1024);
       const provider = new InfluxMetricsProvider('token', 'prod');
 
       provider.pushMetric(Metric.create('first').addTag('pad', padding).intField('v', 1));
@@ -144,7 +144,7 @@ describe('InfluxMetricsProvider flush self-telemetry', () => {
       const stats = takeLastFlushStats();
       // Two buffers should remain — the oldest got dropped to stay under the cap.
       expect(stats?.pendingBuffers).toBe(2);
-      expect(stats?.pendingBytes).toBeLessThan(10 * 1024 * 1024 + 4 * 1024 * 1024);
+      expect(stats?.pendingBytes).toBeLessThan(1 * 1024 * 1024 + 400 * 1024);
     } finally {
       globalThis.fetch = originalFetch;
     }
