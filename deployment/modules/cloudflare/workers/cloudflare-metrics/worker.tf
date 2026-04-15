@@ -12,11 +12,6 @@ resource "cloudflare_worker_version" "worker" {
   account_id = var.cloudflare_account_id
   worker_id  = cloudflare_worker.worker.id
   limits = {
-    # Workaround for a Cloudflare terraform provider bug where
-    # cpu_ms = 30000 is silently dropped and the runtime falls back to
-    # the default 50ms limit. 29999 does get applied. Setting 30000
-    # directly via the Cloudflare UI works fine, so the bug is in the
-    # provider's serialization, not the API.
     cpu_ms = 29999
   }
   bindings = [
@@ -69,6 +64,34 @@ resource "cloudflare_workers_deployment" "worker" {
       version_id = cloudflare_worker_version.worker.id
     }
   ]
+}
+
+# Workaround for a bug in the Cloudflare terraform provider:
+# `cloudflare_worker_version` has no `usage_model` attribute, so newly
+# created workers default to legacy `bundled` mode at the service-env
+# level (50 ms CPU cap) regardless of the `limits.cpu_ms` we set. The
+# runtime uses the service-env settings, not the version limits, so
+# our 29999 ms value is silently ignored until something flips the
+# service-env to `standard`. PATCH the services environment directly
+# after every deploy to force it.
+resource "terraform_data" "force_standard_usage_model" {
+  triggers_replace = [
+    cloudflare_workers_deployment.worker.id,
+  ]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      curl -sf -X PATCH \
+        "https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/workers/services/${cloudflare_worker.worker.name}/environments/production/settings" \
+        -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+        -F 'settings={"usage_model":"standard","limits":{"cpu_ms":29999}}' \
+        -o /dev/null
+    EOT
+
+    environment = {
+      CLOUDFLARE_API_TOKEN = var.cloudflare_api_token
+    }
+  }
 }
 
 resource "cloudflare_workers_cron_trigger" "collect" {
