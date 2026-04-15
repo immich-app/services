@@ -46,19 +46,15 @@ export async function handleScheduled(
   const isolateAgeSec = Math.round((Date.now() - isolateStartedAt) / 1000);
   const isColdStart = isolateAgeSec < 120;
 
-  // Snapshot the pre-tick end time so we can restore on error; advance
-  // optimistically so that if this invocation is killed (e.g. CPU limit),
-  // the next tick doesn't keep growing the backfill window trying to cover
-  // the failed window. VM dedupes, so any "lost" data in the small overlap
-  // between ticks is harmless.
-  const prevEnd = lastSuccessfulEndMs;
-  lastSuccessfulEndMs = Date.now() - DEFAULT_LAG_MS;
-
   const graphqlClient = new CloudflareGraphQLClient(env.CLOUDFLARE_API_TOKEN);
   try {
     const results = await metrics.monitorAsyncFunction({ name: 'cron_collect' }, () =>
-      runCollection(env, metrics, graphqlClient, isColdStart, prevEnd),
+      runCollection(env, metrics, graphqlClient, isColdStart, lastSuccessfulEndMs),
     )();
+    // Record the lagged end of the window we just queried so the next tick
+    // knows where to pick up if there was a gap.
+    const prevEnd = lastSuccessfulEndMs;
+    lastSuccessfulEndMs = Date.now() - DEFAULT_LAG_MS;
 
     const totalPoints = results.reduce((acc, r) => acc + r.points, 0);
     const totalErrors = results.filter((r) => r.error).length;
@@ -117,13 +113,7 @@ function emitLastFlushStats(metrics: CloudflareMetricsRepository): void {
 // collector's default — but avoids a circular import.
 const DEFAULT_LAG_MS = 5 * 60 * 1000;
 const DEFAULT_WINDOW_MS = 3 * 60 * 1000;
-// Capped aggressively — a runaway backfill window is what caused the
-// "runs for an hour then dies forever" death spiral. When a tick exceeded
-// CPU limit, lastSuccessfulEndMs stopped advancing, the gap grew, the next
-// query got wider, burning more CPU, until every tick was querying an
-// unbounded window and consistently failing. 10 minutes of data is still
-// recoverable within the 30s CPU budget.
-const MAX_BACKFILL_MS = 10 * 60 * 1000;
+const MAX_BACKFILL_MS = 30 * 60 * 1000; // 30-minute cap on recovery backfill
 
 function computeWindowMs(isColdStart: boolean, lastSuccessfulEndMs: number | null): number {
   if (lastSuccessfulEndMs !== null) {
@@ -135,9 +125,10 @@ function computeWindowMs(isColdStart: boolean, lastSuccessfulEndMs: number | nul
     }
     return DEFAULT_WINDOW_MS;
   }
-  // Fresh isolate with no prior state — use the same capped backfill.
+  // Fresh isolate with no prior state — use a shorter backfill window
+  // since cold-start ticks already do extra work resolving resource caches.
   if (isColdStart) {
-    return MAX_BACKFILL_MS;
+    return 15 * 60 * 1000;
   }
   return DEFAULT_WINDOW_MS;
 }

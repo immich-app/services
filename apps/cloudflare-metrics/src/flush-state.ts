@@ -1,9 +1,6 @@
 export const pendingFlushBuffers: string[] = [];
-// Cap the retry buffer very tightly. Larger caps accumulate state across
-// failing ticks and make every subsequent flush slower — dragging CPU over
-// the limit in a feedback loop. 1 MB = roughly one tick's worth of data;
-// older data gets dropped rather than retried forever.
-export const MAX_PENDING_FLUSH_BYTES = 1 * 1024 * 1024;
+// Cap retry buffer at 10 MB; eviction drops oldest-first.
+export const MAX_PENDING_FLUSH_BYTES = 10 * 1024 * 1024;
 
 export interface LastFlushStats {
   bytes: number;
