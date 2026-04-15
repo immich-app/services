@@ -47,14 +47,20 @@ function escapeTagKey(s: string): string {
   if (!s.includes(',') && !s.includes('=') && !s.includes(' ')) {
     return s;
   }
-  return s.replaceAll(',', String.raw`\,`).replaceAll('=', String.raw`\=`).replaceAll(' ', String.raw`\ `);
+  return s
+    .replaceAll(',', String.raw`\,`)
+    .replaceAll('=', String.raw`\=`)
+    .replaceAll(' ', String.raw`\ `);
 }
 
 function escapeTagValue(s: string): string {
   if (!s.includes(',') && !s.includes('=') && !s.includes(' ')) {
     return s;
   }
-  return s.replaceAll(',', String.raw`\,`).replaceAll('=', String.raw`\=`).replaceAll(' ', String.raw`\ `);
+  return s
+    .replaceAll(',', String.raw`\,`)
+    .replaceAll('=', String.raw`\=`)
+    .replaceAll(' ', String.raw`\ `);
 }
 
 function getMetricsWriteUrl(environment: string): string {
