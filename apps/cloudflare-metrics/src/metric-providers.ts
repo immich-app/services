@@ -33,22 +33,28 @@ export class HeaderMetricsProvider implements IMetricsProviderRepository {
 }
 
 // InfluxDB line protocol escape rules. Keep these simple — we do a cheap
-// `includes` check first and only fall into the regex replace when needed.
+// `includes` check first and only fall into the replace when needed.
 // Measurement: escape `,` and ` `.
 // Tag key / tag value / field key: escape `,`, `=`, ` `.
 function escapeMeasurement(s: string): string {
-  if (!s.includes(',') && !s.includes(' ')) return s;
-  return s.replace(/,/g, '\\,').replace(/ /g, '\\ ');
+  if (!s.includes(',') && !s.includes(' ')) {
+    return s;
+  }
+  return s.replaceAll(',', String.raw`\,`).replaceAll(' ', String.raw`\ `);
 }
 
 function escapeTagKey(s: string): string {
-  if (!s.includes(',') && !s.includes('=') && !s.includes(' ')) return s;
-  return s.replace(/,/g, '\\,').replace(/=/g, '\\=').replace(/ /g, '\\ ');
+  if (!s.includes(',') && !s.includes('=') && !s.includes(' ')) {
+    return s;
+  }
+  return s.replaceAll(',', String.raw`\,`).replaceAll('=', String.raw`\=`).replaceAll(' ', String.raw`\ `);
 }
 
 function escapeTagValue(s: string): string {
-  if (!s.includes(',') && !s.includes('=') && !s.includes(' ')) return s;
-  return s.replace(/,/g, '\\,').replace(/=/g, '\\=').replace(/ /g, '\\ ');
+  if (!s.includes(',') && !s.includes('=') && !s.includes(' ')) {
+    return s;
+  }
+  return s.replaceAll(',', String.raw`\,`).replaceAll('=', String.raw`\=`).replaceAll(' ', String.raw`\ `);
 }
 
 function getMetricsWriteUrl(environment: string): string {
@@ -80,14 +86,12 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
     }
     let fieldPart = '';
     for (const [key, { value, type }] of metric.fields) {
-      if (fieldPart) fieldPart += ',';
-      fieldPart += escapeTagKey(key) + '=';
-      if (type === 'float') {
-        fieldPart += value.toString();
-      } else {
-        // int/duration → write as integer with `i` suffix
-        fieldPart += Math.round(value).toString() + 'i';
+      if (fieldPart) {
+        fieldPart += ',';
       }
+      // int/duration → write as integer with `i` suffix
+      const serialized = type === 'float' ? value.toString() : Math.round(value).toString() + 'i';
+      fieldPart += escapeTagKey(key) + '=' + serialized;
     }
     if (!fieldPart) {
       return; // no fields → skip
