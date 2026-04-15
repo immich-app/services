@@ -11,12 +11,6 @@ import { CloudflareMetricsRepository } from '../metrics.js';
 // returns a frozen value in Workers (deploy time, not wall clock).
 let isolateStartedAt: number | null = null;
 
-// Force fresh isolate on deploy — change this marker to trigger a new
-// build output hash and redeploy. Long-lived isolates occasionally get
-// into a bad state where ticks consistently fail CPU limit; a fresh
-// deploy unsticks them.
-const BUILD_MARKER = '2026-04-15-v2';
-
 // Track the end timestamp of the last successful collection so we can
 // backfill the exact gap after crashes or missed ticks. Resets on isolate
 // restart, in which case we fall back to a wide backfill window.
@@ -94,7 +88,7 @@ export async function handleScheduled(
       .intField('error_responses', graphqlClient.errorResponseCount)
       .intField('retries', graphqlClient.retryCount)
       .intField('retry_successes', graphqlClient.retrySuccessCount),
-    Metric.create('isolate').addTag('build', BUILD_MARKER).intField('age_seconds', isolateAgeSec),
+    Metric.create('isolate').intField('age_seconds', isolateAgeSec),
   ]) {
     metrics.push(m);
   }
