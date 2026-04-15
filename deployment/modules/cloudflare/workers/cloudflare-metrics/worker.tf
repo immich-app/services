@@ -2,6 +2,14 @@ resource "cloudflare_worker" "worker" {
   account_id = var.cloudflare_account_id
   name       = "${var.app_name}-api${local.resource_suffix}"
   logpush    = true
+  observability = {
+    enabled            = true
+    head_sampling_rate = 1
+    logs = {
+      enabled         = true
+      invocation_logs = true
+    }
+  }
 }
 
 resource "terraform_data" "source_hash" {
