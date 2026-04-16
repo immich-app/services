@@ -441,7 +441,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (namespace_id, action_type) (cf_kv_operations_requests{namespace_id=~\"$namespace_id\"})",
+          "expr": "sum by (namespace_id, action_type) (max_over_time(cf_kv_operations_requests{namespace_id=~\"$namespace_id\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{namespace_id}} {{action_type}}",
@@ -530,7 +530,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (action_type) (cf_kv_operations_requests{namespace_id=~\"$namespace_id\"})",
+          "expr": "sum by (action_type) (max_over_time(cf_kv_operations_requests{namespace_id=~\"$namespace_id\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{action_type}}",
@@ -992,7 +992,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_kv_operations_requests{action_type=\"read\"}[1h])) / 1e6 * 0.50",
+          "expr": "sum(increase(max_over_time(cf_kv_operations_requests{action_type=\"read\"}[2m])[1h])) / 1e6 * 0.50",
           "legendFormat": "Reads",
           "refId": "A",
           "instant": false,
@@ -1004,7 +1004,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_kv_operations_requests{action_type!=\"read\"}[1h])) / 1e6 * 5.00",
+          "expr": "sum(increase(max_over_time(cf_kv_operations_requests{action_type!=\"read\"}[2m])[1h])) / 1e6 * 5.00",
           "legendFormat": "Writes",
           "refId": "B",
           "instant": false,

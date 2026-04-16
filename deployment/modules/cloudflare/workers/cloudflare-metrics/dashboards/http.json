@@ -507,7 +507,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_name) (cf_http_requests_overview_requests{zone_name=~\"$zone_name\"})",
+          "expr": "sum by (zone_name) (max_over_time(cf_http_requests_overview_requests{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",
@@ -596,7 +596,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_name) (cf_http_requests_overview_bytes{zone_name=~\"$zone_name\"})",
+          "expr": "sum by (zone_name) (max_over_time(cf_http_requests_overview_bytes{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",
@@ -698,7 +698,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_name) (cf_http_requests_overview_cached_requests{zone_name=~\"$zone_name\"}) / clamp_min(sum by (zone_name) (cf_http_requests_overview_requests{zone_name=~\"$zone_name\"}), 1)",
+          "expr": "sum by (zone_name) (max_over_time(cf_http_requests_overview_cached_requests{zone_name=~\"$zone_name\"}[2m])) / clamp_min(sum by (zone_name) (max_over_time(cf_http_requests_overview_requests{zone_name=~\"$zone_name\"}[2m])), 1)",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",
@@ -787,7 +787,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (cache_status) (cf_http_requests_detail_requests{zone_name=~\"$zone_name\"})",
+          "expr": "sum by (cache_status) (max_over_time(cf_http_requests_detail_requests{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{cache_status}}",
@@ -889,7 +889,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "avg by (zone_name) (cf_http_requests_detail_edge_ttfb_ms_avg{zone_name=~\"$zone_name\"})",
+          "expr": "avg by (zone_name) (max_over_time(cf_http_requests_detail_edge_ttfb_ms_avg{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",
@@ -978,7 +978,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "avg by (zone_name) (cf_http_requests_detail_origin_response_ms_avg{zone_name=~\"$zone_name\"})",
+          "expr": "avg by (zone_name) (max_over_time(cf_http_requests_detail_origin_response_ms_avg{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",
@@ -1080,7 +1080,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (http_method) (cf_http_requests_detail_requests{zone_name=~\"$zone_name\"})",
+          "expr": "sum by (http_method) (max_over_time(cf_http_requests_detail_requests{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{http_method}}",
@@ -1169,7 +1169,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (edge_response_status) (cf_http_requests_detail_requests{zone_name=~\"$zone_name\"})",
+          "expr": "sum by (edge_response_status) (max_over_time(cf_http_requests_detail_requests{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{edge_response_status}}",
@@ -1258,7 +1258,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "topk(10, sum by (client_country) (cf_http_requests_detail_requests{zone_name=~\"$zone_name\"}))",
+          "expr": "topk(10, sum by (client_country) (max_over_time(cf_http_requests_detail_requests{zone_name=~\"$zone_name\"}[2m])))",
           "instant": false,
           "range": true,
           "legendFormat": "{{client_country}}",
@@ -1347,7 +1347,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_name) (cf_http_requests_detail_edge_response_bytes{zone_name=~\"$zone_name\"})",
+          "expr": "sum by (zone_name) (max_over_time(cf_http_requests_detail_edge_response_bytes{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",

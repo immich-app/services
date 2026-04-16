@@ -98,7 +98,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_name) (cf_dns_analytics_queries{zone_name=~\"$zone_name\"})",
+          "expr": "sum by (zone_name) (max_over_time(cf_dns_analytics_queries{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",
@@ -187,7 +187,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (query_type) (cf_dns_analytics_queries{zone_name=~\"$zone_name\"})",
+          "expr": "sum by (query_type) (max_over_time(cf_dns_analytics_queries{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{query_type}}",
@@ -276,7 +276,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (response_code) (cf_dns_analytics_queries{zone_name=~\"$zone_name\"})",
+          "expr": "sum by (response_code) (max_over_time(cf_dns_analytics_queries{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{response_code}}",
@@ -365,7 +365,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (cf_dns_analytics_queries_uncached{zone_name=~\"$zone_name\"})",
+          "expr": "sum (max_over_time(cf_dns_analytics_queries_uncached{zone_name=~\"$zone_name\"}[2m])",
           "instant": false,
           "range": true,
           "legendFormat": "uncached",
@@ -377,7 +377,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (cf_dns_analytics_queries_stale{zone_name=~\"$zone_name\"})",
+          "expr": "sum (max_over_time(cf_dns_analytics_queries_stale{zone_name=~\"$zone_name\"}[2m])",
           "instant": false,
           "range": true,
           "legendFormat": "stale",
@@ -479,7 +479,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "avg by (zone_name) (cf_dns_analytics_processing_time_us_avg{zone_name=~\"$zone_name\"})",
+          "expr": "avg by (zone_name) (max_over_time(cf_dns_analytics_processing_time_us_avg{zone_name=~\"$zone_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",

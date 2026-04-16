@@ -441,7 +441,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (cf_durable_objects_invocations_requests{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"})",
+          "expr": "sum by (script_name) (max_over_time(cf_durable_objects_invocations_requests{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -530,7 +530,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (cf_durable_objects_invocations_errors{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"})",
+          "expr": "sum by (script_name) (max_over_time(cf_durable_objects_invocations_errors{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -632,7 +632,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (cf_durable_objects_periodic_cpu_time_us{script_name=~\"$script_name\"})",
+          "expr": "sum by (script_name) (max_over_time(cf_durable_objects_periodic_cpu_time_us{script_name=~\"$script_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -721,7 +721,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (script_name) (cf_durable_objects_periodic_active_ws_connections_max{script_name=~\"$script_name\"})",
+          "expr": "max by (script_name) (max_over_time(cf_durable_objects_periodic_active_ws_connections_max{script_name=~\"$script_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -810,7 +810,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (cf_durable_objects_periodic_rows_read{script_name=~\"$script_name\"})",
+          "expr": "sum by (script_name) (max_over_time(cf_durable_objects_periodic_rows_read{script_name=~\"$script_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -899,7 +899,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (cf_durable_objects_periodic_rows_written{script_name=~\"$script_name\"})",
+          "expr": "sum by (script_name) (max_over_time(cf_durable_objects_periodic_rows_written{script_name=~\"$script_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -1361,7 +1361,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_durable_objects_invocations_requests[1h])) / 1e6 * 0.15",
+          "expr": "sum(increase(max_over_time(cf_durable_objects_invocations_requests[2m])[1h])) / 1e6 * 0.15",
           "legendFormat": "Requests",
           "refId": "A",
           "instant": false,
@@ -1373,7 +1373,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_durable_objects_periodic_duration_ms[1h])) / 1000 / 1e6 * 12.50",
+          "expr": "sum(increase(max_over_time(cf_durable_objects_periodic_duration_ms[2m])[1h])) / 1000 / 1e6 * 12.50",
           "legendFormat": "Duration",
           "refId": "B",
           "instant": false,

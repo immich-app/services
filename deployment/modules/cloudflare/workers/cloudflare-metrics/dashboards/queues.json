@@ -441,7 +441,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (queue_name, action_type) (cf_queue_operations_billable_operations{queue_name=~\"$queue_name\"})",
+          "expr": "sum by (queue_name, action_type) (max_over_time(cf_queue_operations_billable_operations{queue_name=~\"$queue_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{queue_name}} {{action_type}}",
@@ -530,7 +530,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (queue_name) (cf_queue_operations_bytes{queue_name=~\"$queue_name\"})",
+          "expr": "sum by (queue_name) (max_over_time(cf_queue_operations_bytes{queue_name=~\"$queue_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{queue_name}}",
@@ -632,7 +632,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (queue_name) (cf_queue_backlog_backlog_messages_avg{queue_name=~\"$queue_name\"})",
+          "expr": "max by (queue_name) (max_over_time(cf_queue_backlog_backlog_messages_avg{queue_name=~\"$queue_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{queue_name}}",
@@ -721,7 +721,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (queue_name) (cf_queue_backlog_backlog_bytes_avg{queue_name=~\"$queue_name\"})",
+          "expr": "max by (queue_name) (max_over_time(cf_queue_backlog_backlog_bytes_avg{queue_name=~\"$queue_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{queue_name}}",
@@ -823,7 +823,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "avg by (queue_name) (cf_queue_consumer_concurrency_avg{queue_name=~\"$queue_name\"})",
+          "expr": "avg by (queue_name) (max_over_time(cf_queue_consumer_concurrency_avg{queue_name=~\"$queue_name\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{queue_name}}",
@@ -1094,7 +1094,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_queue_operations_billable_operations[1h])) / 1e6 * 0.40",
+          "expr": "sum(increase(max_over_time(cf_queue_operations_billable_operations[2m])[1h])) / 1e6 * 0.40",
           "legendFormat": "Operations",
           "refId": "A",
           "instant": false,

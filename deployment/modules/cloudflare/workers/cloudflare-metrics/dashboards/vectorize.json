@@ -98,7 +98,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (index_name) (cf_vectorize_operations_operations)",
+          "expr": "sum by (index_name) (max_over_time(cf_vectorize_operations_operations[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{index_name}}",
@@ -187,7 +187,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (index_name) (cf_vectorize_queries_queries)",
+          "expr": "sum by (index_name) (max_over_time(cf_vectorize_queries_queries[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{index_name}}",
@@ -378,7 +378,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (index_name) (cf_vectorize_writes_added_vectors)",
+          "expr": "sum by (index_name) (max_over_time(cf_vectorize_writes_added_vectors[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{index_name}}",
@@ -649,7 +649,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_vectorize_queries_queried_vector_dimensions[1h])) / 1e6 * 0.01",
+          "expr": "sum(increase(max_over_time(cf_vectorize_queries_queried_vector_dimensions[2m])[1h])) / 1e6 * 0.01",
           "legendFormat": "Queried Dims",
           "refId": "A",
           "instant": false,

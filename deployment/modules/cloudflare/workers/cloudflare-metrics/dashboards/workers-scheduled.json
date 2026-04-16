@@ -375,7 +375,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name, status) (cf_workers_scheduled_invocations{script_name=~\"$script_name\",cron=~\"$cron\"})",
+          "expr": "sum by (script_name, status) (max_over_time(cf_workers_scheduled_invocations{script_name=~\"$script_name\",cron=~\"$cron\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}} {{status}}",
@@ -464,7 +464,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (cf_workers_scheduled_invocations{script_name=~\"$script_name\",cron=~\"$cron\",status=\"error\"})",
+          "expr": "sum by (script_name) (max_over_time(cf_workers_scheduled_invocations{script_name=~\"$script_name\",cron=~\"$cron\",status=\"error\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -566,7 +566,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (cf_workers_scheduled_cpu_time_us_sum{script_name=~\"$script_name\",cron=~\"$cron\"})",
+          "expr": "sum by (script_name) (max_over_time(cf_workers_scheduled_cpu_time_us_sum{script_name=~\"$script_name\",cron=~\"$cron\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -655,7 +655,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (script_name) (cf_workers_scheduled_cpu_time_us_max{script_name=~\"$script_name\",cron=~\"$cron\"})",
+          "expr": "max by (script_name) (max_over_time(cf_workers_scheduled_cpu_time_us_max{script_name=~\"$script_name\",cron=~\"$cron\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",

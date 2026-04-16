@@ -375,7 +375,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (config_id) (cf_hyperdrive_queries_count{config_id=~\"$config_id\"})",
+          "expr": "sum by (config_id) (max_over_time(cf_hyperdrive_queries_count{config_id=~\"$config_id\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",
@@ -464,7 +464,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (config_id) (cf_hyperdrive_queries_query_bytes{config_id=~\"$config_id\"})",
+          "expr": "sum by (config_id) (max_over_time(cf_hyperdrive_queries_query_bytes{config_id=~\"$config_id\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",
@@ -566,7 +566,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (config_id) (cf_hyperdrive_queries_query_latency_us{config_id=~\"$config_id\"}) / clamp_min(sum by (config_id) (cf_hyperdrive_queries_count{config_id=~\"$config_id\"}), 1)",
+          "expr": "sum by (config_id) (max_over_time(cf_hyperdrive_queries_query_latency_us{config_id=~\"$config_id\"}[2m])) / clamp_min(sum by (config_id) (max_over_time(cf_hyperdrive_queries_count{config_id=~\"$config_id\"}[2m])), 1)",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",
@@ -655,7 +655,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (config_id) (cf_hyperdrive_queries_connection_latency_us{config_id=~\"$config_id\"}) / clamp_min(sum by (config_id) (cf_hyperdrive_queries_count{config_id=~\"$config_id\"}), 1)",
+          "expr": "sum by (config_id) (max_over_time(cf_hyperdrive_queries_connection_latency_us{config_id=~\"$config_id\"}[2m])) / clamp_min(sum by (config_id) (max_over_time(cf_hyperdrive_queries_count{config_id=~\"$config_id\"}[2m])), 1)",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",
@@ -757,7 +757,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (config_id) (cf_hyperdrive_pool_current_pool_size{config_id=~\"$config_id\"})",
+          "expr": "max by (config_id) (max_over_time(cf_hyperdrive_pool_current_pool_size{config_id=~\"$config_id\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}} current",
@@ -769,7 +769,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (config_id) (cf_hyperdrive_pool_max_pool_size{config_id=~\"$config_id\"})",
+          "expr": "max by (config_id) (max_over_time(cf_hyperdrive_pool_max_pool_size{config_id=~\"$config_id\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}} max",
@@ -858,7 +858,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (config_id) (cf_hyperdrive_pool_waiting_clients{config_id=~\"$config_id\"})",
+          "expr": "max by (config_id) (max_over_time(cf_hyperdrive_pool_waiting_clients{config_id=~\"$config_id\"}[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",

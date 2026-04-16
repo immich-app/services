@@ -98,7 +98,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (pipeline_id) (cf_pipelines_ingestion_ingested_bytes)",
+          "expr": "sum by (pipeline_id) (max_over_time(cf_pipelines_ingestion_ingested_bytes[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{pipeline_id}}",
@@ -187,7 +187,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (pipeline_id) (cf_pipelines_delivery_delivered_bytes)",
+          "expr": "sum by (pipeline_id) (max_over_time(cf_pipelines_delivery_delivered_bytes[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{pipeline_id}}",
@@ -289,7 +289,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (pipeline_id) (cf_pipelines_operator_bytes_in)",
+          "expr": "sum by (pipeline_id) (max_over_time(cf_pipelines_operator_bytes_in[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{pipeline_id}}",
@@ -378,7 +378,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (pipeline_id) (cf_pipelines_sink_bytes_written)",
+          "expr": "sum by (pipeline_id) (max_over_time(cf_pipelines_sink_bytes_written[2m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{pipeline_id}}",
