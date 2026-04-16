@@ -98,7 +98,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (host_name) (max_over_time(cf_rum_pageload_visits[2m]))",
+          "expr": "sum by (host_name) (max_over_time(cf_rum_pageload_visits[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{host_name}}",
@@ -187,7 +187,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (host_name) (max_over_time(cf_rum_performance_visits[2m]))",
+          "expr": "sum by (host_name) (max_over_time(cf_rum_performance_visits[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{host_name}}",
@@ -289,7 +289,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (host_name) (max_over_time(cf_rum_web_vitals_visits[2m]))",
+          "expr": "sum by (host_name) (max_over_time(cf_rum_web_vitals_visits[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{host_name}}",

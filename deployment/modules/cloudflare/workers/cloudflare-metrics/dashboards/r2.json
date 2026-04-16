@@ -507,7 +507,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (bucket_name, action_type) (max_over_time(cf_r2_operations_requests{bucket_name=~\"$bucket_name\"}[2m]))",
+          "expr": "sum by (bucket_name, action_type) (max_over_time(cf_r2_operations_requests{bucket_name=~\"$bucket_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{bucket_name}} {{action_type}}",
@@ -596,7 +596,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (bucket_name) (max_over_time(cf_r2_operations_response_object_bytes{bucket_name=~\"$bucket_name\"}[2m]))",
+          "expr": "sum by (bucket_name) (max_over_time(cf_r2_operations_response_object_bytes{bucket_name=~\"$bucket_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{bucket_name}}",
@@ -1058,7 +1058,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[2m])[1h])) / 1e6 * 4.50",
+          "expr": "sum(increase(max_over_time(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[1m])[1h])) / 1e6 * 4.50",
           "legendFormat": "Class A Ops",
           "refId": "A",
           "instant": false,
@@ -1070,7 +1070,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[2m])[1h])) / 1e6 * 0.36",
+          "expr": "sum(increase(max_over_time(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[1m])[1h])) / 1e6 * 0.36",
           "legendFormat": "Class B Ops",
           "refId": "B",
           "instant": false,

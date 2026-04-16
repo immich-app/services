@@ -903,7 +903,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (max_over_time(cf_workers_invocations_requests[2m]))",
+          "expr": "sum by (script_name) (max_over_time(cf_workers_invocations_requests[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -992,7 +992,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (max_over_time(cf_workers_invocations_errors[2m]))",
+          "expr": "sum by (script_name) (max_over_time(cf_workers_invocations_errors[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -1094,7 +1094,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_name) (max_over_time(cf_http_requests_overview_requests[2m]))",
+          "expr": "sum by (zone_name) (max_over_time(cf_http_requests_overview_requests[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",
@@ -1183,7 +1183,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_name) (max_over_time(cf_http_requests_overview_cached_requests[2m])) / clamp_min(sum by (zone_name) (max_over_time(cf_http_requests_overview_requests[2m])), 1)",
+          "expr": "sum by (zone_name) (max_over_time(cf_http_requests_overview_cached_requests[1m])) / clamp_min(sum by (zone_name) (max_over_time(cf_http_requests_overview_requests[1m])), 1)",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",
@@ -1285,7 +1285,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_name) (max_over_time(cf_d1_queries_detail_query_count[2m]))",
+          "expr": "sum by (database_name) (max_over_time(cf_d1_queries_detail_query_count[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -2560,7 +2560,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(max_over_time(cf_workers_invocations_requests[2m])[1h])) / 1e6 * 0.30) + (sum(increase(max_over_time(cf_workers_invocations_cpu_time_us_sum[2m])[1h])) / 1000 / 1e6 * 0.02)",
+          "expr": "(sum(increase(max_over_time(cf_workers_invocations_requests[1m])[1h])) / 1e6 * 0.30) + (sum(increase(max_over_time(cf_workers_invocations_cpu_time_us_sum[1m])[1h])) / 1000 / 1e6 * 0.02)",
           "legendFormat": "Workers",
           "refId": "A",
           "instant": false,
@@ -2572,7 +2572,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(max_over_time(cf_d1_queries_rows_read[2m])[1h])) / 1e6 * 0.001) + (sum(increase(max_over_time(cf_d1_queries_rows_written[2m])[1h])) / 1e6 * 1.00)",
+          "expr": "(sum(increase(max_over_time(cf_d1_queries_rows_read[1m])[1h])) / 1e6 * 0.001) + (sum(increase(max_over_time(cf_d1_queries_rows_written[1m])[1h])) / 1e6 * 1.00)",
           "legendFormat": "D1",
           "refId": "B",
           "instant": false,
@@ -2584,7 +2584,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(max_over_time(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[2m])[1h])) / 1e6 * 4.50) + (sum(increase(max_over_time(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[2m])[1h])) / 1e6 * 0.36)",
+          "expr": "(sum(increase(max_over_time(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[1m])[1h])) / 1e6 * 4.50) + (sum(increase(max_over_time(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[1m])[1h])) / 1e6 * 0.36)",
           "legendFormat": "R2",
           "refId": "C",
           "instant": false,
@@ -2596,7 +2596,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(max_over_time(cf_kv_operations_requests{action_type=\"read\"}[2m])[1h])) / 1e6 * 0.50) + (sum(increase(max_over_time(cf_kv_operations_requests{action_type!=\"read\"}[2m])[1h])) / 1e6 * 5.00)",
+          "expr": "(sum(increase(max_over_time(cf_kv_operations_requests{action_type=\"read\"}[1m])[1h])) / 1e6 * 0.50) + (sum(increase(max_over_time(cf_kv_operations_requests{action_type!=\"read\"}[1m])[1h])) / 1e6 * 5.00)",
           "legendFormat": "KV",
           "refId": "D",
           "instant": false,
@@ -2608,7 +2608,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(max_over_time(cf_durable_objects_invocations_requests[2m])[1h])) / 1e6 * 0.15) + (sum(increase(max_over_time(cf_durable_objects_periodic_duration_ms[2m])[1h])) / 1000 / 1e6 * 12.50)",
+          "expr": "(sum(increase(max_over_time(cf_durable_objects_invocations_requests[1m])[1h])) / 1e6 * 0.15) + (sum(increase(max_over_time(cf_durable_objects_periodic_duration_ms[1m])[1h])) / 1000 / 1e6 * 12.50)",
           "legendFormat": "Durable Objects",
           "refId": "E",
           "instant": false,
@@ -2620,7 +2620,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_queue_operations_billable_operations[2m])[1h])) / 1e6 * 0.40",
+          "expr": "sum(increase(max_over_time(cf_queue_operations_billable_operations[1m])[1h])) / 1e6 * 0.40",
           "legendFormat": "Queues",
           "refId": "F",
           "instant": false,
@@ -2632,7 +2632,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_vectorize_queries_queried_vector_dimensions[2m])[1h])) / 1e6 * 0.01",
+          "expr": "sum(increase(max_over_time(cf_vectorize_queries_queried_vector_dimensions[1m])[1h])) / 1e6 * 0.01",
           "legendFormat": "Vectorize",
           "refId": "G",
           "instant": false,
@@ -2644,7 +2644,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_ai_inference_neurons[2m])[1h])) / 1000 * 0.011",
+          "expr": "sum(increase(max_over_time(cf_ai_inference_neurons[1m])[1h])) / 1000 * 0.011",
           "legendFormat": "Workers AI",
           "refId": "H",
           "instant": false,

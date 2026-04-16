@@ -98,7 +98,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (action) (max_over_time(cf_email_routing_messages{zone_name=~\"$zone_name\"}[2m]))",
+          "expr": "sum by (action) (max_over_time(cf_email_routing_messages{zone_name=~\"$zone_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{action}}",
@@ -187,7 +187,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (status) (max_over_time(cf_email_routing_messages{zone_name=~\"$zone_name\"}[2m]))",
+          "expr": "sum by (status) (max_over_time(cf_email_routing_messages{zone_name=~\"$zone_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{status}}",
@@ -289,7 +289,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (event_type) (max_over_time(cf_email_sending_messages{zone_name=~\"$zone_name\"}[2m]))",
+          "expr": "sum by (event_type) (max_over_time(cf_email_sending_messages{zone_name=~\"$zone_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{event_type}}",
@@ -391,7 +391,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (disposition) (max_over_time(cf_dmarc_reports_messages{zone_name=~\"$zone_name\"}[2m]))",
+          "expr": "sum by (disposition) (max_over_time(cf_dmarc_reports_messages{zone_name=~\"$zone_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{disposition}}",
@@ -480,7 +480,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (max_over_time(cf_dmarc_reports_dmarc_pass{zone_name=~\"$zone_name\"}[2m])",
+          "expr": "sum (max_over_time(cf_dmarc_reports_dmarc_pass{zone_name=~\"$zone_name\"}[1m])",
           "instant": false,
           "range": true,
           "legendFormat": "dmarc pass",
@@ -492,7 +492,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (max_over_time(cf_dmarc_reports_spf_pass{zone_name=~\"$zone_name\"}[2m])",
+          "expr": "sum (max_over_time(cf_dmarc_reports_spf_pass{zone_name=~\"$zone_name\"}[1m])",
           "instant": false,
           "range": true,
           "legendFormat": "spf pass",
@@ -504,7 +504,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (max_over_time(cf_dmarc_reports_dkim_pass{zone_name=~\"$zone_name\"}[2m])",
+          "expr": "sum (max_over_time(cf_dmarc_reports_dkim_pass{zone_name=~\"$zone_name\"}[1m])",
           "instant": false,
           "range": true,
           "legendFormat": "dkim pass",

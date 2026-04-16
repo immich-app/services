@@ -507,7 +507,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_name) (max_over_time(cf_d1_queries_detail_query_count{database_name=~\"$database_name\"}[2m]))",
+          "expr": "sum by (database_name) (max_over_time(cf_d1_queries_detail_query_count{database_name=~\"$database_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -596,7 +596,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_name) (max_over_time(cf_d1_queries_detail_query_count{database_name=~\"$database_name\",error!=\"\"}[2m]))",
+          "expr": "sum by (database_name) (max_over_time(cf_d1_queries_detail_query_count{database_name=~\"$database_name\",error!=\"\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -698,7 +698,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_name) (max_over_time(cf_d1_queries_rows_read{database_name=~\"$database_name\"}[2m]))",
+          "expr": "sum by (database_name) (max_over_time(cf_d1_queries_rows_read{database_name=~\"$database_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -787,7 +787,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_name) (max_over_time(cf_d1_queries_rows_written{database_name=~\"$database_name\"}[2m]))",
+          "expr": "sum by (database_name) (max_over_time(cf_d1_queries_rows_written{database_name=~\"$database_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -889,7 +889,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (database_name) (max_over_time(cf_d1_queries_detail_query_duration_ms_p50{database_name=~\"$database_name\"}[2m]))",
+          "expr": "max by (database_name) (max_over_time(cf_d1_queries_detail_query_duration_ms_p50{database_name=~\"$database_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -978,7 +978,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (database_name) (max_over_time(cf_d1_queries_detail_query_duration_ms_p95{database_name=~\"$database_name\"}[2m]))",
+          "expr": "max by (database_name) (max_over_time(cf_d1_queries_detail_query_duration_ms_p95{database_name=~\"$database_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -1067,7 +1067,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (database_name) (max_over_time(cf_d1_queries_detail_query_duration_ms_p99{database_name=~\"$database_name\"}[2m]))",
+          "expr": "max by (database_name) (max_over_time(cf_d1_queries_detail_query_duration_ms_p99{database_name=~\"$database_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -1427,7 +1427,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_d1_queries_rows_read[2m])[1h])) / 1e6 * 0.001",
+          "expr": "sum(increase(max_over_time(cf_d1_queries_rows_read[1m])[1h])) / 1e6 * 0.001",
           "legendFormat": "Rows Read",
           "refId": "A",
           "instant": false,
@@ -1439,7 +1439,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_d1_queries_rows_written[2m])[1h])) / 1e6 * 1.00",
+          "expr": "sum(increase(max_over_time(cf_d1_queries_rows_written[1m])[1h])) / 1e6 * 1.00",
           "legendFormat": "Rows Written",
           "refId": "B",
           "instant": false,

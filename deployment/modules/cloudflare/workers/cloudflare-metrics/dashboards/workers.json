@@ -507,7 +507,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (max_over_time(cf_workers_invocations_requests{script_name=~\"$script_name\",status=~\"$status\"}[2m]))",
+          "expr": "sum by (script_name) (max_over_time(cf_workers_invocations_requests{script_name=~\"$script_name\",status=~\"$status\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -596,7 +596,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (max_over_time(cf_workers_invocations_errors{script_name=~\"$script_name\",status=~\"$status\"}[2m]))",
+          "expr": "sum by (script_name) (max_over_time(cf_workers_invocations_errors{script_name=~\"$script_name\",status=~\"$status\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -698,7 +698,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (script_name) (max_over_time(cf_workers_invocations_cpu_time_us_p50{script_name=~\"$script_name\",status=~\"$status\"}[2m]))",
+          "expr": "max by (script_name) (max_over_time(cf_workers_invocations_cpu_time_us_p50{script_name=~\"$script_name\",status=~\"$status\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -787,7 +787,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (script_name) (max_over_time(cf_workers_invocations_cpu_time_us_p99{script_name=~\"$script_name\",status=~\"$status\"}[2m]))",
+          "expr": "max by (script_name) (max_over_time(cf_workers_invocations_cpu_time_us_p99{script_name=~\"$script_name\",status=~\"$status\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -876,7 +876,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (script_name) (max_over_time(cf_workers_invocations_duration_ms_p50{script_name=~\"$script_name\",status=~\"$status\"}[2m]))",
+          "expr": "max by (script_name) (max_over_time(cf_workers_invocations_duration_ms_p50{script_name=~\"$script_name\",status=~\"$status\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -965,7 +965,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max by (script_name) (max_over_time(cf_workers_invocations_duration_ms_p99{script_name=~\"$script_name\",status=~\"$status\"}[2m]))",
+          "expr": "max by (script_name) (max_over_time(cf_workers_invocations_duration_ms_p99{script_name=~\"$script_name\",status=~\"$status\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -1067,7 +1067,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (max_over_time(cf_workers_subrequests_subrequests{script_name=~\"$script_name\"}[2m]))",
+          "expr": "sum by (script_name) (max_over_time(cf_workers_subrequests_subrequests{script_name=~\"$script_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -1156,7 +1156,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (http_response_status) (max_over_time(cf_workers_subrequests_subrequests{script_name=~\"$script_name\"}[2m]))",
+          "expr": "sum by (http_response_status) (max_over_time(cf_workers_subrequests_subrequests{script_name=~\"$script_name\"}[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{http_response_status}}",
@@ -1427,7 +1427,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_workers_invocations_requests[2m])[1h])) / 1e6 * 0.30",
+          "expr": "sum(increase(max_over_time(cf_workers_invocations_requests[1m])[1h])) / 1e6 * 0.30",
           "legendFormat": "Requests",
           "refId": "A",
           "instant": false,
@@ -1439,7 +1439,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_workers_invocations_cpu_time_us_sum[2m])[1h])) / 1000 / 1e6 * 0.02",
+          "expr": "sum(increase(max_over_time(cf_workers_invocations_cpu_time_us_sum[1m])[1h])) / 1000 / 1e6 * 0.02",
           "legendFormat": "CPU Time",
           "refId": "B",
           "instant": false,
