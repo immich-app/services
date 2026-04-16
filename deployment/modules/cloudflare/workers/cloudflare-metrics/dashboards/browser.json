@@ -63,7 +63,7 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",

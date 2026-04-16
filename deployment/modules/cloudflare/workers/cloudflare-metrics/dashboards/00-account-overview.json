@@ -841,7 +841,7 @@
     {
       "id": 15,
       "type": "timeseries",
-      "title": "Worker Request Rate (per script)",
+      "title": "Worker Request per Script",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -868,7 +868,7 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -930,7 +930,7 @@
     {
       "id": 16,
       "type": "timeseries",
-      "title": "Worker Error Rate (per script)",
+      "title": "Worker Error per Script",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -957,14 +957,14 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": true,
+            "spanNulls": false,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1059,7 +1059,7 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -1121,7 +1121,7 @@
     {
       "id": 19,
       "type": "timeseries",
-      "title": "Cache Hit Rate per Zone",
+      "title": "Cache Hit per Zone",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -1223,7 +1223,7 @@
     {
       "id": 21,
       "type": "timeseries",
-      "title": "D1 Query Rate per Database",
+      "title": "D1 Query per Database",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -1250,7 +1250,7 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -1537,7 +1537,7 @@
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": true,
+            "spanNulls": false,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {

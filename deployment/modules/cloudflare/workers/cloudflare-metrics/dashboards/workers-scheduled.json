@@ -340,7 +340,7 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -429,14 +429,14 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": true,
+            "spanNulls": false,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {

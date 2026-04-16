@@ -445,7 +445,7 @@
     {
       "id": 9,
       "type": "timeseries",
-      "title": "Operation Rate per Bucket",
+      "title": "Operation per Bucket",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -472,7 +472,7 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -561,7 +561,7 @@
               }
             ]
           },
-          "unit": "Bps",
+          "unit": "bytes",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",

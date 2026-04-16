@@ -116,7 +116,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       model = jsonencode({
         datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
         editorMode    = "code"
-        expr          = "sum(increase(cloudflare_metrics_cron_error_count[10m]))"
+        expr          = "sum(sum_over_time(cloudflare_metrics_cron_error_count[10m]))"
         instant       = true
         intervalMs    = 60000
         legendFormat  = "errors"
@@ -178,7 +178,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       model = jsonencode({
         datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
         editorMode    = "code"
-        expr          = "sum(increase(cloudflare_metrics_collector_dataset_errors[15m]))"
+        expr          = "max(sum by (dataset) (sum_over_time(cloudflare_metrics_collector_dataset_errors[15m])))"
         instant       = true
         intervalMs    = 60000
         legendFormat  = "errors"
@@ -217,7 +217,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       __dashboardUid__ = local.exporter_health_uid
       __panelId__      = tostring(local.alert_panels.dataset_errors)
       summary          = "Collector dataset errors sustained"
-      description      = "More than 10 dataset-level errors in the last 15 minutes. Check the exporter-health dashboard to see which datasets are failing."
+      description      = "A single dataset has had more than 10 errors in the last 15 minutes. Check the exporter-health dashboard to see which dataset is failing."
     }
     labels    = { severity = "3" }
     is_paused = false
@@ -241,7 +241,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       model = jsonencode({
         datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
         editorMode    = "code"
-        expr          = "sum(increase(cloudflare_metrics_flush_errors[15m]))"
+        expr          = "sum(sum_over_time(cloudflare_metrics_flush_errors[15m]))"
         instant       = true
         intervalMs    = 60000
         legendFormat  = "errors"
@@ -426,7 +426,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       model = jsonencode({
         datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
         editorMode    = "code"
-        expr          = "sum(increase(cloudflare_metrics_graphql_client_error_responses[15m]))"
+        expr          = "sum(sum_over_time(cloudflare_metrics_graphql_client_error_responses[15m]))"
         instant       = true
         intervalMs    = 60000
         legendFormat  = "error responses"
@@ -491,7 +491,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       model = jsonencode({
         datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
         editorMode    = "code"
-        expr          = "sum(increase(cf_workers_invocations_errors{script_name=\"${local.worker_script_name}\"}[30m]))"
+        expr          = "sum(sum_over_time(cf_workers_invocations_errors{script_name=\"${local.worker_script_name}\"}[30m]))"
         instant       = true
         intervalMs    = 60000
         legendFormat  = "errors"

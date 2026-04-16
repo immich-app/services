@@ -712,7 +712,7 @@
               }
             ]
           },
-          "unit": "Bps",
+          "unit": "bytes",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -801,7 +801,7 @@
               }
             ]
           },
-          "unit": "Bps",
+          "unit": "bytes",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",

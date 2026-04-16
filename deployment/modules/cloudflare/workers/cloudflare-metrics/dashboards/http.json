@@ -472,7 +472,7 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -561,7 +561,7 @@
               }
             ]
           },
-          "unit": "Bps",
+          "unit": "bytes",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -636,7 +636,7 @@
     {
       "id": 12,
       "type": "timeseries",
-      "title": "Cache Hit Rate per Zone",
+      "title": "Cache Hit per Zone",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -752,7 +752,7 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -1045,7 +1045,7 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -1134,7 +1134,7 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -1223,7 +1223,7 @@
               }
             ]
           },
-          "unit": "reqps",
+          "unit": "short",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",
@@ -1312,7 +1312,7 @@
               }
             ]
           },
-          "unit": "Bps",
+          "unit": "bytes",
           "custom": {
             "drawStyle": "line",
             "lineInterpolation": "smooth",

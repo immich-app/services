@@ -591,7 +591,7 @@
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": true,
+            "spanNulls": false,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -619,7 +619,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (dataset, error, error_scope) (cloudflare_metrics_collector_dataset_errors)",
+          "expr": "sum by (dataset, error, error_scope) (max_over_time(cloudflare_metrics_collector_dataset_errors[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{dataset}} ({{error_scope}}: {{error}})",
@@ -980,7 +980,7 @@
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": true,
+            "spanNulls": false,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1008,7 +1008,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "max(cloudflare_metrics_graphql_client_error_responses)",
+          "expr": "max(max_over_time(cloudflare_metrics_graphql_client_error_responses[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "error responses",
@@ -1260,7 +1260,7 @@
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": true,
+            "spanNulls": false,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1288,7 +1288,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (cloudflare_metrics_flush_errors)",
+          "expr": "sum(max_over_time(cloudflare_metrics_flush_errors[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "errors",
@@ -1552,7 +1552,7 @@
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": true,
+            "spanNulls": false,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1580,7 +1580,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (resource) (cloudflare_metrics_resource_lookup_errors)",
+          "expr": "sum by (resource) (max_over_time(cloudflare_metrics_resource_lookup_errors[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{resource}}",
