@@ -75,7 +75,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_r2_operations_requests{bucket_name=~\"$bucket_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_r2_operations_requests{bucket_name=~\"$bucket_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -141,7 +141,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_r2_operations_response_object_bytes{bucket_name=~\"$bucket_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_r2_operations_response_object_bytes{bucket_name=~\"$bucket_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -405,7 +405,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_r2_operations_response_bytes{bucket_name=~\"$bucket_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_r2_operations_response_bytes{bucket_name=~\"$bucket_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -895,7 +895,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[24h])) / 1e6 * 4.50) + (sum(increase(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[24h])) / 1e6 * 0.36) + (last_over_time((sum(cf_r2_storage_payload_bytes))[6h:]) / 1073741824 * 0.015 / 30)",
+          "expr": "(sum(sum_over_time(max_over_time(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[1m])[24h:1m])) / 1e6 * 4.50) + (sum(sum_over_time(max_over_time(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[1m])[24h:1m])) / 1e6 * 0.36) + (last_over_time((sum(cf_r2_storage_payload_bytes))[6h:]) / 1073741824 * 0.015 / 30)",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -973,7 +973,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "((sum(increase(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[24h])) / 1e6 * 4.50) + (sum(increase(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[24h])) / 1e6 * 0.36) + (last_over_time((sum(cf_r2_storage_payload_bytes))[6h:]) / 1073741824 * 0.015 / 30)) * 30",
+          "expr": "((sum(sum_over_time(max_over_time(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[1m])[24h:1m])) / 1e6 * 4.50) + (sum(sum_over_time(max_over_time(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[1m])[24h:1m])) / 1e6 * 0.36) + (last_over_time((sum(cf_r2_storage_payload_bytes))[6h:]) / 1073741824 * 0.015 / 30)) * 30",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -1058,7 +1058,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[1m])[1h])) / 1e6 * 4.50",
+          "expr": "sum(sum_over_time(max_over_time(cf_r2_operations_requests{action_type=~\"PutObject|DeleteObject|CreateMultipartUpload|ListObjects|ListObjectsV2|ListMultipartUploads|ListParts\"}[1m])[1h:1m])) / 1e6 * 4.50",
           "legendFormat": "Class A Ops",
           "refId": "A",
           "instant": false,
@@ -1070,7 +1070,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[1m])[1h])) / 1e6 * 0.36",
+          "expr": "sum(sum_over_time(max_over_time(cf_r2_operations_requests{action_type=~\"GetObject|HeadObject|HeadBucket\"}[1m])[1h:1m])) / 1e6 * 0.36",
           "legendFormat": "Class B Ops",
           "refId": "B",
           "instant": false,

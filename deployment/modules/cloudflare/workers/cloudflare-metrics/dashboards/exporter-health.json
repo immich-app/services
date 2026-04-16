@@ -273,7 +273,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cloudflare_metrics_cron_error_count[1m]))",
+          "expr": "sum(cloudflare_metrics_cron_error_count)",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -619,7 +619,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (dataset, error, error_scope) (increase(cloudflare_metrics_collector_dataset_errors[1m]))",
+          "expr": "sum by (dataset, error, error_scope) (cloudflare_metrics_collector_dataset_errors)",
           "instant": false,
           "range": true,
           "legendFormat": "{{dataset}} ({{error_scope}}: {{error}})",
@@ -813,7 +813,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (dataset, error, error_scope, error_message) (increase(cloudflare_metrics_collector_dataset_errors[1h]))",
+          "expr": "sum by (dataset, error, error_scope, error_message) (sum_over_time(cloudflare_metrics_collector_dataset_errors[1h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "",
@@ -1288,7 +1288,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (increase(cloudflare_metrics_flush_errors[1m]))",
+          "expr": "sum (cloudflare_metrics_flush_errors)",
           "instant": false,
           "range": true,
           "legendFormat": "errors",

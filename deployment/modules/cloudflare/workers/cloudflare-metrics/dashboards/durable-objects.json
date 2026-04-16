@@ -75,7 +75,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_durable_objects_invocations_requests{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_durable_objects_invocations_requests{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -141,7 +141,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_durable_objects_invocations_errors{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_durable_objects_invocations_errors{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -207,7 +207,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_durable_objects_subrequests_request_body_size_uncached_bytes{script_name=~\"$script_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_durable_objects_subrequests_request_body_size_uncached_bytes{script_name=~\"$script_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -1198,7 +1198,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(cf_durable_objects_invocations_requests[24h])) / 1e6 * 0.15) + (sum(increase(cf_durable_objects_periodic_duration_ms[24h])) / 1000 / 1e6 * 12.50) + (last_over_time((sum(cf_durable_objects_storage_stored_bytes))[6h:]) / 1073741824 * 0.20 / 30)",
+          "expr": "(sum(sum_over_time(max_over_time(cf_durable_objects_invocations_requests[1m])[24h:1m])) / 1e6 * 0.15) + (sum(sum_over_time(max_over_time(cf_durable_objects_periodic_duration_ms[1m])[24h:1m])) / 1000 / 1e6 * 12.50) + (last_over_time((sum(cf_durable_objects_storage_stored_bytes))[6h:]) / 1073741824 * 0.20 / 30)",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -1276,7 +1276,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "((sum(increase(cf_durable_objects_invocations_requests[24h])) / 1e6 * 0.15) + (sum(increase(cf_durable_objects_periodic_duration_ms[24h])) / 1000 / 1e6 * 12.50) + (last_over_time((sum(cf_durable_objects_storage_stored_bytes))[6h:]) / 1073741824 * 0.20 / 30)) * 30",
+          "expr": "((sum(sum_over_time(max_over_time(cf_durable_objects_invocations_requests[1m])[24h:1m])) / 1e6 * 0.15) + (sum(sum_over_time(max_over_time(cf_durable_objects_periodic_duration_ms[1m])[24h:1m])) / 1000 / 1e6 * 12.50) + (last_over_time((sum(cf_durable_objects_storage_stored_bytes))[6h:]) / 1073741824 * 0.20 / 30)) * 30",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -1361,7 +1361,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_durable_objects_invocations_requests[1m])[1h])) / 1e6 * 0.15",
+          "expr": "sum(sum_over_time(max_over_time(cf_durable_objects_invocations_requests[1m])[1h:1m])) / 1e6 * 0.15",
           "legendFormat": "Requests",
           "refId": "A",
           "instant": false,
@@ -1373,7 +1373,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_durable_objects_periodic_duration_ms[1m])[1h])) / 1000 / 1e6 * 12.50",
+          "expr": "sum(sum_over_time(max_over_time(cf_durable_objects_periodic_duration_ms[1m])[1h:1m])) / 1000 / 1e6 * 12.50",
           "legendFormat": "Duration",
           "refId": "B",
           "instant": false,

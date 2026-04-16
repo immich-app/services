@@ -75,7 +75,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_ai_inference_requests[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_ai_inference_requests[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -141,7 +141,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_ai_inference_neurons[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_ai_inference_neurons[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",

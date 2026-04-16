@@ -75,7 +75,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_http_requests_overview_requests{zone_name=~\"$zone_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_http_requests_overview_requests{zone_name=~\"$zone_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -141,7 +141,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_http_requests_overview_cached_requests{zone_name=~\"$zone_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_http_requests_overview_cached_requests{zone_name=~\"$zone_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -273,7 +273,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_http_requests_overview_bytes{zone_name=~\"$zone_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_http_requests_overview_bytes{zone_name=~\"$zone_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -339,7 +339,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_http_requests_overview_cached_bytes{zone_name=~\"$zone_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_http_requests_overview_cached_bytes{zone_name=~\"$zone_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -405,7 +405,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_http_requests_overview_visits{zone_name=~\"$zone_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_http_requests_overview_visits{zone_name=~\"$zone_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",

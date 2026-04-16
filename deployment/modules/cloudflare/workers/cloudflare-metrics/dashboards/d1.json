@@ -75,7 +75,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_d1_queries_detail_query_count{database_name=~\"$database_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_d1_queries_detail_query_count{database_name=~\"$database_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -141,7 +141,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_d1_queries_detail_query_count{database_name=~\"$database_name\",error!=\"\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_d1_queries_detail_query_count{database_name=~\"$database_name\",error!=\"\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -207,7 +207,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_d1_queries_rows_read{database_name=~\"$database_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_d1_queries_rows_read{database_name=~\"$database_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -273,7 +273,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(cf_d1_queries_rows_written{database_name=~\"$database_name\"}[24h]))",
+          "expr": "sum(sum_over_time(max_over_time(cf_d1_queries_rows_written{database_name=~\"$database_name\"}[1m])[24h:1m]))",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -1264,7 +1264,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(cf_d1_queries_rows_read[24h])) / 1e6 * 0.001) + (sum(increase(cf_d1_queries_rows_written[24h])) / 1e6 * 1.00) + (last_over_time((sum(cf_d1_storage_database_size_bytes))[6h:]) / 1073741824 * 0.75 / 30)",
+          "expr": "(sum(sum_over_time(max_over_time(cf_d1_queries_rows_read[1m])[24h:1m])) / 1e6 * 0.001) + (sum(sum_over_time(max_over_time(cf_d1_queries_rows_written[1m])[24h:1m])) / 1e6 * 1.00) + (last_over_time((sum(cf_d1_storage_database_size_bytes))[6h:]) / 1073741824 * 0.75 / 30)",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -1342,7 +1342,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "((sum(increase(cf_d1_queries_rows_read[24h])) / 1e6 * 0.001) + (sum(increase(cf_d1_queries_rows_written[24h])) / 1e6 * 1.00) + (last_over_time((sum(cf_d1_storage_database_size_bytes))[6h:]) / 1073741824 * 0.75 / 30)) * 30",
+          "expr": "((sum(sum_over_time(max_over_time(cf_d1_queries_rows_read[1m])[24h:1m])) / 1e6 * 0.001) + (sum(sum_over_time(max_over_time(cf_d1_queries_rows_written[1m])[24h:1m])) / 1e6 * 1.00) + (last_over_time((sum(cf_d1_storage_database_size_bytes))[6h:]) / 1073741824 * 0.75 / 30)) * 30",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -1427,7 +1427,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_d1_queries_rows_read[1m])[1h])) / 1e6 * 0.001",
+          "expr": "sum(sum_over_time(max_over_time(cf_d1_queries_rows_read[1m])[1h:1m])) / 1e6 * 0.001",
           "legendFormat": "Rows Read",
           "refId": "A",
           "instant": false,
@@ -1439,7 +1439,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_d1_queries_rows_written[1m])[1h])) / 1e6 * 1.00",
+          "expr": "sum(sum_over_time(max_over_time(cf_d1_queries_rows_written[1m])[1h:1m])) / 1e6 * 1.00",
           "legendFormat": "Rows Written",
           "refId": "B",
           "instant": false,

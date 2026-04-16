@@ -486,7 +486,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "(sum(increase(cf_vectorize_queries_queried_vector_dimensions[24h])) / 1e6 * 0.01) + (last_over_time((sum(cf_vectorize_storage_stored_vector_dimensions))[6h:]) / 1e8 * 0.05 / 30)",
+          "expr": "(sum(sum_over_time(max_over_time(cf_vectorize_queries_queried_vector_dimensions[1m])[24h:1m])) / 1e6 * 0.01) + (last_over_time((sum(cf_vectorize_storage_stored_vector_dimensions))[6h:]) / 1e8 * 0.05 / 30)",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -564,7 +564,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "((sum(increase(cf_vectorize_queries_queried_vector_dimensions[24h])) / 1e6 * 0.01) + (last_over_time((sum(cf_vectorize_storage_stored_vector_dimensions))[6h:]) / 1e8 * 0.05 / 30)) * 30",
+          "expr": "((sum(sum_over_time(max_over_time(cf_vectorize_queries_queried_vector_dimensions[1m])[24h:1m])) / 1e6 * 0.01) + (last_over_time((sum(cf_vectorize_storage_stored_vector_dimensions))[6h:]) / 1e8 * 0.05 / 30)) * 30",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -649,7 +649,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(increase(max_over_time(cf_vectorize_queries_queried_vector_dimensions[1m])[1h])) / 1e6 * 0.01",
+          "expr": "sum(sum_over_time(max_over_time(cf_vectorize_queries_queried_vector_dimensions[1m])[1h:1m])) / 1e6 * 0.01",
           "legendFormat": "Queried Dims",
           "refId": "A",
           "instant": false,
