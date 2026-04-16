@@ -475,11 +475,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -564,11 +564,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -666,11 +666,11 @@
           "unit": "µs",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -755,11 +755,11 @@
           "unit": "µs",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -844,11 +844,11 @@
           "unit": "ms",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -933,11 +933,11 @@
           "unit": "ms",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1035,11 +1035,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1124,11 +1124,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1378,7 +1378,7 @@
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "none",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",
