@@ -206,7 +206,7 @@ export class CloudflareMetricsCollector {
       metric
         .intField('invocations', bucket.count)
         .intField('cpu_time_us_sum', Math.round(bucket.cpuTimeUs))
-        .intField('cpu_time_us_avg', Math.round(bucket.cpuTimeUs / bucket.count))
+        .intField('cpu_time_us_avg', bucket.count > 0 ? Math.round(bucket.cpuTimeUs / bucket.count) : 0)
         .intField('cpu_time_us_max', Math.round(bucket.cpuTimeMax))
         .setExportTimestamp(timestamp);
       this.metrics.pushRaw(metric);

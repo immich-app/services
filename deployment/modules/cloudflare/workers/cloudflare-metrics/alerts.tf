@@ -116,7 +116,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       model = jsonencode({
         datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
         editorMode    = "code"
-        expr          = "sum(sum_over_time(cloudflare_metrics_cron_error_count[10m]))"
+        expr          = "max(sum_over_time(cloudflare_metrics_cron_error_count[10m]))"
         instant       = true
         intervalMs    = 60000
         legendFormat  = "errors"
@@ -241,7 +241,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       model = jsonencode({
         datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
         editorMode    = "code"
-        expr          = "sum(sum_over_time(cloudflare_metrics_flush_errors[15m]))"
+        expr          = "max(sum_over_time(cloudflare_metrics_flush_errors[15m]))"
         instant       = true
         intervalMs    = 60000
         legendFormat  = "errors"
@@ -426,7 +426,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       model = jsonencode({
         datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
         editorMode    = "code"
-        expr          = "sum(sum_over_time(cloudflare_metrics_graphql_client_error_responses[15m]))"
+        expr          = "max(sum_over_time(cloudflare_metrics_graphql_client_error_responses[15m]))"
         instant       = true
         intervalMs    = 60000
         legendFormat  = "error responses"
@@ -491,7 +491,7 @@ resource "grafana_rule_group" "cloudflare_metrics_alerts" {
       model = jsonencode({
         datasource    = { type = "prometheus", uid = local.prometheus_datasource_uid }
         editorMode    = "code"
-        expr          = "sum(sum_over_time(cf_workers_invocations_errors{script_name=\"${local.worker_script_name}\"}[30m]))"
+        expr          = "max(sum_over_time(cf_workers_invocations_errors{script_name=\"${local.worker_script_name}\"}[30m]))"
         instant       = true
         intervalMs    = 60000
         legendFormat  = "errors"

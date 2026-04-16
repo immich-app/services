@@ -90,15 +90,16 @@ export class InfluxMetricsProvider implements IMetricsProviderRepository {
     for (const [key, value] of metric.tags) {
       line += ',' + escapeTagKey(key) + '=' + escapeTagValue(value);
     }
-    let fieldPart = '';
+    const fieldParts: string[] = [];
     for (const [key, { value, type }] of metric.fields) {
-      if (fieldPart) {
-        fieldPart += ',';
+      if (!Number.isFinite(value)) {
+        continue;
       }
       // int/duration → write as integer with `i` suffix
       const serialized = type === 'float' ? value.toString() : Math.round(value).toString() + 'i';
-      fieldPart += escapeTagKey(key) + '=' + serialized;
+      fieldParts.push(escapeTagKey(key) + '=' + serialized);
     }
+    const fieldPart = fieldParts.join(',');
     if (!fieldPart) {
       return; // no fields → skip
     }
