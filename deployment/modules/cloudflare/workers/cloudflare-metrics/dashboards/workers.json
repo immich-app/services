@@ -207,7 +207,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(rate(cf_workers_invocations_errors{script_name=~\"$script_name\",status=~\"$status\"}[5m])) / clamp_min(sum(rate(cf_workers_invocations_requests{script_name=~\"$script_name\",status=~\"$status\"}[5m])), 1)",
+          "expr": "sum(cf_workers_invocations_errors{script_name=~\"$script_name\",status=~\"$status\"}) / clamp_min(sum(cf_workers_invocations_requests{script_name=~\"$script_name\",status=~\"$status\"}), 1)",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -507,7 +507,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_workers_invocations_requests{script_name=~\"$script_name\",status=~\"$status\"}[5m]))",
+          "expr": "sum by (script_name) (cf_workers_invocations_requests{script_name=~\"$script_name\",status=~\"$status\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -596,7 +596,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_workers_invocations_errors{script_name=~\"$script_name\",status=~\"$status\"}[5m]))",
+          "expr": "sum by (script_name) (cf_workers_invocations_errors{script_name=~\"$script_name\",status=~\"$status\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -1067,7 +1067,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_workers_subrequests_subrequests{script_name=~\"$script_name\"}[5m]))",
+          "expr": "sum by (script_name) (cf_workers_subrequests_subrequests{script_name=~\"$script_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
