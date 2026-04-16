@@ -66,11 +66,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -98,7 +98,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (endpoint) (rate(cf_browser_rendering_api_requests[5m]))",
+          "expr": "sum by (endpoint) (cf_browser_rendering_api_requests)",
           "instant": false,
           "range": true,
           "legendFormat": "{{endpoint}}",
@@ -155,11 +155,11 @@
           "unit": "ms",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -187,7 +187,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (rate(cf_browser_rendering_browser_time_total_session_duration_ms[5m]))",
+          "expr": "sum (cf_browser_rendering_browser_time_total_session_duration_ms)",
           "instant": false,
           "range": true,
           "legendFormat": "total ms/s",
@@ -244,11 +244,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -333,11 +333,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -435,11 +435,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -467,7 +467,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (rate(cf_browser_isolation_sessions_sessions[5m]))",
+          "expr": "sum (cf_browser_isolation_sessions_sessions)",
           "instant": false,
           "range": true,
           "legendFormat": "sessions",
@@ -524,11 +524,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -556,7 +556,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (rate(cf_browser_isolation_user_actions_actions[5m]))",
+          "expr": "sum (cf_browser_isolation_user_actions_actions)",
           "instant": false,
           "range": true,
           "legendFormat": "actions",
@@ -595,7 +595,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 Browser",
+  "title": "Cloudflare — Browser",
   "uid": "cf-browser",
   "version": 1,
   "weekStart": ""

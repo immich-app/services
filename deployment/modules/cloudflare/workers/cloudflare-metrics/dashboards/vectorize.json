@@ -66,11 +66,11 @@
           "unit": "ops",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -98,7 +98,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (index_name) (rate(cf_vectorize_operations_operations[5m]))",
+          "expr": "sum by (index_name) (cf_vectorize_operations_operations)",
           "instant": false,
           "range": true,
           "legendFormat": "{{index_name}}",
@@ -155,11 +155,11 @@
           "unit": "ops",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -187,7 +187,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (index_name) (rate(cf_vectorize_queries_queries[5m]))",
+          "expr": "sum by (index_name) (cf_vectorize_queries_queries)",
           "instant": false,
           "range": true,
           "legendFormat": "{{index_name}}",
@@ -257,11 +257,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -346,11 +346,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -378,7 +378,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (index_name) (rate(cf_vectorize_writes_added_vectors[5m]))",
+          "expr": "sum by (index_name) (cf_vectorize_writes_added_vectors)",
           "instant": false,
           "range": true,
           "legendFormat": "{{index_name}}",
@@ -600,7 +600,7 @@
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "none",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",

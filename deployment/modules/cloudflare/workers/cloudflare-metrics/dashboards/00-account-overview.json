@@ -871,11 +871,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -903,7 +903,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_workers_invocations_requests[5m]))",
+          "expr": "sum by (script_name) (cf_workers_invocations_requests)",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -960,11 +960,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -992,7 +992,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_workers_invocations_errors[5m]))",
+          "expr": "sum by (script_name) (cf_workers_invocations_errors)",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -1062,11 +1062,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1094,7 +1094,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_name) (rate(cf_http_requests_overview_requests[5m]))",
+          "expr": "sum by (zone_name) (cf_http_requests_overview_requests)",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",
@@ -1151,11 +1151,11 @@
           "unit": "percentunit",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1183,7 +1183,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_name) (rate(cf_http_requests_overview_cached_requests[5m])) / clamp_min(sum by (zone_name) (rate(cf_http_requests_overview_requests[5m])), 1)",
+          "expr": "sum by (zone_name) (cf_http_requests_overview_cached_requests) / clamp_min(sum by (zone_name) (cf_http_requests_overview_requests), 1)",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",
@@ -1253,11 +1253,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1285,7 +1285,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (database_name) (rate(cf_d1_queries_detail_query_count[5m]))",
+          "expr": "sum by (database_name) (cf_d1_queries_detail_query_count)",
           "instant": false,
           "range": true,
           "legendFormat": "{{database_name}}",
@@ -1342,11 +1342,11 @@
           "unit": "decbytes",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1431,11 +1431,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1533,11 +1533,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1565,7 +1565,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (dataset, error, error_scope) (increase(cloudflare_metrics_collector_dataset_errors[5m]))",
+          "expr": "sum by (dataset, error, error_scope) (increase(cloudflare_metrics_collector_dataset_errors[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{dataset}} ({{error_scope}}: {{error}})",
@@ -1622,11 +1622,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1654,7 +1654,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (dataset) (increase(cloudflare_metrics_collector_dataset_rows[5m]))",
+          "expr": "sum by (dataset) (increase(cloudflare_metrics_collector_dataset_rows[1m]))",
           "instant": false,
           "range": true,
           "legendFormat": "{{dataset}}",
@@ -1711,11 +1711,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -2511,7 +2511,7 @@
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "none",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",

@@ -195,7 +195,7 @@
               }
             ]
           },
-          "unit": "\u00b5s",
+          "unit": "µs",
           "noValue": "0"
         },
         "overrides": []
@@ -343,11 +343,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -375,7 +375,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_pages_functions_invocations_requests{script_name=~\"$script_name\"}[5m]))",
+          "expr": "sum by (script_name) (cf_pages_functions_invocations_requests{script_name=~\"$script_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -432,11 +432,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -464,7 +464,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_pages_functions_invocations_errors{script_name=~\"$script_name\"}[5m]))",
+          "expr": "sum by (script_name) (cf_pages_functions_invocations_errors{script_name=~\"$script_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -531,14 +531,14 @@
               }
             ]
           },
-          "unit": "\u00b5s",
+          "unit": "µs",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -623,11 +623,11 @@
           "unit": "ms",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -723,7 +723,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 Pages Functions",
+  "title": "Cloudflare — Pages Functions",
   "uid": "cf-pages-functions",
   "version": 1,
   "weekStart": ""

@@ -343,11 +343,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -375,7 +375,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (config_id) (rate(cf_hyperdrive_queries_count{config_id=~\"$config_id\"}[5m]))",
+          "expr": "sum by (config_id) (cf_hyperdrive_queries_count{config_id=~\"$config_id\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",
@@ -432,11 +432,11 @@
           "unit": "Bps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -464,7 +464,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (config_id) (rate(cf_hyperdrive_queries_query_bytes{config_id=~\"$config_id\"}[5m]))",
+          "expr": "sum by (config_id) (cf_hyperdrive_queries_query_bytes{config_id=~\"$config_id\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",
@@ -504,7 +504,7 @@
     {
       "id": 10,
       "type": "timeseries",
-      "title": "Query Latency (avg \u00b5s)",
+      "title": "Query Latency (avg µs)",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -531,14 +531,14 @@
               }
             ]
           },
-          "unit": "\u00b5s",
+          "unit": "µs",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -566,7 +566,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (config_id) (rate(cf_hyperdrive_queries_query_latency_us{config_id=~\"$config_id\"}[5m])) / clamp_min(sum by (config_id) (rate(cf_hyperdrive_queries_count{config_id=~\"$config_id\"}[5m])), 1)",
+          "expr": "sum by (config_id) (cf_hyperdrive_queries_query_latency_us{config_id=~\"$config_id\"}) / clamp_min(sum by (config_id) (cf_hyperdrive_queries_count{config_id=~\"$config_id\"}), 1)",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",
@@ -593,7 +593,7 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "Connection Latency (avg \u00b5s)",
+      "title": "Connection Latency (avg µs)",
       "datasource": {
         "type": "prometheus",
         "uid": "36979063-5384-4eb9-8679-565a727cbc13"
@@ -620,14 +620,14 @@
               }
             ]
           },
-          "unit": "\u00b5s",
+          "unit": "µs",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -655,7 +655,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (config_id) (rate(cf_hyperdrive_queries_connection_latency_us{config_id=~\"$config_id\"}[5m])) / clamp_min(sum by (config_id) (rate(cf_hyperdrive_queries_count{config_id=~\"$config_id\"}[5m])), 1)",
+          "expr": "sum by (config_id) (cf_hyperdrive_queries_connection_latency_us{config_id=~\"$config_id\"}) / clamp_min(sum by (config_id) (cf_hyperdrive_queries_count{config_id=~\"$config_id\"}), 1)",
           "instant": false,
           "range": true,
           "legendFormat": "{{config_id}}",
@@ -725,11 +725,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -826,11 +826,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -926,7 +926,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 Hyperdrive",
+  "title": "Cloudflare — Hyperdrive",
   "uid": "cf-hyperdrive",
   "version": 1,
   "weekStart": ""

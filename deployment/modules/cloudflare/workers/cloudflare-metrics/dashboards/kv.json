@@ -273,7 +273,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(rate(cf_kv_operations_requests{namespace_id=~\"$namespace_id\",action_type=\"read\"}[5m]))",
+          "expr": "sum(cf_kv_operations_requests{namespace_id=~\"$namespace_id\",action_type=\"read\"})",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -339,7 +339,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum(rate(cf_kv_operations_requests{namespace_id=~\"$namespace_id\",action_type=\"write\"}[5m]))",
+          "expr": "sum(cf_kv_operations_requests{namespace_id=~\"$namespace_id\",action_type=\"write\"})",
           "instant": true,
           "range": false,
           "legendFormat": "__auto",
@@ -409,11 +409,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -441,7 +441,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (namespace_id, action_type) (rate(cf_kv_operations_requests{namespace_id=~\"$namespace_id\"}[5m]))",
+          "expr": "sum by (namespace_id, action_type) (cf_kv_operations_requests{namespace_id=~\"$namespace_id\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{namespace_id}} {{action_type}}",
@@ -498,11 +498,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -530,7 +530,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (action_type) (rate(cf_kv_operations_requests{namespace_id=~\"$namespace_id\"}[5m]))",
+          "expr": "sum by (action_type) (cf_kv_operations_requests{namespace_id=~\"$namespace_id\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{action_type}}",
@@ -600,11 +600,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -689,11 +689,11 @@
           "unit": "decbytes",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -943,7 +943,7 @@
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "none",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",

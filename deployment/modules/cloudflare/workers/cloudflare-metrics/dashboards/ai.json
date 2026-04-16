@@ -198,11 +198,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -230,7 +230,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (model_name) (rate(cf_ai_inference_requests[5m]))",
+          "expr": "sum by (model_name) (cf_ai_inference_requests)",
           "instant": false,
           "range": true,
           "legendFormat": "{{model_name}}",
@@ -287,11 +287,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -319,7 +319,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (model_name) (rate(cf_ai_inference_neurons[5m]))",
+          "expr": "sum by (model_name) (cf_ai_inference_neurons)",
           "instant": false,
           "range": true,
           "legendFormat": "{{model_name}}",
@@ -389,11 +389,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -421,7 +421,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (gateway) (rate(cf_ai_gateway_requests_requests[5m]))",
+          "expr": "sum by (gateway) (cf_ai_gateway_requests_requests)",
           "instant": false,
           "range": true,
           "legendFormat": "{{gateway}}",
@@ -478,11 +478,11 @@
           "unit": "percentunit",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -510,7 +510,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (gateway) (rate(cf_ai_gateway_cache_events[5m])) / clamp_min(sum by (gateway) (rate(cf_ai_gateway_requests_requests[5m])), 1)",
+          "expr": "sum by (gateway) (cf_ai_gateway_cache_events) / clamp_min(sum by (gateway) (cf_ai_gateway_requests_requests), 1)",
           "instant": false,
           "range": true,
           "legendFormat": "{{gateway}}",
@@ -567,11 +567,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -599,7 +599,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (gateway) (rate(cf_ai_gateway_errors_errors[5m]))",
+          "expr": "sum by (gateway) (cf_ai_gateway_errors_errors)",
           "instant": false,
           "range": true,
           "legendFormat": "{{gateway}}",
@@ -656,11 +656,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -758,11 +758,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -790,7 +790,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (namespace) (rate(cf_ai_search_api_search_count[5m]))",
+          "expr": "sum by (namespace) (cf_ai_search_api_search_count)",
           "instant": false,
           "range": true,
           "legendFormat": "{{namespace}}",
@@ -847,11 +847,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -879,7 +879,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (namespace) (rate(cf_ai_search_ingested_num_chunks[5m]))",
+          "expr": "sum by (namespace) (cf_ai_search_ingested_num_chunks)",
           "instant": false,
           "range": true,
           "legendFormat": "{{namespace}}",
@@ -949,11 +949,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -981,7 +981,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (instance) (rate(cf_auto_rag_config_api_search_count[5m]))",
+          "expr": "sum by (instance) (cf_auto_rag_config_api_search_count)",
           "instant": false,
           "range": true,
           "legendFormat": "{{instance}}",
@@ -1038,11 +1038,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1109,7 +1109,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 AI",
+  "title": "Cloudflare — AI",
   "uid": "cf-ai",
   "version": 1,
   "weekStart": ""

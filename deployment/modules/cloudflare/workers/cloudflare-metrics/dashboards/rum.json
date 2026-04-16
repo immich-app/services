@@ -66,11 +66,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -98,7 +98,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (host_name) (rate(cf_rum_pageload_visits[5m]))",
+          "expr": "sum by (host_name) (cf_rum_pageload_visits)",
           "instant": false,
           "range": true,
           "legendFormat": "{{host_name}}",
@@ -155,11 +155,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -187,7 +187,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (host_name) (rate(cf_rum_performance_visits[5m]))",
+          "expr": "sum by (host_name) (cf_rum_performance_visits)",
           "instant": false,
           "range": true,
           "legendFormat": "{{host_name}}",
@@ -257,11 +257,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -289,7 +289,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (host_name) (rate(cf_rum_web_vitals_visits[5m]))",
+          "expr": "sum by (host_name) (cf_rum_web_vitals_visits)",
           "instant": false,
           "range": true,
           "legendFormat": "{{host_name}}",
@@ -328,7 +328,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 RUM",
+  "title": "Cloudflare — RUM",
   "uid": "cf-rum",
   "version": 1,
   "weekStart": ""

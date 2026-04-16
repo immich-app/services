@@ -475,11 +475,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -507,7 +507,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (bucket_name, action_type) (rate(cf_r2_operations_requests{bucket_name=~\"$bucket_name\"}[5m]))",
+          "expr": "sum by (bucket_name, action_type) (cf_r2_operations_requests{bucket_name=~\"$bucket_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{bucket_name}} {{action_type}}",
@@ -564,11 +564,11 @@
           "unit": "Bps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -596,7 +596,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (bucket_name) (rate(cf_r2_operations_response_object_bytes{bucket_name=~\"$bucket_name\"}[5m]))",
+          "expr": "sum by (bucket_name) (cf_r2_operations_response_object_bytes{bucket_name=~\"$bucket_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{bucket_name}}",
@@ -666,11 +666,11 @@
           "unit": "decbytes",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -755,11 +755,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1009,7 +1009,7 @@
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "none",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",

@@ -409,11 +409,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -441,7 +441,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_durable_objects_invocations_requests{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"}[5m]))",
+          "expr": "sum by (script_name) (cf_durable_objects_invocations_requests{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -498,11 +498,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -530,7 +530,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_durable_objects_invocations_errors{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"}[5m]))",
+          "expr": "sum by (script_name) (cf_durable_objects_invocations_errors{script_name=~\"$script_name\",namespace_id=~\"$namespace_id\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -600,11 +600,11 @@
           "unit": "µs",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -632,7 +632,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_durable_objects_periodic_cpu_time_us{script_name=~\"$script_name\"}[5m]))",
+          "expr": "sum by (script_name) (cf_durable_objects_periodic_cpu_time_us{script_name=~\"$script_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -689,11 +689,11 @@
           "unit": "short",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -778,11 +778,11 @@
           "unit": "ops",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -810,7 +810,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_durable_objects_periodic_rows_read{script_name=~\"$script_name\"}[5m]))",
+          "expr": "sum by (script_name) (cf_durable_objects_periodic_rows_read{script_name=~\"$script_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -867,11 +867,11 @@
           "unit": "ops",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -899,7 +899,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (script_name) (rate(cf_durable_objects_periodic_rows_written{script_name=~\"$script_name\"}[5m]))",
+          "expr": "sum by (script_name) (cf_durable_objects_periodic_rows_written{script_name=~\"$script_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{script_name}}",
@@ -969,11 +969,11 @@
           "unit": "decbytes",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1058,11 +1058,11 @@
           "unit": "decbytes",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -1312,7 +1312,7 @@
             "drawStyle": "line",
             "fillOpacity": 20,
             "gradientMode": "none",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 2,
             "pointSize": 5,
             "showPoints": "never",

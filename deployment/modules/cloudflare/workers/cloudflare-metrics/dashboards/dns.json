@@ -66,11 +66,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -98,7 +98,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (zone_name) (rate(cf_dns_analytics_queries{zone_name=~\"$zone_name\"}[5m]))",
+          "expr": "sum by (zone_name) (cf_dns_analytics_queries{zone_name=~\"$zone_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{zone_name}}",
@@ -155,11 +155,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -187,7 +187,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (query_type) (rate(cf_dns_analytics_queries{zone_name=~\"$zone_name\"}[5m]))",
+          "expr": "sum by (query_type) (cf_dns_analytics_queries{zone_name=~\"$zone_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{query_type}}",
@@ -244,11 +244,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -276,7 +276,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum by (response_code) (rate(cf_dns_analytics_queries{zone_name=~\"$zone_name\"}[5m]))",
+          "expr": "sum by (response_code) (cf_dns_analytics_queries{zone_name=~\"$zone_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "{{response_code}}",
@@ -333,11 +333,11 @@
           "unit": "reqps",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -365,7 +365,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (rate(cf_dns_analytics_queries_uncached{zone_name=~\"$zone_name\"}[5m]))",
+          "expr": "sum (cf_dns_analytics_queries_uncached{zone_name=~\"$zone_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "uncached",
@@ -377,7 +377,7 @@
             "uid": "36979063-5384-4eb9-8679-565a727cbc13"
           },
           "editorMode": "code",
-          "expr": "sum (rate(cf_dns_analytics_queries_stale{zone_name=~\"$zone_name\"}[5m]))",
+          "expr": "sum (cf_dns_analytics_queries_stale{zone_name=~\"$zone_name\"})",
           "instant": false,
           "range": true,
           "legendFormat": "stale",
@@ -444,14 +444,14 @@
               }
             ]
           },
-          "unit": "\u00b5s",
+          "unit": "µs",
           "custom": {
             "drawStyle": "line",
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "fillOpacity": 10,
             "gradientMode": "none",
-            "spanNulls": false,
+            "spanNulls": true,
             "showPoints": "never",
             "pointSize": 5,
             "stacking": {
@@ -547,7 +547,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Cloudflare \u2014 DNS",
+  "title": "Cloudflare — DNS",
   "uid": "cf-dns",
   "version": 1,
   "weekStart": ""
