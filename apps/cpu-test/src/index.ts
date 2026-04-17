@@ -4,7 +4,9 @@
 // cron should be killed with `exceededCpu`, and under `standard` it should
 // complete with `outcome=ok`. Ground truth is the cron outcome in
 // `wrangler tail --format json` (cpuTimeMs + outcome).
-const BURN_ITERATIONS = 200_000_000;
+// bump to force a new version so `usage_model=standard` actually applies;
+// terraform provider treats the deprecated attribute as "no diff" in-place.
+const BURN_ITERATIONS = 200_000_001;
 
 function burnCpu(iterations: number): number {
   let acc = 0;

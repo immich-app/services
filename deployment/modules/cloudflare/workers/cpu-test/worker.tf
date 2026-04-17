@@ -16,12 +16,13 @@ resource "terraform_data" "source_hash" {
   input = filesha256("${var.dist_dir}/${var.app_name}/index.js")
 }
 
-# Commit A: intentionally omit `usage_model` so we observe what new workers
-# default to at the version level. Outcome is measured via `wrangler tail`
-# (cpuTimeMs + outcome=ok|exceededCpu) on the once-per-minute cron.
+# Commit B: Commit A confirmed new workers default to `usage_model = bundled`
+# (50ms CPU cap) — first cron fired exceededCpu at cpu=50ms. Set
+# usage_model = "standard" to lift the cap and re-verify via wrangler tail.
 resource "cloudflare_worker_version" "worker" {
   account_id          = var.cloudflare_account_id
   worker_id           = cloudflare_worker.worker.id
+  usage_model         = "standard"
   compatibility_date  = "2025-09-16"
   compatibility_flags = ["nodejs_compat"]
   main_module         = "index.js"
