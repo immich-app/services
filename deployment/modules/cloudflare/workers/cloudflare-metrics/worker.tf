@@ -17,8 +17,9 @@ resource "terraform_data" "source_hash" {
 }
 
 resource "cloudflare_worker_version" "worker" {
-  account_id = var.cloudflare_account_id
-  worker_id  = cloudflare_worker.worker.id
+  account_id  = var.cloudflare_account_id
+  worker_id   = cloudflare_worker.worker.id
+  usage_model = "standard"
   limits = {
     cpu_ms = 30000
   }
@@ -72,42 +73,6 @@ resource "cloudflare_workers_deployment" "worker" {
       version_id = cloudflare_worker_version.worker.id
     }
   ]
-}
-
-# Workaround for a bug in the Cloudflare terraform provider:
-# `cloudflare_worker_version` has no `usage_model` attribute, so newly
-# created workers default to legacy `bundled` mode at the service-env
-# level (50 ms CPU cap) regardless of the `limits.cpu_ms` we set. The
-# runtime uses the service-env settings, not the version limits, so
-# our 29999 ms value is silently ignored until something flips the
-# service-env to `standard`. PATCH the services environment directly
-# after every deploy to force it.
-resource "terraform_data" "force_standard_usage_model" {
-  triggers_replace = [
-    cloudflare_workers_deployment.worker.id,
-  ]
-
-  provisioner "local-exec" {
-    # Best-effort — don't fail the whole deploy if this PATCH errors,
-    # since the service-env settings are sticky across deploys once set.
-    # `|| true` on the end makes any curl failure non-fatal; the response
-    # body is still printed so we can see what went wrong in CI logs.
-    command = <<-EOT
-      HTTP_CODE=$(curl -s -o /tmp/cf-patch-response.json -w "%%{http_code}" -X PATCH \
-        "https://api.cloudflare.com/client/v4/accounts/${var.cloudflare_account_id}/workers/services/${cloudflare_worker.worker.name}/environments/production/settings" \
-        -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-        -F 'settings={"usage_model":"standard","limits":{"cpu_ms":30000}}') || true
-      echo "[usage_model PATCH] HTTP $HTTP_CODE"
-      cat /tmp/cf-patch-response.json 2>/dev/null; echo
-      if [ "$HTTP_CODE" != "200" ]; then
-        echo "::warning::usage_model PATCH returned HTTP $HTTP_CODE — worker may be in bundled mode (50ms CPU cap)"
-      fi
-    EOT
-
-    environment = {
-      CLOUDFLARE_API_TOKEN = var.cloudflare_api_token
-    }
-  }
 }
 
 resource "cloudflare_workers_cron_trigger" "collect" {
