@@ -1,8 +1,0 @@
-#:schema node_modules/wrangler/config-schema.json
-name = "cpu-test-immich-app"
-main = "src/index.ts"
-compatibility_date = "2025-09-16"
-compatibility_flags = ["nodejs_compat"]
-
-[triggers]
-crons = ["* * * * *"]
