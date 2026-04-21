@@ -1,7 +1,7 @@
 import { handleFetch } from './handlers/http.js';
 import { handleScheduled } from './handlers/scheduled.js';
 
-export const FORCE_NEW_VERSION = 2;
+export const FORCE_NEW_VERSION = 3;
 
 export default {
   fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
