@@ -100,7 +100,7 @@ jobs:
 
       - name: Comment preview URLs
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions-cool/maintain-one-comment@772214ac4bff3c578c76eed4ac19d08dc787c050 # v3.2.1
+        uses: actions-cool/maintain-one-comment@909842216bc8e8658364c572ec52100f4c2cc50a # v3.3.0
         with:
           number: ${{ github.event.number }}
           body: ${{ steps.preview-urls.outputs.body }}
