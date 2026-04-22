@@ -150,7 +150,7 @@ export function resolveTimestamp(dataset: DatasetQuery, row: DatasetRow): Date |
   return date;
 }
 
-export function normalizeTagValue(raw: unknown): string | undefined {
+export function normalizeTagValue(raw?: unknown): string | undefined {
   if (raw === null || raw === undefined) {
     return undefined;
   }

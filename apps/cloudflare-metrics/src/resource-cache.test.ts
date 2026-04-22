@@ -41,11 +41,7 @@ describe('ResourceCacheService', () => {
 
   it('uses cached results on subsequent calls within TTL', async () => {
     let callCount = 0;
-    const restClient = new FakeRestClient(
-      [{ uuid: 'db-1', name: 'my-db' }],
-      [],
-      [],
-    );
+    const restClient = new FakeRestClient([{ uuid: 'db-1', name: 'my-db' }], [], []);
     const origList = restClient.listD1Databases.bind(restClient);
     restClient.listD1Databases = async (...args: Parameters<typeof restClient.listD1Databases>) => {
       callCount++;
@@ -82,11 +78,7 @@ describe('ResourceCacheService', () => {
   });
 
   it('emits resource_lookup metrics for each resource type', async () => {
-    const restClient = new FakeRestClient(
-      [{ uuid: 'db-1', name: 'my-db' }],
-      [],
-      [{ id: 'z-1', name: 'example.com' }],
-    );
+    const restClient = new FakeRestClient([{ uuid: 'db-1', name: 'my-db' }], [], [{ id: 'z-1', name: 'example.com' }]);
     const service = new ResourceCacheService('acct', metrics, now, restClient);
     await service.populate();
     const lookups = provider.metrics.filter((m) => m.name === 'cloudflare_metrics_resource_lookup');
