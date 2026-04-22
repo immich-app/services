@@ -2,6 +2,12 @@ name: Destroy PR environment
 on:
   pull_request_target:
     types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number whose pr-<N> stage to destroy in dev + prod'
+        required: true
+        type: string
 
 env:
   TG_NON_INTERACTIVE: 'true'
@@ -15,7 +21,7 @@ jobs:
         environment: ['dev', 'prod']
     env:
       ENVIRONMENT: ${{ matrix.environment }}
-      TF_VAR_stage: pr-${{ github.event.number }}
+      TF_VAR_stage: pr-${{ github.event.inputs.pr_number || github.event.number }}
       TF_VAR_dist_dir: ${{ github.workspace }}/dist
       TF_VAR_migrations_dir: ${{ github.workspace }}/apps/version/migrations
       OP_SERVICE_ACCOUNT_TOKEN: ${{ matrix.environment == 'prod' && secrets.OP_TF_PROD_ENV || secrets.OP_TF_DEV_ENV }}
