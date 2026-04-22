@@ -113,7 +113,7 @@ The JSON structure should be:
       "username": "user1",
       "id": 12345
     },
-    "role": "admin"
+    "role": "immich_admin"
   },
   {
     "github": {
@@ -125,7 +125,7 @@ The JSON structure should be:
 ]
 ```
 
-Users with `role` of "admin" or "team" are authorized to approve pull requests.
+Users with `role` of "immich_admin", "team", or "immich" are authorized to approve pull requests.
 
 ## How It Works
 

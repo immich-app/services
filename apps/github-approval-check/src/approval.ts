@@ -6,7 +6,7 @@
 import { createOctokitForInstallation } from './auth.js';
 import { CheckRunManager } from './check-runs.js';
 
-type Role = 'admin' | 'team' | 'contributor' | 'support' | 'futo' | 'yucca';
+type Role = 'immich_admin' | 'team' | 'immich' | 'contributor' | 'support' | 'futo' | 'yucca';
 
 interface User {
   github: {
@@ -25,7 +25,7 @@ interface User {
 
 function hasApproverRole(user: User): boolean {
   const roles = user.roles ?? (user.role ? [user.role] : []);
-  return roles.includes('admin') || roles.includes('team');
+  return roles.includes('immich_admin') || roles.includes('team') || roles.includes('immich');
 }
 
 interface Review {
