@@ -81,7 +81,8 @@
         }
       ],
       "title": "Unique Servers (24h)",
-      "type": "stat"
+      "type": "stat",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -142,7 +143,8 @@
         }
       ],
       "title": "Total Requests (24h)",
-      "type": "stat"
+      "type": "stat",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -213,7 +215,8 @@
         }
       ],
       "title": "Cache Hit Rate (24h)",
-      "type": "stat"
+      "type": "stat",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -285,7 +288,8 @@
         }
       ],
       "title": "Servers Up-to-date (24h)",
-      "type": "stat"
+      "type": "stat",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -346,7 +350,8 @@
         }
       ],
       "title": "Releases Stored",
-      "type": "stat"
+      "type": "stat",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -415,7 +420,8 @@
         }
       ],
       "title": "Errors (24h)",
-      "type": "stat"
+      "type": "stat",
+      "maxDataPoints": 300
     },
     {
       "collapsed": false,
@@ -545,7 +551,8 @@
         }
       ],
       "title": "Unique Servers Over Time",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -610,7 +617,8 @@
         }
       ],
       "title": "Version Distribution (24h)",
-      "type": "piechart"
+      "type": "piechart",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -707,7 +715,8 @@
         }
       ],
       "title": "Version Adoption Over Time",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "title": "Latest Version: Upgrades vs New Installs",
@@ -785,7 +794,8 @@
             ]
           }
         ]
-      }
+      },
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -877,7 +887,8 @@
         }
       ],
       "title": "New Servers (not seen in last 30d)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "title": "New Server Rate",
@@ -925,7 +936,8 @@
           "unit": "short"
         },
         "overrides": []
-      }
+      },
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -951,7 +963,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 6,
         "x": 0,
         "y": 37
       },
@@ -990,7 +1002,8 @@
         }
       ],
       "title": "Servers by Continent (24h)",
-      "type": "piechart"
+      "type": "piechart",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -1047,8 +1060,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 8,
+        "w": 6,
+        "x": 6,
         "y": 37
       },
       "id": 13,
@@ -1092,7 +1105,8 @@
         }
       ],
       "title": "Traffic Source (24h)",
-      "type": "piechart"
+      "type": "piechart",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -1124,8 +1138,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
+        "w": 6,
+        "x": 12,
         "y": 37
       },
       "id": 14,
@@ -1158,7 +1172,111 @@
         }
       ],
       "title": "Top Cloudflare Edge Locations (24h)",
-      "type": "bargauge"
+      "type": "bargauge",
+      "maxDataPoints": 300
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "IPv4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "IPv6"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 37
+      },
+      "id": 32,
+      "maxDataPoints": 300,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{client_ip!~\".*:.*\",client_ip!=\"\"}[24h]) or count_over_time(version_changelog_request_invocation{client_ip!~\".*:.*\",client_ip!=\"\"}[24h])))",
+          "legendFormat": "IPv4",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        },
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{client_ip=~\".*:.*\"}[24h]) or count_over_time(version_changelog_request_invocation{client_ip=~\".*:.*\"}[24h])))",
+          "legendFormat": "IPv6",
+          "refId": "B",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "IPv4 vs IPv6 (24h)",
+      "type": "piechart"
     },
     {
       "collapsed": false,
@@ -1269,7 +1387,8 @@
         }
       ],
       "title": "Request Duration (p95)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -1460,7 +1579,8 @@
         }
       ],
       "title": "Cache Hit Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -1551,7 +1671,8 @@
         }
       ],
       "title": "Requests by Region",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "collapsed": false,
@@ -1679,7 +1800,8 @@
         }
       ],
       "title": "D1 Query Duration (p95)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -1787,7 +1909,8 @@
         }
       ],
       "title": "D1 Query Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -1894,7 +2017,8 @@
         }
       ],
       "title": "D1 Error Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -1985,7 +2109,8 @@
         }
       ],
       "title": "Releases Stored Over Time",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "collapsed": false,
@@ -2094,7 +2219,8 @@
         }
       ],
       "title": "Webhook Events",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -2202,7 +2328,8 @@
         }
       ],
       "title": "Cron Sync",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -2299,7 +2426,8 @@
         }
       ],
       "title": "GitHub API Duration",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -2384,7 +2512,8 @@
         }
       ],
       "title": "Data Source (Webhook vs Cron, 24h)",
-      "type": "piechart"
+      "type": "piechart",
+      "maxDataPoints": 300
     },
     {
       "collapsed": false,
@@ -2487,7 +2616,8 @@
         }
       ],
       "title": "Requests by Path (non-POST)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     },
     {
       "datasource": {
@@ -2623,7 +2753,8 @@
         }
       ],
       "title": "Response Status Codes",
-      "type": "timeseries"
+      "type": "timeseries",
+      "maxDataPoints": 300
     }
   ],
   "refresh": "30s",
