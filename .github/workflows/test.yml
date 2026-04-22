@@ -15,11 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
       - name: Setup pnpm
-        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
       - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
 
@@ -41,3 +43,64 @@ jobs:
       - name: Run unit tests
         run: pnpm run test
         if: ${{ !cancelled() }}
+
+  integration-test-cloudflare-metrics:
+    name: Integration Test (cloudflare-metrics)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Detect relevant changes
+        id: changes
+        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        with:
+          filters: |
+            cloudflare-metrics:
+              - 'apps/cloudflare-metrics/**'
+              - '.github/workflows/test.yml'
+
+      - name: Setup pnpm
+        if: steps.changes.outputs.cloudflare-metrics == 'true' || github.event_name != 'pull_request'
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+
+      - name: Setup Node
+        if: steps.changes.outputs.cloudflare-metrics == 'true' || github.event_name != 'pull_request'
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Run pnpm install
+        if: steps.changes.outputs.cloudflare-metrics == 'true' || github.event_name != 'pull_request'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install 1Password CLI
+        if: steps.changes.outputs.cloudflare-metrics == 'true' || github.event_name != 'pull_request'
+        uses: 1password/install-cli-action@8d006a0d0a4fd505af7f7ce589e7f768385ff5e4 # v3.0.0
+
+      - name: Check integration credentials are available
+        id: creds
+        if: steps.changes.outputs.cloudflare-metrics == 'true' || github.event_name != 'pull_request'
+        continue-on-error: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_TF_DEV_ENV }}
+        run: |
+          if op run --env-file=apps/cloudflare-metrics/.integration.env -- sh -c 'test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"' 2>/dev/null; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Skipping integration test — credentials not configured in 1Password"
+          fi
+
+      - name: Run integration tests
+        if: >-
+          (steps.changes.outputs.cloudflare-metrics == 'true' || github.event_name != 'pull_request')
+          && steps.creds.outputs.available == 'true'
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_TF_DEV_ENV }}
+        run: |
+          op run \
+            --env-file=apps/cloudflare-metrics/.integration.env \
+            -- pnpm --filter @immich-services/cloudflare-metrics run test:integration
