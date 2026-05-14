@@ -703,9 +703,12 @@ describe('CDN cache immutable headers fix', () => {
     const cache = caches.default;
     const key = new Request('https://example.com/test-immutable-headers');
 
-    const original = new Response(JSON.stringify({ data: 'test' }), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
-    });
+    const original = Response.json(
+      { data: 'test' },
+      {
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' },
+      },
+    );
     await cache.put(key, original.clone());
 
     const cached = await cache.match(key);

@@ -145,8 +145,8 @@ describe('CloudflareGraphQLClient', () => {
   it('sends the bearer token and parses batched dataset rows', async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(
-        new Response(
-          JSON.stringify({
+        Response.json(
+          {
             data: {
               viewer: {
                 accounts: [
@@ -162,7 +162,7 @@ describe('CloudflareGraphQLClient', () => {
               },
             },
             errors: null,
-          }),
+          },
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
       ),
@@ -203,8 +203,8 @@ describe('CloudflareGraphQLClient', () => {
   it('surfaces per-field errors from a partial GraphQL response', async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(
-        new Response(
-          JSON.stringify({
+        Response.json(
+          {
             data: {
               viewer: {
                 accounts: [
@@ -221,7 +221,7 @@ describe('CloudflareGraphQLClient', () => {
               },
             },
             errors: [{ message: 'no access', path: ['viewer', 'accounts', 0, 'd1_queries'] }],
-          }),
+          },
           { status: 200 },
         ),
       ),
@@ -255,7 +255,7 @@ describe('CloudflareGraphQLClient', () => {
         account[alias] = [];
       }
       return Promise.resolve(
-        new Response(JSON.stringify({ data: { viewer: { accounts: [account] } }, errors: null }), { status: 200 }),
+        Response.json({ data: { viewer: { accounts: [account] } }, errors: null }, { status: 200 }),
       );
     });
     const client = new CloudflareGraphQLClient(
@@ -302,7 +302,7 @@ describe('CloudflareGraphQLClient', () => {
         ];
       }
       return Promise.resolve(
-        new Response(JSON.stringify({ data: { viewer: { accounts: [account] } }, errors: null }), { status: 200 }),
+        Response.json({ data: { viewer: { accounts: [account] } }, errors: null }, { status: 200 }),
       );
     });
     const client = new CloudflareGraphQLClient(
@@ -334,8 +334,8 @@ describe('CloudflareGraphQLClient', () => {
   it('batches multiple zones into a single request', async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve(
-        new Response(
-          JSON.stringify({
+        Response.json(
+          {
             data: {
               viewer: {
                 z0: [
@@ -351,7 +351,7 @@ describe('CloudflareGraphQLClient', () => {
               },
             },
             errors: null,
-          }),
+          },
           { status: 200 },
         ),
       ),
@@ -402,9 +402,7 @@ describe('CloudflareGraphQLClient', () => {
       // has something to count.
       const errors =
         calls === 2 ? [{ message: 'transient', path: ['viewer', 'accounts', 0, aliases[0] ?? 'ds_0'] }] : null;
-      return Promise.resolve(
-        new Response(JSON.stringify({ data: { viewer: { accounts: [account] } }, errors }), { status: 200 }),
-      );
+      return Promise.resolve(Response.json({ data: { viewer: { accounts: [account] } }, errors }, { status: 200 }));
     });
     const client = new CloudflareGraphQLClient(
       'tok',
