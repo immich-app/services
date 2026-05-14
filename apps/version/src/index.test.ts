@@ -1,5 +1,5 @@
-import { env, fetchMock, SELF } from 'cloudflare:test';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { env, exports } from 'cloudflare:workers';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryCache } from './memory-cache.js';
 import { revalidationState, versionCache } from './version-service.js';
 import { compareSemVer, isGreaterThan, parseSemVer } from './version.js';
@@ -214,7 +214,7 @@ describe('Version Worker', () => {
 
   describe('OPTIONS preflight', () => {
     it('returns correct CORS headers', async () => {
-      const response = await SELF.fetch('https://example.com/version', { method: 'OPTIONS' });
+      const response = await exports.default.fetch('https://example.com/version', { method: 'OPTIONS' });
       expect(response.status).toBe(200);
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
       expect(response.headers.get('Access-Control-Allow-Methods')).toBe('GET, POST, OPTIONS');
@@ -225,7 +225,7 @@ describe('Version Worker', () => {
 
   describe('GET /health', () => {
     it('returns healthy status', async () => {
-      const response = await SELF.fetch('https://example.com/health');
+      const response = await exports.default.fetch('https://example.com/health');
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body).toEqual({ status: 'ok' });
@@ -234,7 +234,7 @@ describe('Version Worker', () => {
 
   describe('GET /version', () => {
     it('returns the latest version', async () => {
-      const response = await SELF.fetch('https://example.com/version');
+      const response = await exports.default.fetch('https://example.com/version');
       expect(response.status).toBe(200);
       const body = (await response.json()) as any;
       expect(body.version).toBe('v1.120.0');
@@ -244,7 +244,7 @@ describe('Version Worker', () => {
     it('awaits D1 on cold start rather than deferring', async () => {
       // Cache is empty (invalidated in beforeEach), D1 has data
       // The first request must return real data, not 404 or empty
-      const response = await SELF.fetch('https://example.com/version');
+      const response = await exports.default.fetch('https://example.com/version');
       expect(response.status).toBe(200);
       const body = (await response.json()) as any;
       expect(body.version).toBe('v1.120.0');
@@ -252,44 +252,44 @@ describe('Version Worker', () => {
       // Now delete D1 data — second request should come from cache, proving
       // the first request populated the cache synchronously
       await env.VERSION_DB.exec('DELETE FROM releases');
-      const second = await SELF.fetch('https://example.com/version');
+      const second = await exports.default.fetch('https://example.com/version');
       expect(second.status).toBe(200);
       const secondBody = (await second.json()) as any;
       expect(secondBody.version).toBe('v1.120.0');
     });
 
     it('does not include Cache-Control header (memory cached, not CDN)', async () => {
-      const response = await SELF.fetch('https://example.com/version');
+      const response = await exports.default.fetch('https://example.com/version');
       expect(response.headers.get('Cache-Control')).toBeNull();
     });
 
     it('returns 404 when no releases exist', async () => {
       await env.VERSION_DB.exec('DELETE FROM releases');
-      const response = await SELF.fetch('https://example.com/version');
+      const response = await exports.default.fetch('https://example.com/version');
       expect(response.status).toBe(404);
     });
 
     it('serves from in-memory cache on second request', async () => {
-      const first = await SELF.fetch('https://example.com/version');
+      const first = await exports.default.fetch('https://example.com/version');
       expect(first.status).toBe(200);
 
       // Delete from D1 - second request should still work from cache
       await env.VERSION_DB.exec('DELETE FROM releases');
 
-      const second = await SELF.fetch('https://example.com/version');
+      const second = await exports.default.fetch('https://example.com/version');
       expect(second.status).toBe(200);
       const body = (await second.json()) as any;
       expect(body.version).toBe('v1.120.0');
     });
 
     it('includes CORS header', async () => {
-      const response = await SELF.fetch('https://example.com/version');
+      const response = await exports.default.fetch('https://example.com/version');
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*');
     });
 
     it('serves stale data while revalidating in the background', async () => {
       // Prime the cache
-      const first = await SELF.fetch('https://example.com/version');
+      const first = await exports.default.fetch('https://example.com/version');
       expect(first.status).toBe(200);
 
       // Expire the cache by invalidating and setting with 0 TTL
@@ -319,7 +319,7 @@ describe('Version Worker', () => {
         .run();
 
       // This request should get stale v1.120.0 while triggering background refresh
-      const stale = await SELF.fetch('https://example.com/version');
+      const stale = await exports.default.fetch('https://example.com/version');
       expect(stale.status).toBe(200);
       const staleBody = (await stale.json()) as any;
       expect(staleBody.version).toBe('v1.120.0');
@@ -328,7 +328,7 @@ describe('Version Worker', () => {
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Next request should get the updated version from refreshed cache
-      const fresh = await SELF.fetch('https://example.com/version');
+      const fresh = await exports.default.fetch('https://example.com/version');
       expect(fresh.status).toBe(200);
       const freshBody = (await fresh.json()) as any;
       expect(freshBody.version).toBe('v1.130.0');
@@ -343,8 +343,8 @@ describe('Version Worker', () => {
 
       // Fire two concurrent requests while stale
       const [r1, r2] = await Promise.all([
-        SELF.fetch('https://example.com/version'),
-        SELF.fetch('https://example.com/version'),
+        exports.default.fetch('https://example.com/version'),
+        exports.default.fetch('https://example.com/version'),
       ]);
 
       expect(r1.status).toBe(200);
@@ -360,21 +360,21 @@ describe('Version Worker', () => {
 
   describe('GET /changelog', () => {
     it('returns 400 when version is missing', async () => {
-      const response = await SELF.fetch('https://example.com/changelog');
+      const response = await exports.default.fetch('https://example.com/changelog');
       expect(response.status).toBe(400);
       const body = (await response.json()) as { error: string };
       expect(body.error).toContain('version');
     });
 
     it('returns 400 for invalid version format', async () => {
-      const response = await SELF.fetch('https://example.com/changelog?version=invalid');
+      const response = await exports.default.fetch('https://example.com/changelog?version=invalid');
       expect(response.status).toBe(400);
       const body = (await response.json()) as { error: string };
       expect(body.error).toContain('Invalid version');
     });
 
     it('returns releases newer than the provided version', async () => {
-      const response = await SELF.fetch('https://example.com/changelog?version=v1.100.0');
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.100.0');
       expect(response.status).toBe(200);
       const body = (await response.json()) as any;
       expect(body.current).toBe('v1.100.0');
@@ -385,14 +385,14 @@ describe('Version Worker', () => {
     });
 
     it('returns empty releases when on latest version', async () => {
-      const response = await SELF.fetch('https://example.com/changelog?version=v1.120.0');
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.120.0');
       expect(response.status).toBe(200);
       const body = (await response.json()) as any;
       expect(body.releases).toHaveLength(0);
     });
 
     it('handles version without v prefix', async () => {
-      const response = await SELF.fetch('https://example.com/changelog?version=1.100.0');
+      const response = await exports.default.fetch('https://example.com/changelog?version=1.100.0');
       expect(response.status).toBe(200);
       const body = (await response.json()) as any;
       expect(body.current).toBe('1.100.0');
@@ -400,20 +400,20 @@ describe('Version Worker', () => {
     });
 
     it('returns all releases when version is very old', async () => {
-      const response = await SELF.fetch('https://example.com/changelog?version=v1.0.0');
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.0.0');
       expect(response.status).toBe(200);
       const body = (await response.json()) as any;
       expect(body.releases).toHaveLength(3);
     });
 
     it('includes Cache-Control header for CDN caching', async () => {
-      const response = await SELF.fetch('https://example.com/changelog?version=v1.100.0');
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.100.0');
       expect(response.headers.get('Cache-Control')).toBe('public, max-age=86400');
     });
 
     it('returns empty results when D1 has no data', async () => {
       await env.VERSION_DB.exec('DELETE FROM releases');
-      const response = await SELF.fetch('https://example.com/changelog?version=v1.0.0');
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.0.0');
       expect(response.status).toBe(200);
       const body = (await response.json()) as any;
       expect(body.releases).toHaveLength(0);
@@ -425,7 +425,7 @@ describe('Version Worker', () => {
     const webhookSecret = 'test-secret';
 
     it('returns 401 without signature', async () => {
-      const response = await SELF.fetch('https://example.com/webhook', {
+      const response = await exports.default.fetch('https://example.com/webhook', {
         method: 'POST',
         body: '{}',
       });
@@ -433,7 +433,7 @@ describe('Version Worker', () => {
     });
 
     it('returns 401 with invalid signature', async () => {
-      const response = await SELF.fetch('https://example.com/webhook', {
+      const response = await exports.default.fetch('https://example.com/webhook', {
         method: 'POST',
         body: '{}',
         headers: { 'X-Hub-Signature-256': 'sha256=invalid' },
@@ -442,14 +442,14 @@ describe('Version Worker', () => {
     });
 
     it('returns 405 for non-POST requests', async () => {
-      const response = await SELF.fetch('https://example.com/webhook');
+      const response = await exports.default.fetch('https://example.com/webhook');
       expect(response.status).toBe(405);
     });
 
     it('ignores non-release events', async () => {
       const body = JSON.stringify({ action: 'opened' });
       const signature = await createWebhookSignature(body, webhookSecret);
-      const response = await SELF.fetch('https://example.com/webhook', {
+      const response = await exports.default.fetch('https://example.com/webhook', {
         method: 'POST',
         body,
         headers: {
@@ -465,7 +465,7 @@ describe('Version Worker', () => {
     it('ignores non-published release actions', async () => {
       const body = JSON.stringify({ action: 'created', release: {} });
       const signature = await createWebhookSignature(body, webhookSecret);
-      const response = await SELF.fetch('https://example.com/webhook', {
+      const response = await exports.default.fetch('https://example.com/webhook', {
         method: 'POST',
         body,
         headers: {
@@ -480,7 +480,7 @@ describe('Version Worker', () => {
 
     it('upserts a published release and invalidates cache', async () => {
       // Prime the cache
-      await SELF.fetch('https://example.com/version');
+      await exports.default.fetch('https://example.com/version');
 
       const releasePayload = {
         action: 'published',
@@ -497,7 +497,7 @@ describe('Version Worker', () => {
 
       const body = JSON.stringify(releasePayload);
       const signature = await createWebhookSignature(body, webhookSecret);
-      const response = await SELF.fetch('https://example.com/webhook', {
+      const response = await exports.default.fetch('https://example.com/webhook', {
         method: 'POST',
         body,
         headers: {
@@ -510,7 +510,7 @@ describe('Version Worker', () => {
       expect(result.success).toBe(true);
 
       // Verify the new release is now the latest (cache was invalidated)
-      const versionResponse = await SELF.fetch('https://example.com/version');
+      const versionResponse = await exports.default.fetch('https://example.com/version');
       const versionBody = (await versionResponse.json()) as any;
       expect(versionBody.version).toBe('v1.130.0');
     });
@@ -531,7 +531,7 @@ describe('Version Worker', () => {
 
       const body = JSON.stringify(releasePayload);
       const signature = await createWebhookSignature(body, webhookSecret);
-      await SELF.fetch('https://example.com/webhook', {
+      await exports.default.fetch('https://example.com/webhook', {
         method: 'POST',
         body,
         headers: {
@@ -540,7 +540,7 @@ describe('Version Worker', () => {
         },
       });
 
-      const response = await SELF.fetch('https://example.com/changelog?version=v1.110.0');
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.110.0');
       const changelog = (await response.json()) as any;
       expect(changelog.releases[0].body).toBe('Updated release notes');
     });
@@ -553,7 +553,7 @@ describe('Version Worker', () => {
 
       const body = JSON.stringify(releasePayload);
       const signature = await createWebhookSignature(body, webhookSecret);
-      const response = await SELF.fetch('https://example.com/webhook', {
+      const response = await exports.default.fetch('https://example.com/webhook', {
         method: 'POST',
         body,
         headers: {
@@ -581,7 +581,7 @@ describe('Version Worker', () => {
 
       const body = JSON.stringify(releasePayload);
       const signature = await createWebhookSignature(body, webhookSecret);
-      const response = await SELF.fetch('https://example.com/webhook', {
+      const response = await exports.default.fetch('https://example.com/webhook', {
         method: 'POST',
         body,
         headers: {
@@ -611,7 +611,7 @@ describe('Version Worker', () => {
 
       const body = JSON.stringify(releasePayload);
       const signature = await createWebhookSignature(body, webhookSecret);
-      const response = await SELF.fetch('https://example.com/webhook', {
+      const response = await exports.default.fetch('https://example.com/webhook', {
         method: 'POST',
         body,
         headers: {
@@ -627,7 +627,7 @@ describe('Version Worker', () => {
 
   describe('Unknown routes', () => {
     it('returns 404 for unknown paths', async () => {
-      const response = await SELF.fetch('https://example.com/unknown');
+      const response = await exports.default.fetch('https://example.com/unknown');
       expect(response.status).toBe(404);
     });
   });
@@ -642,28 +642,30 @@ describe('Cron sync', () => {
     versionCache.invalidate();
     revalidationState.inFlight = false;
     await env.VERSION_DB.exec('DELETE FROM releases');
-    fetchMock.activate();
-    fetchMock.disableNetConnect();
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const request = new Request(input, init);
+      const url = new URL(request.url);
 
-    // Allow metrics flush (dev URL)
-    const metricsOrigin = fetchMock.get('https://cf-workers.monitoring.dev.immich.cloud');
-    metricsOrigin.intercept({ path: '/write', method: 'POST' }).reply(200, 'OK').persist();
+      if (
+        request.method === 'GET' &&
+        url.origin === 'https://api.github.com' &&
+        url.pathname === '/repos/immich-app/immich/releases' &&
+        url.searchParams.get('per_page') === '100' &&
+        url.searchParams.get('page') === '1'
+      ) {
+        return Promise.resolve(Response.json(mockReleases));
+      }
+
+      return fetch(input, init);
+    });
   });
 
   afterEach(() => {
-    fetchMock.deactivate();
+    vi.unstubAllGlobals();
   });
 
   it('fetches from GitHub and populates D1', async () => {
-    const github = fetchMock.get('https://api.github.com');
-    github
-      .intercept({
-        path: '/repos/immich-app/immich/releases',
-        query: { per_page: '100', page: '1' },
-      })
-      .reply(200, mockReleases);
-
-    const response = await SELF.fetch('https://example.com/changelog?version=v1.100.0');
+    const response = await exports.default.fetch('https://example.com/changelog?version=v1.100.0');
     expect(response.status).toBe(200);
     const body = (await response.json()) as any;
     // D1 is empty, so no releases
@@ -672,25 +674,17 @@ describe('Cron sync', () => {
     // Seed directly to simulate cron populating D1
     await seedReleases();
 
-    const response2 = await SELF.fetch('https://example.com/changelog?version=v1.100.0');
+    const response2 = await exports.default.fetch('https://example.com/changelog?version=v1.100.0');
     const body2 = (await response2.json()) as any;
     expect(body2.releases).toHaveLength(2);
     expect(body2.latest.tag_name).toBe('v1.120.0');
   });
 
   it('returns latest version from GitHub when cache is empty', async () => {
-    const github = fetchMock.get('https://api.github.com');
-    github
-      .intercept({
-        path: '/repos/immich-app/immich/releases',
-        query: { per_page: '100', page: '1' },
-      })
-      .reply(200, mockReleases);
-
     // Seed D1 directly
     await seedReleases();
 
-    const response = await SELF.fetch('https://example.com/version');
+    const response = await exports.default.fetch('https://example.com/version');
     expect(response.status).toBe(200);
     const body = (await response.json()) as any;
     expect(body.version).toBe('v1.120.0');

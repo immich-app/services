@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "types": ["@cloudflare/workers-types", "@cloudflare/vitest-pool-workers", "@types/node"],
+    "types": ["@types/node"],
     "composite": true,
     "declaration": true,
     "declarationMap": true

@@ -1,10 +1,10 @@
-import { SELF } from 'cloudflare:test';
+import { exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
 describe('GitHub Approval Check Worker', () => {
   describe('Health Check', () => {
     it('should return healthy status', async () => {
-      const response = await SELF.fetch('https://example.com/health');
+      const response = await exports.default.fetch('https://example.com/health');
       const data = (await response.json()) as any;
 
       expect(response.status).toBe(200);
@@ -14,7 +14,7 @@ describe('GitHub Approval Check Worker', () => {
 
   describe('Webhook Endpoint', () => {
     it('should reject requests without signature', async () => {
-      const response = await SELF.fetch('https://example.com/webhook', {
+      const response = await exports.default.fetch('https://example.com/webhook', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -27,7 +27,7 @@ describe('GitHub Approval Check Worker', () => {
     });
 
     it('should return 404 for unknown paths', async () => {
-      const response = await SELF.fetch('https://example.com/unknown');
+      const response = await exports.default.fetch('https://example.com/unknown');
       expect(response.status).toBe(404);
     });
   });

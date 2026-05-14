@@ -1,23 +1,24 @@
-import { createExecutionContext, createScheduledController, env, SELF, waitOnExecutionContext } from 'cloudflare:test';
+import { createExecutionContext, createScheduledController, waitOnExecutionContext } from 'cloudflare:test';
+import { env, exports } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { __resetFlushStateForTests } from './flush-state.js';
 import worker from './index.js';
 
 describe('HTTP handler', () => {
   it('returns 200 for /health', async () => {
-    const response = await SELF.fetch('https://example.com/health');
+    const response = await exports.default.fetch('https://example.com/health');
     expect(response.status).toBe(200);
     const body = (await response.json()) as { status: string };
     expect(body.status).toBe('ok');
   });
 
   it('returns 404 for unknown routes', async () => {
-    const response = await SELF.fetch('https://example.com/nope');
+    const response = await exports.default.fetch('https://example.com/nope');
     expect(response.status).toBe(404);
   });
 
   it('returns 404 for /collect — the manual trigger endpoint has been removed', async () => {
-    const response = await SELF.fetch('https://example.com/collect');
+    const response = await exports.default.fetch('https://example.com/collect');
     expect(response.status).toBe(404);
   });
 });
