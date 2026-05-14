@@ -19,9 +19,12 @@ export default {
 
     // Health check endpoint
     if (url.pathname === '/health') {
-      return new Response(JSON.stringify({ status: 'healthy' }), {
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return Response.json(
+        { status: 'healthy' },
+        {
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     // GitHub webhook endpoint

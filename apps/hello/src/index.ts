@@ -6,12 +6,12 @@ export default {
     // Handle different routes
     switch (url.pathname) {
       case '/': {
-        return new Response(
-          JSON.stringify({
+        return Response.json(
+          {
             message: 'Hello from Immich Worker API!',
             timestamp: new Date().toISOString(),
             path: url.pathname,
-          }),
+          },
           {
             headers: {
               'Content-Type': 'application/json',
@@ -22,11 +22,11 @@ export default {
       }
 
       case '/health': {
-        return new Response(
-          JSON.stringify({
+        return Response.json(
+          {
             status: 'healthy',
             timestamp: new Date().toISOString(),
-          }),
+          },
           {
             headers: {
               'Content-Type': 'application/json',
@@ -38,11 +38,11 @@ export default {
 
       case '/api/greet': {
         const name = url.searchParams.get('name') || 'World';
-        return new Response(
-          JSON.stringify({
+        return Response.json(
+          {
             greeting: `Hello, ${name}!`,
             timestamp: new Date().toISOString(),
-          }),
+          },
           {
             headers: {
               'Content-Type': 'application/json',
@@ -53,11 +53,11 @@ export default {
       }
 
       default: {
-        return new Response(
-          JSON.stringify({
+        return Response.json(
+          {
             error: 'Not Found',
             path: url.pathname,
-          }),
+          },
           {
             status: 404,
             headers: {

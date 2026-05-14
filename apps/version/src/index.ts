@@ -14,7 +14,7 @@ const DEFAULT_HEADERS: Record<string, string> = {
 };
 
 function jsonResponse(data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
-  return new Response(JSON.stringify(data), {
+  return Response.json(data, {
     status,
     headers: { ...DEFAULT_HEADERS, ...extraHeaders },
   });

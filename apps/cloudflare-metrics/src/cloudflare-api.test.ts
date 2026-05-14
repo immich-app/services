@@ -6,22 +6,22 @@ describe('CloudflareRestClient', () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
+        Response.json(
+          {
             success: true,
             result: [{ uuid: 'a', name: 'one' }],
             result_info: { page: 1, per_page: 100, total_pages: 2, count: 1, total_count: 2 },
-          }),
+          },
           { status: 200 },
         ),
       )
       .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
+        Response.json(
+          {
             success: true,
             result: [{ uuid: 'b', name: 'two' }],
             result_info: { page: 2, per_page: 100, total_pages: 2, count: 1, total_count: 2 },
-          }),
+          },
           { status: 200 },
         ),
       );
@@ -46,12 +46,12 @@ describe('CloudflareRestClient', () => {
 
   it('keeps the existing query string when listing zones', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
+      Response.json(
+        {
           success: true,
           result: [{ id: 'z1', name: 'example.com' }],
           result_info: { page: 1, per_page: 100, total_pages: 1, count: 1, total_count: 1 },
-        }),
+        },
         { status: 200 },
       ),
     );
@@ -70,11 +70,11 @@ describe('CloudflareRestClient', () => {
 
   it('returns the zone payload from getZone on success', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
+      Response.json(
+        {
           success: true,
           result: { id: 'z1', name: 'pages.example.com' },
-        }),
+        },
         { status: 200 },
       ),
     );
