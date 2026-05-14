@@ -35,7 +35,7 @@ export async function getInstallationId(
     return data.id;
   } catch (error: any) {
     if (error.status === 404) {
-      throw new Error(`GitHub App is not installed on repository ${owner}/${repo}`);
+      throw new Error(`GitHub App is not installed on repository ${owner}/${repo}`); // eslint-disable-line preserve-caught-error
     }
     console.error(`Failed to get installation ID for ${owner}/${repo}:`, error);
     throw error;

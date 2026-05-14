@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "types": ["./worker-configuration.d.ts", "vitest/globals"],
+    "types": ["./worker-configuration.d.ts", "vitest/globals", "node"],
     "paths": {
       "@immich-services/github-approval-check/*": ["./src/*"]
     }
