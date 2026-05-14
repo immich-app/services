@@ -11,11 +11,10 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "test": "pnpm -r test",
-    "check": "tsc --noEmit && pnpm -r typecheck"
+    "check": "pnpm -r check"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.8.71",
-    "@cloudflare/workers-types": "^4.20241127.0",
+    "@cloudflare/vitest-pool-workers": "^0.16.5",
     "@eslint/js": "^9.35.0",
     "@types/node": "^24.12.2",
     "@typescript-eslint/eslint-plugin": "^8.19.0",

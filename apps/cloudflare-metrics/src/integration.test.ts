@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:test';
+import { env } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { CloudflareMetricsCollector } from './collector.js';
 import { ALL_DATASETS } from './datasets.js';

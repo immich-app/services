@@ -1,9 +1,9 @@
-import { SELF } from 'cloudflare:test';
+import { exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 
 describe('Hello Worker', () => {
   it('should return hello message on root path', async () => {
-    const response = await SELF.fetch('https://example.com/');
+    const response = await exports.default.fetch('https://example.com/');
     const data = (await response.json()) as any;
 
     expect(response.status).toBe(200);
@@ -12,7 +12,7 @@ describe('Hello Worker', () => {
   });
 
   it('should return health status', async () => {
-    const response = await SELF.fetch('https://example.com/health');
+    const response = await exports.default.fetch('https://example.com/health');
     const data = (await response.json()) as any;
 
     expect(response.status).toBe(200);
@@ -20,7 +20,7 @@ describe('Hello Worker', () => {
   });
 
   it('should greet with name parameter', async () => {
-    const response = await SELF.fetch('https://example.com/api/greet?name=Claude');
+    const response = await exports.default.fetch('https://example.com/api/greet?name=Claude');
     const data = (await response.json()) as any;
 
     expect(response.status).toBe(200);
@@ -28,7 +28,7 @@ describe('Hello Worker', () => {
   });
 
   it('should return 404 for unknown routes', async () => {
-    const response = await SELF.fetch('https://example.com/unknown');
+    const response = await exports.default.fetch('https://example.com/unknown');
     const data = (await response.json()) as any;
 
     expect(response.status).toBe(404);
