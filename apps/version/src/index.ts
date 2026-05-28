@@ -1,3 +1,4 @@
+import semver from 'semver';
 import { DeferredRepository } from './deferred.js';
 import { createInstallationToken } from './github-auth.js';
 import { GitHubRepository } from './github-repository.js';
@@ -5,7 +6,6 @@ import { CloudflareMetricsRepository, HeaderMetricsProvider, InfluxMetricsProvid
 import { ReleaseRepository } from './release-repository.js';
 import type { GitHubRelease } from './types.js';
 import { VersionService } from './version-service.js';
-import { parseSemVer } from './version.js';
 import { verifyWebhookSignature } from './webhook.js';
 
 const DEFAULT_HEADERS: Record<string, string> = {
@@ -85,8 +85,15 @@ export default {
               return errorResponse('Missing required query parameter: version', 400);
             }
 
-            if (!parseSemVer(version)) {
+            if (!semver.valid(version)) {
               return errorResponse('Invalid version format. Expected semver (e.g., 1.100.0 or v1.100.0)', 400);
+            }
+
+            // we assume stable for backwards compatibility
+            const channel = url.searchParams.get('channel') ?? 'stable';
+
+            if (!versionService.isValidChannel(channel)) {
+              return errorResponse('Invalid release channel. Expected "stable" or "rc"', 400);
             }
 
             const requestTags = {
@@ -114,7 +121,7 @@ export default {
             return await metrics.monitorAsyncFunction(
               { name: 'changelog_request', tags: requestTags },
               async (): Promise<Response> => {
-                const changelog = await versionService.getChangelog(version);
+                const changelog = await versionService.getChangelog(version, channel);
                 const response = jsonResponse(changelog, 200, { 'Cache-Control': 'public, max-age=86400' });
                 if (env.ENVIRONMENT) {
                   const cache = caches.default;
