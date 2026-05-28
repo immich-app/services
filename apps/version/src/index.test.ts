@@ -44,27 +44,41 @@ const mockReleases = [
   },
 ];
 
+interface SeedRelease {
+  id: number;
+  tag_name: string;
+  name?: string;
+  url?: string;
+  body?: string;
+  created_at?: string;
+  published_at?: string;
+}
+
+async function insertRelease(release: SeedRelease) {
+  const parsedVersion = semver.parse(release.tag_name)!;
+  await env.VERSION_DB.prepare(
+    `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch, prerelease)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  )
+    .bind(
+      release.id,
+      release.tag_name,
+      release.name ?? release.tag_name,
+      release.url ?? '',
+      release.body ?? '',
+      release.created_at ?? '',
+      release.published_at ?? '',
+      parsedVersion.major,
+      parsedVersion.minor,
+      parsedVersion.patch,
+      parsedVersion.prerelease[1] ?? null,
+    )
+    .run();
+}
+
 async function seedReleases() {
   for (const release of mockReleases) {
-    const parsedVersion = semver.parse(release.tag_name)!;
-    await env.VERSION_DB.prepare(
-      `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch, prerelease)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-      .bind(
-        release.id,
-        release.tag_name,
-        release.name,
-        release.url,
-        release.body,
-        release.created_at,
-        release.published_at,
-        parsedVersion.major,
-        parsedVersion.minor,
-        parsedVersion.patch,
-        parsedVersion.prerelease[1] ?? null,
-      )
-      .run();
+    await insertRelease(release);
   }
 }
 
@@ -176,6 +190,17 @@ describe('Version Worker', () => {
       expect(body.published_at).toBe('2025-03-01T00:00:00Z');
     });
 
+    it('returns the latest stable version, ignoring newer pre-releases', async () => {
+      // A pre-release newer than every stable release must not be served on the default (stable) channel.
+      await insertRelease({ id: 10, tag_name: 'v1.130.0-rc.1', published_at: '2025-04-01T00:00:00Z' });
+      versionCache.invalidate();
+
+      const response = await exports.default.fetch('https://example.com/version');
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as any;
+      expect(body.version).toBe('v1.120.0');
+    });
+
     it('awaits D1 on cold start rather than deferring', async () => {
       // Cache is empty (invalidated in beforeEach), D1 has data
       // The first request must return real data, not 404 or empty
@@ -234,25 +259,12 @@ describe('Version Worker', () => {
       Object.assign(versionCache, { expiresAt: 0 });
 
       // Update D1 with a new version
-      const parsedVersion = semver.parse('v1.130.0')!;
-      await env.VERSION_DB.prepare(
-        `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch, prerelease)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-        .bind(
-          4,
-          'v1.130.0',
-          'v1.130.0',
-          '',
-          '',
-          '2025-04-01T00:00:00Z',
-          '2025-04-01T00:00:00Z',
-          parsedVersion.major,
-          parsedVersion.minor,
-          parsedVersion.patch,
-          parsedVersion.prerelease[1] ?? null,
-        )
-        .run();
+      await insertRelease({
+        id: 4,
+        tag_name: 'v1.130.0',
+        created_at: '2025-04-01T00:00:00Z',
+        published_at: '2025-04-01T00:00:00Z',
+      });
 
       // This request should get stale v1.120.0 while triggering background refresh
       const stale = await exports.default.fetch('https://example.com/version');
@@ -354,6 +366,94 @@ describe('Version Worker', () => {
       const body = (await response.json()) as any;
       expect(body.releases).toHaveLength(0);
       expect(body.latest).toBeNull();
+    });
+  });
+
+  describe('GET /changelog - release channels', () => {
+    it('does not error when the requested version is a pre-release', async () => {
+      // Regression: getNewerThan used to bind the whole prerelease array, throwing D1_TYPE_ERROR -> 500.
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.121.0-rc.1');
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as any;
+      expect(body.current).toBe('v1.121.0-rc.1');
+    });
+
+    it('returns 400 for an invalid channel', async () => {
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.100.0&channel=nightly');
+      expect(response.status).toBe(400);
+      const body = (await response.json()) as { error: string };
+      expect(body.error).toContain('channel');
+    });
+
+    it('defaults to the stable channel when none is provided', async () => {
+      await insertRelease({ id: 20, tag_name: 'v1.121.0-rc.1' });
+
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.120.0');
+      const body = (await response.json()) as any;
+      const tags = body.releases.map((r: any) => r.tag_name);
+      expect(tags).not.toContain('v1.121.0-rc.1');
+      expect(body.latest.tag_name).toBe('v1.120.0');
+    });
+
+    it('includes pre-releases on the rc channel but excludes them on stable', async () => {
+      await insertRelease({ id: 20, tag_name: 'v1.121.0-rc.1' });
+
+      const rc = await exports.default.fetch('https://example.com/changelog?version=v1.120.0&channel=rc');
+      const rcBody = (await rc.json()) as any;
+      const rcTags = rcBody.releases.map((r: any) => r.tag_name);
+      expect(rcTags).toContain('v1.121.0-rc.1');
+      expect(rcBody.latest.tag_name).toBe('v1.121.0-rc.1');
+
+      const stable = await exports.default.fetch('https://example.com/changelog?version=v1.120.0&channel=stable');
+      const stableBody = (await stable.json()) as any;
+      expect(stableBody.releases).toHaveLength(0);
+      expect(stableBody.latest.tag_name).toBe('v1.120.0');
+    });
+
+    it('treats a stable release as newer than its own pre-release on the rc channel', async () => {
+      await insertRelease({ id: 21, tag_name: 'v1.121.0-rc.1' });
+      await insertRelease({ id: 22, tag_name: 'v1.121.0' });
+
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.120.0&channel=rc');
+      const body = (await response.json()) as any;
+      // Stable 1.121.0 outranks 1.121.0-rc.1 in semver, so it must be both latest and first.
+      expect(body.latest.tag_name).toBe('v1.121.0');
+      expect(body.releases[0].tag_name).toBe('v1.121.0');
+    });
+
+    it('reports the stable as rc-channel latest once it supersedes the pre-release', async () => {
+      // Once 3.0.0 ships, an rc-channel client must see 3.0.0 rather than 3.0.0-rc.2.
+      await insertRelease({ id: 30, tag_name: 'v3.0.0-rc.2', published_at: '2025-01-01T00:00:00Z' });
+      await insertRelease({ id: 31, tag_name: 'v3.0.0', published_at: '2025-02-01T00:00:00Z' });
+
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.0.0&channel=rc');
+      const body = (await response.json()) as any;
+      expect(body.latest.tag_name).toBe('v3.0.0');
+    });
+
+    it('orders rc-channel latest by semver precedence, not publish date', async () => {
+      // 2.8.1 is a patch to an older line, published *after* 3.0.0-rc.2. The rc channel must still
+      // report 3.0.0-rc.2 as latest because it is the highest semver, not the most recently published.
+      await insertRelease({ id: 32, tag_name: 'v3.0.0-rc.2', published_at: '2025-01-01T00:00:00Z' });
+      await insertRelease({ id: 33, tag_name: 'v2.8.1', published_at: '2025-06-01T00:00:00Z' });
+
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.0.0&channel=rc');
+      const body = (await response.json()) as any;
+      expect(body.latest.tag_name).toBe('v3.0.0-rc.2');
+      expect(body.releases[0].tag_name).toBe('v3.0.0-rc.2');
+    });
+
+    it('returns newer pre-releases and the matching stable for a user on a pre-release', async () => {
+      await insertRelease({ id: 23, tag_name: 'v1.121.0-rc.1' });
+      await insertRelease({ id: 24, tag_name: 'v1.121.0-rc.2' });
+      await insertRelease({ id: 25, tag_name: 'v1.121.0' });
+
+      const response = await exports.default.fetch('https://example.com/changelog?version=v1.121.0-rc.1&channel=rc');
+      const body = (await response.json()) as any;
+      const tags = body.releases.map((r: any) => r.tag_name);
+      expect(tags).toContain('v1.121.0-rc.2');
+      expect(tags).toContain('v1.121.0');
+      expect(tags).not.toContain('v1.121.0-rc.1'); // a version is not newer than itself
     });
   });
 

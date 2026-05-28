@@ -66,7 +66,10 @@ export class VersionService {
     }
 
     const [newerReleases, latest] = await this.metrics.monitorAsyncFunction({ name: 'd1_get_changelog' }, () =>
-      Promise.all([this.releaseRepository.getNewerThan(parsedVersion), this.releaseRepository.getLatest(channel)]),
+      Promise.all([
+        this.releaseRepository.getNewerThan(parsedVersion, channel),
+        this.releaseRepository.getLatest(channel),
+      ]),
     )();
 
     return { current: version, latest, releases: newerReleases };
