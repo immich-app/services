@@ -1,13 +1,13 @@
 import { env, exports } from 'cloudflare:workers';
+import semver from 'semver';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryCache } from './memory-cache.js';
 import { revalidationState, versionCache } from './version-service.js';
-import { compareSemVer, isGreaterThan, parseSemVer } from './version.js';
 import { verifyWebhookSignature } from './webhook.js';
 
 async function createSchema() {
   await env.VERSION_DB.prepare(
-    "CREATE TABLE IF NOT EXISTS releases (id INTEGER PRIMARY KEY, tag_name TEXT NOT NULL UNIQUE, name TEXT NOT NULL DEFAULT '', url TEXT NOT NULL DEFAULT '', body TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '', published_at TEXT NOT NULL DEFAULT '', major INTEGER NOT NULL, minor INTEGER NOT NULL, patch INTEGER NOT NULL)",
+    "CREATE TABLE IF NOT EXISTS releases (id INTEGER PRIMARY KEY, tag_name TEXT NOT NULL UNIQUE, name TEXT NOT NULL DEFAULT '', url TEXT NOT NULL DEFAULT '', body TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '', published_at TEXT NOT NULL DEFAULT '', major INTEGER NOT NULL, minor INTEGER NOT NULL, patch INTEGER NOT NULL, prerelease INTEGER)",
   ).run();
   await env.VERSION_DB.prepare(
     'CREATE INDEX IF NOT EXISTS idx_releases_semver ON releases (major DESC, minor DESC, patch DESC)',
@@ -46,10 +46,10 @@ const mockReleases = [
 
 async function seedReleases() {
   for (const release of mockReleases) {
-    const semver = parseSemVer(release.tag_name)!;
+    const parsedVersion = semver.parse(release.tag_name)!;
     await env.VERSION_DB.prepare(
-      `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch, prerelease)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         release.id,
@@ -59,9 +59,10 @@ async function seedReleases() {
         release.body,
         release.created_at,
         release.published_at,
-        semver.major,
-        semver.minor,
-        semver.patch,
+        parsedVersion.major,
+        parsedVersion.minor,
+        parsedVersion.patch,
+        parsedVersion.prerelease[1] ?? null,
       )
       .run();
   }
@@ -131,72 +132,6 @@ describe('Webhook signature verification', () => {
   it('rejects when body is tampered', async () => {
     const signature = await createWebhookSignature('original', 'secret');
     expect(await verifyWebhookSignature('tampered', signature, 'secret')).toBe(false);
-  });
-});
-
-describe('Version utilities', () => {
-  describe('parseSemVer', () => {
-    it('parses version with v prefix', () => {
-      expect(parseSemVer('v1.100.0')).toEqual({ major: 1, minor: 100, patch: 0 });
-    });
-
-    it('parses version without v prefix', () => {
-      expect(parseSemVer('1.100.0')).toEqual({ major: 1, minor: 100, patch: 0 });
-    });
-
-    it('returns null for invalid version', () => {
-      expect(parseSemVer('invalid')).toBeNull();
-      expect(parseSemVer('')).toBeNull();
-    });
-
-    it('returns null for version with pre-release suffix', () => {
-      expect(parseSemVer('v1.100.0-rc.1')).toBeNull();
-      expect(parseSemVer('1.100.0-beta')).toBeNull();
-    });
-
-    it('returns null for version with extra segments', () => {
-      expect(parseSemVer('v1.100.0.1')).toBeNull();
-    });
-  });
-
-  describe('compareSemVer', () => {
-    it('returns positive when first is greater', () => {
-      expect(compareSemVer({ major: 2, minor: 0, patch: 0 }, { major: 1, minor: 0, patch: 0 })).toBeGreaterThan(0);
-    });
-
-    it('returns negative when first is smaller', () => {
-      expect(compareSemVer({ major: 1, minor: 0, patch: 0 }, { major: 2, minor: 0, patch: 0 })).toBeLessThan(0);
-    });
-
-    it('returns 0 when equal', () => {
-      expect(compareSemVer({ major: 1, minor: 2, patch: 3 }, { major: 1, minor: 2, patch: 3 })).toBe(0);
-    });
-  });
-
-  describe('isGreaterThan', () => {
-    it('compares major versions', () => {
-      expect(isGreaterThan('v2.0.0', 'v1.0.0')).toBe(true);
-      expect(isGreaterThan('v1.0.0', 'v2.0.0')).toBe(false);
-    });
-
-    it('compares minor versions', () => {
-      expect(isGreaterThan('v1.2.0', 'v1.1.0')).toBe(true);
-      expect(isGreaterThan('v1.1.0', 'v1.2.0')).toBe(false);
-    });
-
-    it('compares patch versions', () => {
-      expect(isGreaterThan('v1.1.2', 'v1.1.1')).toBe(true);
-      expect(isGreaterThan('v1.1.1', 'v1.1.2')).toBe(false);
-    });
-
-    it('returns false for equal versions', () => {
-      expect(isGreaterThan('v1.1.1', 'v1.1.1')).toBe(false);
-    });
-
-    it('handles mixed v prefix', () => {
-      expect(isGreaterThan('v1.2.0', '1.1.0')).toBe(true);
-      expect(isGreaterThan('1.2.0', 'v1.1.0')).toBe(true);
-    });
   });
 });
 
@@ -299,10 +234,10 @@ describe('Version Worker', () => {
       Object.assign(versionCache, { expiresAt: 0 });
 
       // Update D1 with a new version
-      const semver = parseSemVer('v1.130.0')!;
+      const parsedVersion = semver.parse('v1.130.0')!;
       await env.VERSION_DB.prepare(
-        `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch, prerelease)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
         .bind(
           4,
@@ -312,9 +247,10 @@ describe('Version Worker', () => {
           '',
           '2025-04-01T00:00:00Z',
           '2025-04-01T00:00:00Z',
-          semver.major,
-          semver.minor,
-          semver.patch,
+          parsedVersion.major,
+          parsedVersion.minor,
+          parsedVersion.patch,
+          parsedVersion.prerelease[1] ?? null,
         )
         .run();
 

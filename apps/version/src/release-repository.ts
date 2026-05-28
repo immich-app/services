@@ -1,5 +1,5 @@
+import { parse, type SemVer } from 'semver';
 import type { GitHubRelease } from './types.js';
-import { type SemVer, parseSemVer } from './version.js';
 
 interface ReleaseRow {
   id: number;
@@ -11,8 +11,10 @@ interface ReleaseRow {
   published_at: string;
 }
 
+export type ReleaseChannel = 'stable' | 'rc';
+
 export interface IReleaseRepository {
-  getLatest(): Promise<GitHubRelease | null>;
+  getLatest(channel?: ReleaseChannel): Promise<GitHubRelease | null>;
   getNewerThan(version: SemVer): Promise<GitHubRelease[]>;
   getCount(): Promise<number>;
   upsert(release: GitHubRelease): Promise<void>;
@@ -22,11 +24,12 @@ export interface IReleaseRepository {
 export class ReleaseRepository implements IReleaseRepository {
   constructor(private db: D1Database) {}
 
-  async getLatest(): Promise<GitHubRelease | null> {
+  async getLatest(channel: ReleaseChannel = 'rc'): Promise<GitHubRelease | null> {
     const row = await this.db
       .prepare(
-        'SELECT id, tag_name, name, url, body, created_at, published_at FROM releases ORDER BY major DESC, minor DESC, patch DESC LIMIT 1',
+        "SELECT id, tag_name, name, url, body, created_at, published_at FROM releases WHERE ?1 = 'rc' OR (prerelease IS NULL) ORDER BY major DESC, minor DESC, patch DESC, prerelease DESC LIMIT 1",
       )
+      .bind(channel)
       .first<ReleaseRow>();
 
     return row ? toGitHubRelease(row) : null;
@@ -44,24 +47,25 @@ export class ReleaseRepository implements IReleaseRepository {
          WHERE major > ?1
            OR (major = ?1 AND minor > ?2)
            OR (major = ?1 AND minor = ?2 AND patch > ?3)
-         ORDER BY major DESC, minor DESC, patch DESC`,
+           OR (major = ?1 AND minor = ?2 AND patch = ?3 AND ?4 IS NOT NULL AND prerelease IS NOT NULL AND prerelease = ?4)
+         ORDER BY major DESC, minor DESC, patch DESC, prerelease DESC`,
       )
-      .bind(version.major, version.minor, version.patch)
+      .bind(version.major, version.minor, version.patch, version.prerelease)
       .all<ReleaseRow>();
 
     return results.map((row) => toGitHubRelease(row));
   }
 
   async upsert(release: GitHubRelease): Promise<void> {
-    const semver = parseSemVer(release.tag_name);
+    const semver = parse(release.tag_name);
     if (!semver) {
       return;
     }
 
     await this.db
       .prepare(
-        `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
+        `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch, prerelease)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`,
       )
       .bind(
         release.id,
@@ -74,6 +78,7 @@ export class ReleaseRepository implements IReleaseRepository {
         semver.major,
         semver.minor,
         semver.patch,
+        semver.prerelease[1] ?? null,
       )
       .run();
   }
@@ -82,7 +87,7 @@ export class ReleaseRepository implements IReleaseRepository {
     const statements: D1PreparedStatement[] = [];
 
     for (const release of releases) {
-      const semver = parseSemVer(release.tag_name);
+      const semver = parse(release.tag_name);
       if (!semver) {
         continue;
       }
@@ -90,8 +95,8 @@ export class ReleaseRepository implements IReleaseRepository {
       statements.push(
         this.db
           .prepare(
-            `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`,
+            `INSERT OR REPLACE INTO releases (id, tag_name, name, url, body, created_at, published_at, major, minor, patch, prerelease)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)`,
           )
           .bind(
             release.id,
@@ -104,6 +109,7 @@ export class ReleaseRepository implements IReleaseRepository {
             semver.major,
             semver.minor,
             semver.patch,
+            semver.prerelease[1] ?? null,
           ),
       );
     }

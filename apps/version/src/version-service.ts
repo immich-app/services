@@ -1,10 +1,10 @@
+import semver from 'semver';
 import type { DeferredRepository } from './deferred.js';
 import type { IGitHubRepository } from './github-repository.js';
 import { MemoryCache } from './memory-cache.js';
 import { type IMetricsRepository, Metric } from './metrics.js';
-import type { IReleaseRepository } from './release-repository.js';
+import type { IReleaseRepository, ReleaseChannel } from './release-repository.js';
 import type { ChangelogResponse, GitHubRelease, VersionResponse } from './types.js';
-import { parseSemVer } from './version.js';
 
 const VERSION_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -59,14 +59,14 @@ export class VersionService {
     return response;
   }
 
-  async getChangelog(version: string): Promise<ChangelogResponse> {
-    const semver = parseSemVer(version);
-    if (!semver) {
+  async getChangelog(version: string, channel: ReleaseChannel): Promise<ChangelogResponse> {
+    const parsedVersion = semver.parse(version);
+    if (!parsedVersion) {
       throw new Error('Invalid version');
     }
 
     const [newerReleases, latest] = await this.metrics.monitorAsyncFunction({ name: 'd1_get_changelog' }, () =>
-      Promise.all([this.releaseRepository.getNewerThan(semver), this.releaseRepository.getLatest()]),
+      Promise.all([this.releaseRepository.getNewerThan(parsedVersion), this.releaseRepository.getLatest(channel)]),
     )();
 
     return { current: version, latest, releases: newerReleases };
@@ -143,6 +143,20 @@ export class VersionService {
           .addTag('user_agent', `immich-server/${version}`)
           .intField('count', 1),
       );
+    }
+  }
+
+  isValidChannel(channel: string): channel is ReleaseChannel {
+    switch (channel) {
+      case 'rc': {
+        return true;
+      }
+      case 'stable': {
+        return true;
+      }
+      default: {
+        return false;
+      }
     }
   }
 
