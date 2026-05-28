@@ -1,6 +1,7 @@
 import { env, exports } from 'cloudflare:workers';
 import semver from 'semver';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { GitHubRepository } from './github-repository.js';
 import { MemoryCache } from './memory-cache.js';
 import { revalidationState, versionCache } from './version-service.js';
 import { verifyWebhookSignature } from './webhook.js';
@@ -630,7 +631,7 @@ describe('Version Worker', () => {
       expect(result.ignored).toBe(true);
     });
 
-    it('ignores prerelease releases', async () => {
+    it('stores prerelease releases for the rc channel', async () => {
       const releasePayload = {
         action: 'published',
         release: {
@@ -638,9 +639,9 @@ describe('Version Worker', () => {
           tag_name: 'v1.121.0-rc.1',
           name: 'v1.121.0-rc.1',
           url: '',
-          body: '',
-          created_at: '',
-          published_at: '',
+          body: 'Release candidate',
+          created_at: '2025-03-15T00:00:00Z',
+          published_at: '2025-03-15T00:00:00Z',
           prerelease: true,
         },
       };
@@ -657,7 +658,17 @@ describe('Version Worker', () => {
       });
       expect(response.status).toBe(200);
       const result = (await response.json()) as any;
-      expect(result.ignored).toBe(true);
+      expect(result.success).toBe(true);
+
+      // The rc build is available on the rc channel...
+      const rc = await exports.default.fetch('https://example.com/changelog?version=v1.120.0&channel=rc');
+      const rcBody = (await rc.json()) as any;
+      expect(rcBody.releases.map((r: any) => r.tag_name)).toContain('v1.121.0-rc.1');
+
+      // ...but hidden from the stable channel.
+      const stable = await exports.default.fetch('https://example.com/changelog?version=v1.120.0&channel=stable');
+      const stableBody = (await stable.json()) as any;
+      expect(stableBody.releases.map((r: any) => r.tag_name)).not.toContain('v1.121.0-rc.1');
     });
   });
 
@@ -725,6 +736,53 @@ describe('Cron sync', () => {
     const body = (await response.json()) as any;
     expect(body.version).toBe('v1.120.0');
     expect(body.published_at).toBe('2025-03-01T00:00:00Z');
+  });
+});
+
+describe('GitHubRepository', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('keeps pre-releases but drops drafts when syncing from GitHub', async () => {
+    const githubReleases = [
+      { id: 1, tag_name: 'v1.120.0', name: 'v1.120.0', url: '', body: '', created_at: '', published_at: '' },
+      {
+        id: 2,
+        tag_name: 'v1.121.0-rc.1',
+        name: 'v1.121.0-rc.1',
+        url: '',
+        body: '',
+        created_at: '',
+        published_at: '',
+        prerelease: true,
+      },
+      {
+        id: 3,
+        tag_name: 'v1.122.0',
+        name: 'v1.122.0',
+        url: '',
+        body: '',
+        created_at: '',
+        published_at: '',
+        draft: true,
+      },
+    ];
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = new URL(new Request(input, init).url);
+      if (url.origin === 'https://api.github.com' && url.pathname === '/repos/immich-app/immich/releases') {
+        return Promise.resolve(Response.json(githubReleases));
+      }
+      return Promise.reject(new Error(`unexpected fetch: ${url.toString()}`));
+    });
+
+    const releases = await new GitHubRepository().fetchReleases();
+    const tags = releases.map((r) => r.tag_name);
+
+    expect(tags).toContain('v1.121.0-rc.1'); // pre-release retained for the rc channel
+    expect(tags).toContain('v1.120.0');
+    expect(tags).not.toContain('v1.122.0'); // draft still dropped
   });
 });
 

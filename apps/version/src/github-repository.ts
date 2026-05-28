@@ -108,7 +108,8 @@ function parseRelease(item: unknown): GitHubRelease | null {
   if (!isValidRelease(item)) {
     return null;
   }
-  if (item.draft === true || item.prerelease === true) {
+  // Drafts are skipped, but pre-releases (rc builds) are kept to back the `rc` channel.
+  if (item.draft === true) {
     return null;
   }
 
