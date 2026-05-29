@@ -170,7 +170,8 @@ export default {
               return errorResponse('Invalid release payload', 400);
             }
 
-            if (releaseData.draft || releaseData.prerelease) {
+            // Drafts are ignored, but pre-releases (rc builds) are stored to back the `rc` channel.
+            if (releaseData.draft) {
               return jsonResponse({ ignored: true });
             }
 

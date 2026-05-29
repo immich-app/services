@@ -15,7 +15,7 @@ export type ReleaseChannel = 'stable' | 'rc';
 
 export interface IReleaseRepository {
   getLatest(channel?: ReleaseChannel): Promise<GitHubRelease | null>;
-  getNewerThan(version: SemVer): Promise<GitHubRelease[]>;
+  getNewerThan(version: SemVer, channel?: ReleaseChannel): Promise<GitHubRelease[]>;
   getCount(): Promise<number>;
   upsert(release: GitHubRelease): Promise<void>;
   bulkUpsert(releases: GitHubRelease[]): Promise<void>;
@@ -24,10 +24,16 @@ export interface IReleaseRepository {
 export class ReleaseRepository implements IReleaseRepository {
   constructor(private db: D1Database) {}
 
-  async getLatest(channel: ReleaseChannel = 'rc'): Promise<GitHubRelease | null> {
+  async getLatest(channel: ReleaseChannel = 'stable'): Promise<GitHubRelease | null> {
+    // The `rc` channel sees every release; `stable` only sees rows without a prerelease component.
+    // Within the same major.minor.patch a stable release outranks its own pre-releases (1.0.0 > 1.0.0-rc.1),
+    // so order stable (prerelease IS NULL) ahead of pre-releases before falling back to the prerelease number.
     const row = await this.db
       .prepare(
-        "SELECT id, tag_name, name, url, body, created_at, published_at FROM releases WHERE ?1 = 'rc' OR (prerelease IS NULL) ORDER BY major DESC, minor DESC, patch DESC, prerelease DESC LIMIT 1",
+        `SELECT id, tag_name, name, url, body, created_at, published_at FROM releases
+         WHERE ?1 = 'rc' OR prerelease IS NULL
+         ORDER BY major DESC, minor DESC, patch DESC, (prerelease IS NULL) DESC, prerelease DESC
+         LIMIT 1`,
       )
       .bind(channel)
       .first<ReleaseRow>();
@@ -40,17 +46,23 @@ export class ReleaseRepository implements IReleaseRepository {
     return row?.count ?? 0;
   }
 
-  async getNewerThan(version: SemVer): Promise<GitHubRelease[]> {
+  async getNewerThan(version: SemVer, channel: ReleaseChannel = 'stable'): Promise<GitHubRelease[]> {
+    // `version.prerelease` is an array (e.g. ['rc', 1] for v1.0.0-rc.1); bind only the numeric
+    // component to match the `prerelease` column. Binding the array itself throws D1_TYPE_ERROR.
+    const prerelease = version.prerelease[1] ?? null;
     const { results } = await this.db
       .prepare(
         `SELECT id, tag_name, name, url, body, created_at, published_at FROM releases
-         WHERE major > ?1
-           OR (major = ?1 AND minor > ?2)
-           OR (major = ?1 AND minor = ?2 AND patch > ?3)
-           OR (major = ?1 AND minor = ?2 AND patch = ?3 AND ?4 IS NOT NULL AND prerelease IS NOT NULL AND prerelease = ?4)
-         ORDER BY major DESC, minor DESC, patch DESC, prerelease DESC`,
+         WHERE (?5 = 'rc' OR prerelease IS NULL)
+           AND (
+             major > ?1
+             OR (major = ?1 AND minor > ?2)
+             OR (major = ?1 AND minor = ?2 AND patch > ?3)
+             OR (major = ?1 AND minor = ?2 AND patch = ?3 AND ?4 IS NOT NULL AND (prerelease IS NULL OR prerelease > ?4))
+           )
+         ORDER BY major DESC, minor DESC, patch DESC, (prerelease IS NULL) DESC, prerelease DESC`,
       )
-      .bind(version.major, version.minor, version.patch, version.prerelease)
+      .bind(version.major, version.minor, version.patch, prerelease, channel)
       .all<ReleaseRow>();
 
     return results.map((row) => toGitHubRelease(row));
