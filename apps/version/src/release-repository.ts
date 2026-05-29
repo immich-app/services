@@ -11,7 +11,8 @@ interface ReleaseRow {
   published_at: string;
 }
 
-export type ReleaseChannel = 'stable' | 'rc';
+export const releaseChannels = ['stable', 'rc'] as const;
+export type ReleaseChannel = (typeof releaseChannels)[number];
 
 export interface IReleaseRepository {
   getLatest(channel?: ReleaseChannel): Promise<GitHubRelease | null>;

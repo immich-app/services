@@ -2,14 +2,14 @@ import semver from 'semver';
 import type { DeferredRepository } from './deferred.js';
 import type { IGitHubRepository } from './github-repository.js';
 import { MemoryCache } from './memory-cache.js';
-import { type IMetricsRepository, Metric } from './metrics.js';
-import type { IReleaseRepository, ReleaseChannel } from './release-repository.js';
+import { Metric, type IMetricsRepository } from './metrics.js';
+import { releaseChannels, type IReleaseRepository, type ReleaseChannel } from './release-repository.js';
 import type { ChangelogResponse, GitHubRelease, VersionResponse } from './types.js';
 
 const VERSION_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 // Module-level state - persists across requests within the same isolate
-export const versionCache = new MemoryCache<VersionResponse>(VERSION_CACHE_TTL_MS);
+export const versionCache = new MemoryCache<Map<ReleaseChannel, VersionResponse>>(VERSION_CACHE_TTL_MS);
 export const revalidationState = { inFlight: false };
 
 export class VersionService {
@@ -18,12 +18,12 @@ export class VersionService {
     private metrics: IMetricsRepository,
   ) {}
 
-  async getLatestVersion(deferred: DeferredRepository): Promise<VersionResponse | null> {
+  async getLatestVersion(deferred: DeferredRepository, channel: ReleaseChannel): Promise<VersionResponse | null> {
     const cached = versionCache.get();
 
-    if (cached && !cached.stale) {
+    if (cached && !cached.stale && cached.value.has(channel)) {
       this.metrics.push(Metric.create('memory_cache_hit').intField('count', 1));
-      return cached.value;
+      return cached.value.get(channel)!;
     }
 
     if (cached?.stale) {
@@ -38,23 +38,31 @@ export class VersionService {
           }
         });
       }
-      return cached.value;
+      return cached.value.get(channel) ?? null;
     }
 
     this.metrics.push(Metric.create('memory_cache_miss').intField('count', 1));
-    return this.refreshVersionCache();
+    const releases = await this.refreshVersionCache();
+    return releases.get(channel) ?? null;
   }
 
-  private async refreshVersionCache(): Promise<VersionResponse | null> {
-    const latest = await this.metrics.monitorAsyncFunction({ name: 'd1_get_latest' }, () =>
-      this.releaseRepository.getLatest(),
-    )();
+  private async refreshVersionCache(): Promise<Map<ReleaseChannel, VersionResponse>> {
+    const latest = await this.metrics.monitorAsyncFunction({ name: 'd1_get_latest' }, async () => {
+      const releases = await Promise.all(
+        releaseChannels.map(async (channel) => [channel, await this.releaseRepository.getLatest(channel)] as const),
+      );
+      return new Map(releases);
+    })();
 
-    if (!latest) {
-      return null;
-    }
+    const response = new Map<ReleaseChannel, VersionResponse>(
+      [...latest.entries()]
+        .filter(([_, release]) => release !== null)
+        .map(
+          ([channel, release]) =>
+            [channel, { version: release!.tag_name, published_at: release!.published_at }] as const,
+        ),
+    );
 
-    const response: VersionResponse = { version: latest.tag_name, published_at: latest.published_at };
     versionCache.set(response);
     return response;
   }
@@ -150,17 +158,7 @@ export class VersionService {
   }
 
   isValidChannel(channel: string): channel is ReleaseChannel {
-    switch (channel) {
-      case 'rc': {
-        return true;
-      }
-      case 'stable': {
-        return true;
-      }
-      default: {
-        return false;
-      }
-    }
+    return ['rc', 'stable'].includes(channel);
   }
 
   private async emitReleaseCount(): Promise<void> {

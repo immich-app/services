@@ -255,7 +255,7 @@ describe('Version Worker', () => {
 
       // Expire the cache by invalidating and setting with 0 TTL
       versionCache.invalidate();
-      versionCache.set({ version: 'v1.120.0', published_at: '2025-03-01T00:00:00Z' });
+      versionCache.set(new Map().set('stable', { version: 'v1.120.0', published_at: '2025-03-01T00:00:00Z' }));
       // Manually expire it
       Object.assign(versionCache, { expiresAt: 0 });
 
@@ -285,7 +285,7 @@ describe('Version Worker', () => {
 
     it('deduplicates concurrent revalidation requests', async () => {
       // Set up stale cache
-      versionCache.set({ version: 'v1.120.0', published_at: '2025-03-01T00:00:00Z' });
+      versionCache.set(new Map().set('stable', { version: 'v1.120.0', published_at: '2025-03-01T00:00:00Z' }));
       Object.assign(versionCache, { expiresAt: 0 });
 
       expect(revalidationState.inFlight).toBe(false);

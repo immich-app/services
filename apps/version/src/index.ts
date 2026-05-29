@@ -70,7 +70,14 @@ export default {
                 },
               },
               async (): Promise<Response> => {
-                const latest = await versionService.getLatestVersion(deferredRepository);
+                // we assume stable for backwards compatibility
+                const channel = url.searchParams.get('channel') ?? 'stable';
+
+                if (!versionService.isValidChannel(channel)) {
+                  return errorResponse('Invalid release channel. Expected "stable" or "rc"', 400);
+                }
+
+                const latest = await versionService.getLatestVersion(deferredRepository, channel);
                 if (!latest) {
                   return errorResponse('No releases found', 404);
                 }
