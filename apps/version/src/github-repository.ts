@@ -1,5 +1,5 @@
+import semver from 'semver';
 import type { GitHubRelease } from './types.js';
-import { compareSemVer, parseSemVer } from './version.js';
 
 const GITHUB_RELEASES_URL = 'https://api.github.com/repos/immich-app/immich/releases';
 const MAX_PAGES = 3;
@@ -58,12 +58,12 @@ export class GitHubRepository implements IGitHubRepository {
     }
 
     allReleases.sort((a, b) => {
-      const semverA = parseSemVer(a.tag_name);
-      const semverB = parseSemVer(b.tag_name);
+      const semverA = semver.parse(a.tag_name);
+      const semverB = semver.parse(b.tag_name);
       if (!semverA || !semverB) {
         return 0;
       }
-      return compareSemVer(semverB, semverA);
+      return semver.compare(semverB, semverA);
     });
 
     return allReleases;
@@ -108,7 +108,8 @@ function parseRelease(item: unknown): GitHubRelease | null {
   if (!isValidRelease(item)) {
     return null;
   }
-  if (item.draft === true || item.prerelease === true) {
+  // Drafts are skipped, but pre-releases (rc builds) are kept to back the `rc` channel.
+  if (item.draft === true) {
     return null;
   }
 
