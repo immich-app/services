@@ -120,7 +120,7 @@ function findAliasInPath(path: readonly (string | number)[] | undefined): string
     if (typeof segment !== 'string') {
       continue;
     }
-    if (segment === 'viewer' || segment === 'accounts' || segment === 'zones') {
+    if (['viewer', 'accounts', 'zones'].includes(segment)) {
       continue;
     }
     return segment;
