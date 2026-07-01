@@ -65,14 +65,7 @@ export class CheckRunManager {
     repo: string,
     checkRunId: number,
     conclusion:
-      | 'success'
-      | 'failure'
-      | 'neutral'
-      | 'cancelled'
-      | 'skipped'
-      | 'timed_out'
-      | 'action_required'
-      | 'in_progress',
+      'success' | 'failure' | 'neutral' | 'cancelled' | 'skipped' | 'timed_out' | 'action_required' | 'in_progress',
     summary: string,
     text: string,
   ): Promise<void> {
