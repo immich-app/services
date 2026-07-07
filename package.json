@@ -14,7 +14,7 @@
     "check": "pnpm -r check"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.16.5",
+    "@cloudflare/vitest-pool-workers": "^0.18.0",
     "@eslint/js": "^10.0.0",
     "@types/node": "^24.13.2",
     "@typescript-eslint/eslint-plugin": "^8.19.0",
