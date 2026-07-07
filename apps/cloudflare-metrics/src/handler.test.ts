@@ -1,6 +1,6 @@
 import { createExecutionContext, createScheduledController, waitOnExecutionContext } from 'cloudflare:test';
 import { env, exports } from 'cloudflare:workers';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { __resetFlushStateForTests } from './flush-state.js';
 import worker from './index.js';
 
@@ -31,16 +31,15 @@ describe('scheduled handler', () => {
   it('emits cron_error{reason=missing_config} when API token or account ID are missing', async () => {
     // Collect metric flush bodies seen by the victoria-metrics POST so we
     // can assert on the cron_error line without touching internal state.
-    const originalFetch = globalThis.fetch;
     const flushBodies: string[] = [];
-    globalThis.fetch = ((url: RequestInfo | URL, init?: RequestInit) => {
+    vi.stubGlobal('fetch', (url: RequestInfo | URL, init?: RequestInit) => {
       const target = typeof url === 'string' ? url : url.toString();
       if (target.includes('/write')) {
         flushBodies.push(init?.body as string);
         return Promise.resolve(new Response('', { status: 204 }));
       }
       return Promise.resolve(new Response('', { status: 200 }));
-    }) as typeof fetch;
+    });
 
     const controller = createScheduledController();
     const ctx = createExecutionContext();
@@ -51,7 +50,7 @@ describe('scheduled handler', () => {
       await worker.scheduled?.(controller, env as unknown as Env, ctx);
       await waitOnExecutionContext(ctx);
     } finally {
-      globalThis.fetch = originalFetch;
+      vi.unstubAllGlobals();
     }
 
     const combined = flushBodies.join('\n');
@@ -63,16 +62,15 @@ describe('scheduled handler', () => {
     // First tick: a successful flush populates lastFlushStats.
     // Second tick: takeLastFlushStats() drains it and emits
     // cloudflare_metrics_flush_* lines to the second tick's flush body.
-    const originalFetch = globalThis.fetch;
     const flushBodies: string[] = [];
-    globalThis.fetch = ((url: RequestInfo | URL, init?: RequestInit) => {
+    vi.stubGlobal('fetch', (url: RequestInfo | URL, init?: RequestInit) => {
       const target = typeof url === 'string' ? url : url.toString();
       if (target.includes('/write')) {
         flushBodies.push(init?.body as string);
         return Promise.resolve(new Response('', { status: 204 }));
       }
       return Promise.resolve(new Response('', { status: 200 }));
-    }) as typeof fetch;
+    });
 
     try {
       const controller = createScheduledController();
@@ -86,7 +84,7 @@ describe('scheduled handler', () => {
       await worker.scheduled?.(controller, env as unknown as Env, ctx2);
       await waitOnExecutionContext(ctx2);
     } finally {
-      globalThis.fetch = originalFetch;
+      vi.unstubAllGlobals();
     }
 
     expect(flushBodies.length).toBeGreaterThanOrEqual(2);

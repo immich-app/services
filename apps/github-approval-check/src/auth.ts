@@ -74,7 +74,7 @@ export function createOctokitForInstallation(appId: string, privateKey: string, 
     console.error('Invalid privateKey:', {
       hasPrivateKey: !!privateKey,
       type: typeof privateKey,
-      length: privateKey ? String(privateKey).length : 0,
+      length: privateKey ? privateKey.length : 0,
     });
     throw new Error('Invalid GitHub App Private Key provided to createOctokitForInstallation');
   }

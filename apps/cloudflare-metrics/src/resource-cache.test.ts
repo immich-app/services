@@ -113,7 +113,7 @@ describe('ResourceCacheService', () => {
       const service = new ResourceCacheService('acct', metrics, now, restClient);
       await service.populate();
       await service.resolveMissingZones(['zone-1']);
-      expect(restClient.getZoneCalls).toHaveLength(0);
+      expect(restClient.zoneCalls).toHaveLength(0);
     });
 
     it('caps individual lookups per run', async () => {
@@ -125,7 +125,7 @@ describe('ResourceCacheService', () => {
       const service = new ResourceCacheService('acct', metrics, now, restClient);
       await service.populate();
       await service.resolveMissingZones(Object.keys(zones));
-      expect(restClient.getZoneCalls).toHaveLength(20);
+      expect(restClient.zoneCalls).toHaveLength(20);
     });
 
     it('does nothing when no rest client is provided', async () => {

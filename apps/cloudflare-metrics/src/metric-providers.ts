@@ -16,10 +16,12 @@ export class HeaderMetricsProvider implements IMetricsProviderRepository {
 
   pushMetric(metric: Metric) {
     for (const [label, { value, type }] of metric.fields) {
-      if (type === 'duration') {
-        const suffix = label === 'duration' ? '' : `_${label.replace('_duration', '')}`;
-        this._metrics.push(`${metric.name}${suffix};dur=${value}`);
+      if (type !== 'duration') {
+        continue;
       }
+
+      const suffix = label === 'duration' ? '' : `_${label.replace('_duration', '')}`;
+      this._metrics.push(`${metric.name}${suffix};dur=${value}`);
     }
   }
 

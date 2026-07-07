@@ -55,7 +55,7 @@ export class VersionService {
     })();
 
     const response = new Map<ReleaseChannel, VersionResponse>(
-      [...latest.entries()]
+      [...latest]
         .filter(([_, release]) => release !== null)
         .map(
           ([channel, release]) =>

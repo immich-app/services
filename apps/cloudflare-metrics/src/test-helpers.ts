@@ -109,7 +109,7 @@ export function asGraphQLClient(fake: FakeGraphQLClient): CloudflareGraphQLClien
  * pages-only zone exists outside the bulk list.
  */
 export class FakeRestClient implements ICloudflareRestClient {
-  public getZoneCalls: string[] = [];
+  public zoneCalls: string[] = [];
   constructor(
     public readonly d1: Array<{ uuid: string; name: string }> = [],
     public readonly queues: Array<{ queue_id: string; queue_name: string }> = [],
@@ -134,7 +134,7 @@ export class FakeRestClient implements ICloudflareRestClient {
 
   // eslint-disable-next-line @typescript-eslint/require-await
   async getZone(zoneId: string) {
-    this.getZoneCalls.push(zoneId);
+    this.zoneCalls.push(zoneId);
     if (zoneId in this.individualZones) {
       return this.individualZones[zoneId];
     }

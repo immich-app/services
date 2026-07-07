@@ -111,7 +111,7 @@ export default {
 
             if (env.ENVIRONMENT) {
               const cache = caches.default;
-              const cacheKey = new Request(url.toString(), request);
+              const cacheKey = new Request(url.href, request);
               const cached = await cache.match(cacheKey);
 
               if (cached) {
@@ -132,7 +132,7 @@ export default {
                 const response = jsonResponse(changelog, 200, { 'Cache-Control': 'public, max-age=86400' });
                 if (env.ENVIRONMENT) {
                   const cache = caches.default;
-                  const cacheKey = new Request(url.toString(), request);
+                  const cacheKey = new Request(url.href, request);
                   ctx.waitUntil(cache.put(cacheKey, response.clone()));
                 }
                 return response;

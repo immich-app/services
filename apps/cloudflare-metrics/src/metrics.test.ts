@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { __resetFlushStateForTests, takeLastFlushStats } from './flush-state.js';
 import { InfluxMetricsProvider, type IMetricsProviderRepository } from './metric-providers.js';
 import { Metric } from './metric.js';
@@ -74,8 +74,7 @@ describe('InfluxMetricsProvider flush self-telemetry', () => {
   });
 
   it('records stats with status=ok after a successful flush', async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = (() => Promise.resolve(new Response('', { status: 204 }))) as typeof fetch;
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('', { status: 204 })));
     try {
       const provider = new InfluxMetricsProvider('token', 'prod');
       provider.pushMetric(Metric.create('foo').intField('v', 1));
@@ -86,13 +85,12 @@ describe('InfluxMetricsProvider flush self-telemetry', () => {
       expect(stats?.pendingBuffers).toBe(0);
       expect(stats?.pendingBytes).toBe(0);
     } finally {
-      globalThis.fetch = originalFetch;
+      vi.unstubAllGlobals();
     }
   });
 
   it('records stats with status=error after a failed flush', async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = (() => Promise.resolve(new Response('bad', { status: 502 }))) as typeof fetch;
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('bad', { status: 502 })));
     try {
       const provider = new InfluxMetricsProvider('token', 'prod');
       provider.pushMetric(Metric.create('foo').intField('v', 1));
@@ -104,13 +102,12 @@ describe('InfluxMetricsProvider flush self-telemetry', () => {
       expect(stats?.pendingBuffers).toBe(1);
       expect(stats?.pendingBytes).toBeGreaterThan(0);
     } finally {
-      globalThis.fetch = originalFetch;
+      vi.unstubAllGlobals();
     }
   });
 
   it('clears lastFlushStats after a single take', async () => {
-    const originalFetch = globalThis.fetch;
-    globalThis.fetch = (() => Promise.resolve(new Response('', { status: 204 }))) as typeof fetch;
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('', { status: 204 })));
     try {
       const provider = new InfluxMetricsProvider('token', 'prod');
       provider.pushMetric(Metric.create('foo').intField('v', 1));
@@ -118,14 +115,13 @@ describe('InfluxMetricsProvider flush self-telemetry', () => {
       expect(takeLastFlushStats()).not.toBeNull();
       expect(takeLastFlushStats()).toBeNull();
     } finally {
-      globalThis.fetch = originalFetch;
+      vi.unstubAllGlobals();
     }
   });
 
   it('evicts the oldest stashed flush body when the total exceeds the 10 MB cap', async () => {
-    const originalFetch = globalThis.fetch;
     // Always fail so every flush stashes its body in the retry buffer.
-    globalThis.fetch = (() => Promise.resolve(new Response('', { status: 502 }))) as typeof fetch;
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('', { status: 502 })));
     try {
       // Each payload is ~4 MB of raw line protocol; three of them land us
       // over the 10 MB cap and force an eviction.
@@ -146,7 +142,7 @@ describe('InfluxMetricsProvider flush self-telemetry', () => {
       expect(stats?.pendingBuffers).toBe(2);
       expect(stats?.pendingBytes).toBeLessThan(10 * 1024 * 1024 + 4 * 1024 * 1024);
     } finally {
-      globalThis.fetch = originalFetch;
+      vi.unstubAllGlobals();
     }
   });
 });
@@ -185,12 +181,9 @@ describe('InfluxMetricsProvider line protocol', () => {
   });
 
   it('stashes a failed flush body and resends it on the next successful flush', async () => {
-    // Use a fetch mock via globalThis so the provider picks it up through its
-    // real `fetch` call path.
-    const originalFetch = globalThis.fetch;
     let call = 0;
     const received: string[] = [];
-    globalThis.fetch = ((_url: RequestInfo | URL, init?: RequestInit) => {
+    vi.stubGlobal('fetch', (_url: RequestInfo | URL, init?: RequestInit) => {
       call++;
       received.push(init?.body as string);
       if (call === 1) {
@@ -198,7 +191,7 @@ describe('InfluxMetricsProvider line protocol', () => {
         return Promise.resolve(new Response('bad gateway', { status: 502 }));
       }
       return Promise.resolve(new Response('', { status: 204 }));
-    }) as typeof fetch;
+    });
 
     try {
       const provider = new InfluxMetricsProvider('token', 'prod');
@@ -216,7 +209,7 @@ describe('InfluxMetricsProvider line protocol', () => {
       expect(received[1]).toContain('first');
       expect(received[1]).toContain('second');
     } finally {
-      globalThis.fetch = originalFetch;
+      vi.unstubAllGlobals();
     }
   });
 });

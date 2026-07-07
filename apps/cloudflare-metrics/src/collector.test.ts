@@ -409,7 +409,7 @@ describe('CloudflareMetricsCollector', () => {
     expect(pages?.tags.get('zone_name')).toBe('pages.example.com');
 
     // Only the uncached zone should have been looked up individually.
-    expect(restClient.getZoneCalls).toEqual(['zone-pages']);
+    expect(restClient.zoneCalls).toEqual(['zone-pages']);
 
     const lookup = provider.metrics.find(
       (m) => m.name === 'cloudflare_metrics_resource_lookup' && m.tags.get('resource') === 'zones_individual',

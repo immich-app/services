@@ -16,10 +16,10 @@ export async function verifyWebhookSignature(body: string, signature: string, se
   const mac = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body));
   const computedSignature = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('');
 
-  return timingSafeEqual(computedSignature, providedSignature);
+  return isTimingSafeEqual(computedSignature, providedSignature);
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
+function isTimingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) {
     return false;
   }

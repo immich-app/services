@@ -26,7 +26,7 @@ export function monitorAsyncFunction<T extends AsyncFn>(
     try {
       return await call(...args);
     } catch (error) {
-      if (!acceptedErrors.some((acceptedError) => error instanceof acceptedError)) {
+      if (acceptedErrors.every((acceptedError) => !(error instanceof acceptedError))) {
         console.error(error, `${operationName}_errors`);
         metric.intField('errors', 1);
       }

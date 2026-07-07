@@ -268,12 +268,12 @@ export class CloudflareMetricsCollector {
     let zoneErrors = 0;
     for (let i = 0; i < zoneTags.length; i++) {
       const zoneTag = zoneTags[i];
-      const zoneName = zoneNames[i];
       if (batchResult.errors[zoneTag]) {
         zoneErrors++;
         console.error(`[collector] ${dataset.key} zone ${zoneTag} error:`, batchResult.errors[zoneTag]);
         continue;
       }
+      const zoneName = zoneNames[i];
       const rows = batchResult.rows[zoneTag] ?? [];
       totalRows += rows.length;
       for (const row of rows) {

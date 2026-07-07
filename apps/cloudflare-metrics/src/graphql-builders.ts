@@ -43,10 +43,10 @@ const SCHEDULED_INVOCATIONS_SELECTION = `workers_scheduled: workersInvocationsSc
 
 export function buildBatchedAccountQuery(
   datasets: readonly DatasetQuery[],
-  includeScheduledInvocations = false,
+  shouldIncludeScheduledInvocations = false,
 ): string {
   const selections = datasets.map((d) => buildDatasetSelection(d, d.key));
-  if (includeScheduledInvocations) {
+  if (shouldIncludeScheduledInvocations) {
     selections.push(SCHEDULED_INVOCATIONS_SELECTION);
   }
   return `query CloudflareMetricsAccountBatch($accountTag: String!, $filter: JSON!) {

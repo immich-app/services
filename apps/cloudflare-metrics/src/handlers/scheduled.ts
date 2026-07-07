@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/no-top-level-assignment-in-function */
 import { CloudflareRestClient } from '../cloudflare-api.js';
 import { CloudflareMetricsCollector } from '../collector.js';
 import { ALL_DATASETS } from '../datasets.js';
