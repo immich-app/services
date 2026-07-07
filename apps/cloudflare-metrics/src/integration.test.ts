@@ -88,7 +88,7 @@ describe.skipIf(!hasCredentials)('Cloudflare GraphQL integration', () => {
           expect(row.dimensions).toBeDefined();
           const timestampDim = dataset.timestampDimension ?? 'datetimeMinute';
           expect(row.dimensions[timestampDim]).toBeDefined();
-          for (const [, spec] of Object.entries(dataset.fields)) {
+          for (const spec of Object.values(dataset.fields)) {
             const [block, key] = spec.source;
             if (block === '_top') {
               continue;

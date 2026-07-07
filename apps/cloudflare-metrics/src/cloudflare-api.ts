@@ -53,6 +53,37 @@ export class CloudflareRestClient implements ICloudflareRestClient {
     private readonly fetchImpl?: typeof fetch,
   ) {}
 
+  private async listPaginated<T>(path: string): Promise<T[]> {
+    const all: T[] = [];
+    let page = 1;
+    const separator = path.includes('?') ? '&' : '?';
+    const doFetch = this.fetchImpl ?? globalThis.fetch;
+    for (;;) {
+      const url = `${this.baseUrl}${path}${separator}page=${page}&per_page=${DEFAULT_PAGE_SIZE}`;
+      const response = await doFetch(url, {
+        headers: { Authorization: `Bearer ${this.apiToken}` },
+      });
+      if (!response.ok) {
+        // eslint-disable-next-line unicorn/prefer-await
+        const body = await response.text().catch(() => '');
+        throw new CloudflareRestError(
+          `Cloudflare REST error (${response.status}) for ${path}: ${body.slice(0, 200)}`,
+          response.status,
+        );
+      }
+      const payload = (await response.json()) as CloudflareListResponse<T>;
+      if (payload.result) {
+        all.push(...payload.result);
+      }
+      const info = payload.result_info;
+      if (!info || page >= (info.total_pages ?? 1)) {
+        break;
+      }
+      page++;
+    }
+    return all;
+  }
+
   async listD1Databases(accountId: string): Promise<D1Database[]> {
     return this.listPaginated<D1Database>(`/accounts/${encodeURIComponent(accountId)}/d1/database`);
   }
@@ -76,6 +107,7 @@ export class CloudflareRestClient implements ICloudflareRestClient {
       return null;
     }
     if (!response.ok) {
+      // eslint-disable-next-line unicorn/prefer-await
       const body = await response.text().catch(() => '');
       throw new CloudflareRestError(
         `Cloudflare REST error (${response.status}) for /zones/${zoneId}: ${body.slice(0, 200)}`,
@@ -84,35 +116,5 @@ export class CloudflareRestClient implements ICloudflareRestClient {
     }
     const payload = (await response.json()) as { result: Zone | null };
     return payload.result ?? null;
-  }
-
-  private async listPaginated<T>(path: string): Promise<T[]> {
-    const all: T[] = [];
-    let page = 1;
-    const separator = path.includes('?') ? '&' : '?';
-    const doFetch = this.fetchImpl ?? globalThis.fetch;
-    for (;;) {
-      const url = `${this.baseUrl}${path}${separator}page=${page}&per_page=${DEFAULT_PAGE_SIZE}`;
-      const response = await doFetch(url, {
-        headers: { Authorization: `Bearer ${this.apiToken}` },
-      });
-      if (!response.ok) {
-        const body = await response.text().catch(() => '');
-        throw new CloudflareRestError(
-          `Cloudflare REST error (${response.status}) for ${path}: ${body.slice(0, 200)}`,
-          response.status,
-        );
-      }
-      const payload = (await response.json()) as CloudflareListResponse<T>;
-      if (payload.result) {
-        all.push(...payload.result);
-      }
-      const info = payload.result_info;
-      if (!info || page >= (info.total_pages ?? 1)) {
-        break;
-      }
-      page++;
-    }
-    return all;
   }
 }

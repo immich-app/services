@@ -136,7 +136,7 @@ describe('groupErrorsByAlias', () => {
 
   it('returns an empty map when errors is null or undefined', () => {
     expect(groupErrorsByAlias(null)).toEqual({});
-    // eslint-disable-next-line unicorn/no-useless-undefined
+
     expect(groupErrorsByAlias(undefined)).toEqual({});
   });
 });
@@ -249,6 +249,7 @@ describe('CloudflareGraphQLClient', () => {
     const fetchMock = vi.fn((_url: string, init: RequestInit) => {
       const body = JSON.parse(init.body as string);
       // Return the aliased fields that this chunk actually asked for.
+      // eslint-disable-next-line unicorn/prefer-iterator-to-array
       const aliases = [...body.query.matchAll(/(ds_\d+): workersInvocationsAdaptive/g)].map((m) => m[1]);
       const account: Record<string, unknown> = {};
       for (const alias of aliases) {
@@ -283,6 +284,7 @@ describe('CloudflareGraphQLClient', () => {
     }));
     const fetchMock = vi.fn((_url: string, init: RequestInit) => {
       const body = JSON.parse(init.body as string);
+      // eslint-disable-next-line unicorn/prefer-iterator-to-array
       const aliases = [...body.query.matchAll(/(ds_\d+): workersInvocationsAdaptive/g)].map((m) => m[1]);
       const account: Record<string, unknown> = {};
       for (const alias of aliases) {
@@ -393,6 +395,7 @@ describe('CloudflareGraphQLClient', () => {
     const fetchMock = vi.fn((_url: string, init: RequestInit) => {
       calls++;
       const body = JSON.parse(init.body as string);
+      // eslint-disable-next-line unicorn/prefer-iterator-to-array
       const aliases = [...body.query.matchAll(/(ds_\d+): workersInvocationsAdaptive/g)].map((m) => m[1]);
       const account: Record<string, unknown> = {};
       for (const alias of aliases) {

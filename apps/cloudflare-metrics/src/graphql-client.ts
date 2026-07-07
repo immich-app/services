@@ -96,11 +96,11 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     const result: BatchedDatasetResult = { rows: {}, errors: {} };
 
     for (const [i, chunk] of chunks.entries()) {
-      const includeScheduled = i === 0 && (options.includeScheduledInvocations ?? false);
-      const chunkResult = await this.fetchAccountBatchChunk(accountTag, chunk, range, includeScheduled);
+      const isIncludeScheduled = i === 0 && (options.includeScheduledInvocations ?? false);
+      const chunkResult = await this.fetchAccountBatchChunk(accountTag, chunk, range, isIncludeScheduled);
       Object.assign(result.rows, chunkResult.rows);
       Object.assign(result.errors, chunkResult.errors);
-      if (includeScheduled) {
+      if (isIncludeScheduled) {
         if (chunkResult.errors.workers_scheduled) {
           result.errors.workers_scheduled = chunkResult.errors.workers_scheduled;
         } else {
@@ -116,10 +116,10 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
     accountTag: string,
     datasets: readonly DatasetQuery[],
     range: { start: Date; end: Date },
-    includeScheduledInvocations: boolean,
+    shouldIncludeScheduledInvocations: boolean,
     attempt = 1,
   ): Promise<BatchedDatasetResult> {
-    const query = buildBatchedAccountQuery(datasets, includeScheduledInvocations);
+    const query = buildBatchedAccountQuery(datasets, shouldIncludeScheduledInvocations);
     const variables = {
       accountTag,
       filter: buildFilterObject(datasets[0] ?? null, range),
@@ -138,7 +138,7 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
       result.rows[dataset.key] = rows ?? [];
     }
 
-    if (includeScheduledInvocations) {
+    if (shouldIncludeScheduledInvocations) {
       if (errorsByAlias.workers_scheduled) {
         result.errors.workers_scheduled = errorsByAlias.workers_scheduled;
       } else {
@@ -153,14 +153,14 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
       for (const dataset of datasets) {
         result.errors[dataset.key] = message;
       }
-      if (includeScheduledInvocations) {
+      if (shouldIncludeScheduledInvocations) {
         result.errors.workers_scheduled = message;
       }
     }
 
     // Retry once when all fields errored — likely a transient Cloudflare
     // analytics backend issue that resolves on the next attempt.
-    const totalFields = datasets.length + (includeScheduledInvocations ? 1 : 0);
+    const totalFields = datasets.length + (shouldIncludeScheduledInvocations ? 1 : 0);
     if (attempt < 2 && totalFields > 0 && Object.keys(result.errors).length >= totalFields) {
       this._retryCount++;
       console.warn(`[graphql] all ${totalFields} fields errored, retrying chunk (attempt ${attempt + 1})`);
@@ -172,7 +172,7 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
         accountTag,
         datasets,
         range,
-        includeScheduledInvocations,
+        shouldIncludeScheduledInvocations,
         attempt + 1,
       );
       if (Object.keys(retryResult.errors).length < totalFields) {

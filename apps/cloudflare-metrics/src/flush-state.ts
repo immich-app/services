@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/no-top-level-assignment-in-function */
 export const pendingFlushBuffers: string[] = [];
 // Cap retry buffer at 10 MB; eviction drops oldest-first.
 export const MAX_PENDING_FLUSH_BYTES = 10 * 1024 * 1024;

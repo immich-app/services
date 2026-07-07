@@ -22,11 +22,11 @@ export function getDevModeConfig(env: Env): DevModeConfig {
   // Extract PR number from stage (e.g., '-pr-123' -> 123)
   let prNumber: number | undefined;
   if (env.DEV_PR_NUMBER) {
-    prNumber = Number.parseInt(env.DEV_PR_NUMBER, 10);
+    prNumber = Number(env.DEV_PR_NUMBER);
   } else if (isPRDeployment && env.STAGE) {
     const match = env.STAGE.match(/-pr-(\d+)/);
     if (match) {
-      prNumber = Number.parseInt(match[1], 10);
+      prNumber = Number(match[1]);
     }
   }
 

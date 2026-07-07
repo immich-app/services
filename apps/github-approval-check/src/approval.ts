@@ -120,7 +120,7 @@ export class ApprovalValidator {
     console.log(
       `[approval] DEBUG: Reviews by valid users (after deduplication):`,
       JSON.stringify(
-        [...approvalsByUser.entries()].map(([userId, review]) => ({
+        [...approvalsByUser].map(([userId, review]) => ({
           userId,
           login: review.user.login,
           state: review.state,

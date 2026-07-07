@@ -6,7 +6,7 @@ describe('dataset registry invariants', () => {
     for (const dataset of ALL_DATASETS) {
       const fieldCount = Object.keys(dataset.fields).length;
       expect(fieldCount, `${dataset.key} must have fields`).toBeGreaterThan(0);
-      for (const [, spec] of Object.entries(dataset.fields)) {
+      for (const spec of Object.values(dataset.fields)) {
         expect(['int', 'float']).toContain(spec.type);
         expect(spec.source[0]).toMatch(/^(sum|avg|max|min|quantiles|uniq|_top)$/);
       }

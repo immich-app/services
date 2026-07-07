@@ -68,7 +68,7 @@ describe('InfluxDB line protocol NaN/Infinity handling', () => {
 
   it('skips NaN float fields', () => {
     const provider = new InfluxMetricsProvider('', '');
-    const metric = Metric.create('test').floatField('bad', Number.NaN).intField('good', 1);
+    const metric = Metric.create('test').floatField('bad', NaN).intField('good', 1);
     provider.pushMetric(metric);
     const [line] = getLines(provider);
     expect(line).not.toContain('bad');
@@ -95,7 +95,7 @@ describe('InfluxDB line protocol NaN/Infinity handling', () => {
 
   it('drops the entire line when all fields are NaN/Infinity', () => {
     const provider = new InfluxMetricsProvider('', '');
-    const metric = Metric.create('test').floatField('a', Number.NaN).floatField('b', Infinity);
+    const metric = Metric.create('test').floatField('a', NaN).floatField('b', Infinity);
     provider.pushMetric(metric);
     expect(getLines(provider)).toHaveLength(0);
   });

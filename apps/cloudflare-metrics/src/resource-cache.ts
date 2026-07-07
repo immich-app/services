@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/no-top-level-assignment-in-function */
 import type { ICloudflareRestClient } from './cloudflare-api.js';
 import { Metric } from './metric.js';
 import type { CloudflareMetricsRepository } from './metrics.js';
@@ -75,25 +76,28 @@ export class ResourceCacheService {
 
     const restClient = this.restClient;
     const now = this.now().getTime();
-    const cacheFresh = <T>(cache: CachedResourceLookup<T> | null): cache is CachedResourceLookup<T> =>
+    const isCacheFresh = <T>(cache: CachedResourceLookup<T> | null): cache is CachedResourceLookup<T> =>
       cache !== null && now - cache.loadedAt < RESOURCE_CACHE_TTL_MS;
 
     const [d1Result, queuesResult, zonesResult] = await Promise.allSettled([
-      cacheFresh(cachedD1Databases)
+      isCacheFresh(cachedD1Databases)
         ? Promise.resolve(cachedD1Databases.values)
-        : restClient.listD1Databases(this.accountTag).then((values) => {
+        : // eslint-disable-next-line unicorn/prefer-await
+          restClient.listD1Databases(this.accountTag).then((values) => {
             cachedD1Databases = { values, loadedAt: now };
             return values;
           }),
-      cacheFresh(cachedQueues)
+      isCacheFresh(cachedQueues)
         ? Promise.resolve(cachedQueues.values)
-        : restClient.listQueues(this.accountTag).then((values) => {
+        : // eslint-disable-next-line unicorn/prefer-await
+          restClient.listQueues(this.accountTag).then((values) => {
             cachedQueues = { values, loadedAt: now };
             return values;
           }),
-      cacheFresh(cachedBulkZones)
+      isCacheFresh(cachedBulkZones)
         ? Promise.resolve(cachedBulkZones.values)
-        : restClient.listZones(this.accountTag).then((values) => {
+        : // eslint-disable-next-line unicorn/prefer-await
+          restClient.listZones(this.accountTag).then((values) => {
             cachedBulkZones = { values, loadedAt: now };
             return values;
           }),
@@ -101,26 +105,32 @@ export class ResourceCacheService {
 
     this.recordResourceLookup('d1_databases', d1Result, (items) => {
       for (const db of items) {
-        if (db.uuid && db.name) {
-          this.cache.d1Databases.set(db.uuid, db.name);
-          globalD1NameCache.set(db.uuid, db.name);
+        if (!(db.uuid && db.name)) {
+          continue;
         }
+
+        this.cache.d1Databases.set(db.uuid, db.name);
+        globalD1NameCache.set(db.uuid, db.name);
       }
     });
     this.recordResourceLookup('queues', queuesResult, (items) => {
       for (const q of items) {
-        if (q.queue_id && q.queue_name) {
-          this.cache.queues.set(q.queue_id, q.queue_name);
-          globalQueueNameCache.set(q.queue_id, q.queue_name);
+        if (!(q.queue_id && q.queue_name)) {
+          continue;
         }
+
+        this.cache.queues.set(q.queue_id, q.queue_name);
+        globalQueueNameCache.set(q.queue_id, q.queue_name);
       }
     });
     this.recordResourceLookup('zones', zonesResult, (items) => {
       for (const z of items) {
-        if (z.id && z.name) {
-          this.cache.zones.set(z.id, z.name);
-          this.cache.bulkZoneTags.add(z.id);
+        if (!(z.id && z.name)) {
+          continue;
         }
+
+        this.cache.zones.set(z.id, z.name);
+        this.cache.bulkZoneTags.add(z.id);
       }
     });
 

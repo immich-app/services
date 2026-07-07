@@ -30,13 +30,13 @@ export async function verifyWebhookSignature(body: string, signature: string, se
   const computedSignature = [...new Uint8Array(mac)].map((b) => b.toString(16).padStart(2, '0')).join('');
 
   // Constant-time comparison to prevent timing attacks
-  return safeCompare(computedSignature, providedSignature);
+  return isSafeCompare(computedSignature, providedSignature);
 }
 
 /**
  * Constant-time string comparison to prevent timing attacks
  */
-function safeCompare(a: string, b: string): boolean {
+function isSafeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) {
     return false;
   }

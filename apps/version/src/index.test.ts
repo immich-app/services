@@ -774,7 +774,7 @@ describe('GitHubRepository', () => {
       if (url.origin === 'https://api.github.com' && url.pathname === '/repos/immich-app/immich/releases') {
         return Promise.resolve(Response.json(githubReleases));
       }
-      return Promise.reject(new Error(`unexpected fetch: ${url.toString()}`));
+      return Promise.reject(new Error(`unexpected fetch: ${url.href}`));
     });
 
     const releases = await new GitHubRepository().fetchReleases();
