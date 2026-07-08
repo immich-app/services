@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - name: Setup pnpm
@@ -52,7 +52,7 @@ jobs:
       OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_TF_DEV_ENV }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -63,7 +63,7 @@ jobs:
           path: '${{ github.workspace }}/dist'
 
       - name: Install 1Password CLI
-        uses: 1password/install-cli-action@8d006a0d0a4fd505af7f7ce589e7f768385ff5e4 # v3.0.0
+        uses: 1password/install-cli-action@a5215d3a7f75c1629216c465ea9ab3ab399c4b71 # v4.0.0
 
       - id: token
         uses: immich-app/devtools/actions/create-workflow-token@1af396ae134e4bc3b63d947e672bc68bf4ff9dc5 # create-workflow-token-action-v3.0.0
@@ -74,7 +74,7 @@ jobs:
           permission-pull-requests: write
 
       - name: Setup Mise
-        uses: immich-app/devtools/actions/use-mise@7b8610a904d57da241e4ddba17fa62b62b15aed4 # use-mise-action-v2.0.2
+        uses: immich-app/devtools/actions/use-mise@3bca63ca3c15020293b36b51737a3ee2c773340b # use-mise-action-v3.1.0
         with:
           github_token: ${{ steps.token.outputs.token }}
 
@@ -129,7 +129,7 @@ jobs:
       OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_TF_PROD_ENV }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -140,7 +140,7 @@ jobs:
           path: '${{ github.workspace }}/dist'
 
       - name: Install 1Password CLI
-        uses: 1password/install-cli-action@8d006a0d0a4fd505af7f7ce589e7f768385ff5e4 # v3.0.0
+        uses: 1password/install-cli-action@a5215d3a7f75c1629216c465ea9ab3ab399c4b71 # v4.0.0
 
       - id: token
         uses: immich-app/devtools/actions/create-workflow-token@1af396ae134e4bc3b63d947e672bc68bf4ff9dc5 # create-workflow-token-action-v3.0.0
@@ -150,7 +150,7 @@ jobs:
           permission-contents: read
 
       - name: Setup Mise
-        uses: immich-app/devtools/actions/use-mise@7b8610a904d57da241e4ddba17fa62b62b15aed4 # use-mise-action-v2.0.2
+        uses: immich-app/devtools/actions/use-mise@3bca63ca3c15020293b36b51737a3ee2c773340b # use-mise-action-v3.1.0
         with:
           github_token: ${{ steps.token.outputs.token }}
 
