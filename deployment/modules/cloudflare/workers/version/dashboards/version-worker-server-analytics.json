@@ -1,0 +1,1702 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 7,
+      "panels": [],
+      "title": "Immich Servers",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "id": 1,
+      "maxDataPoints": 300,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.3",
+      "targets": [
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Unique Servers (24h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "description": "Uses a 3h join window on version_latest_version_count: for up to 3h after a release, both the old and new version count as latest, inflating this stat.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "noValue": "-",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 0.8
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "id": 4,
+      "maxDataPoints": 300,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.3",
+      "targets": [
+        {
+          "expr": "count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) and on(user_agent) last_over_time(version_latest_version_count[3h])) / count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Servers Up-to-date (24h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "id": 9,
+      "maxDataPoints": 300,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "label_replace(count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h]))) by (user_agent), \"version\", \"$1\", \"user_agent\", \"immich-server/(.*)\")",
+          "legendFormat": "{{version}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Version Distribution (24h)",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "id": 8,
+      "maxDataPoints": 150,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[2h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[2h])))",
+          "legendFormat": "unique servers (2h)",
+          "range": true,
+          "refId": "A",
+          "interval": "5m"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
+          "legendFormat": "unique servers (24h)",
+          "refId": "B",
+          "interval": "30m"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d])))",
+          "legendFormat": "unique servers (30d)",
+          "refId": "C",
+          "interval": "1h"
+        }
+      ],
+      "title": "Unique Servers Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "percent"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "id": 10,
+      "maxDataPoints": 150,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "editorMode": "code",
+          "expr": "label_replace(count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[2h]))) by (user_agent), \"version\", \"$1\", \"user_agent\", \"immich-server/(.*)\")",
+          "legendFormat": "{{version}}",
+          "range": true,
+          "refId": "A",
+          "interval": "5m"
+        }
+      ],
+      "title": "Version Adoption Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "description": "New = client_ip not seen in the prior 30d. Subject to IP churn (CGNAT, IPv6 privacy rotation), and the prior-30d window is bounded by metrics retention.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "id": 11,
+      "maxDataPoints": 300,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[5m]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[5m])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 5m) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 5m)))",
+          "legendFormat": "new servers",
+          "refId": "A",
+          "interval": "5m"
+        }
+      ],
+      "title": "New Servers (not seen in last 30d)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "description": "Join semantics as panel 'Servers Up-to-date': 3h latest-version window inflates counts for up to 3h after a release. Only /version requests count toward activity here (not /changelog).",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "axisSoftMin": 0,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "upgrades (seen before)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "new installs"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "id": 33,
+      "maxDataPoints": 150,
+      "targets": [
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) last_over_time(version_latest_version_count[3h])) and count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+          "legendFormat": "upgrades (seen before)",
+          "refId": "A",
+          "interval": "5m"
+        },
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) last_over_time(version_latest_version_count[3h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+          "legendFormat": "new installs",
+          "refId": "B",
+          "interval": "5m"
+        }
+      ],
+      "title": "Latest Version: Upgrades vs New Installs",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "description": "New = client_ip not seen in the prior 30d. Subject to IP churn (CGNAT, IPv6 privacy rotation), and the prior-30d window is bounded by metrics retention.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "pointSize": 5,
+            "showPoints": "never",
+            "axisSoftMin": 0,
+            "spanNulls": true
+          },
+          "color": {
+            "fixedColor": "green",
+            "mode": "fixed"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      },
+      "id": 34,
+      "maxDataPoints": 150,
+      "targets": [
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[1h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+          "legendFormat": "new servers / 1h",
+          "refId": "A",
+          "interval": "5m"
+        },
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1d]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[1d])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1d) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1d)))",
+          "legendFormat": "new servers / day",
+          "refId": "B",
+          "interval": "5m",
+          "hide": true
+        }
+      ],
+      "title": "New Server Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 37
+      },
+      "id": 12,
+      "maxDataPoints": 300,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "count(count by (client_ip, continent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h]))) by (continent)",
+          "legendFormat": "{{continent}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Servers by Continent (24h)",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Immich servers"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Other"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 37
+      },
+      "id": 13,
+      "maxDataPoints": 300,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "(sum(count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) or vector(0)) + (sum(count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) or vector(0))",
+          "legendFormat": "Immich servers",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        },
+        {
+          "expr": "(sum(count_over_time(version_version_request_invocation{user_agent!~\"immich-server/.*\",user_agent!=\"\"}[24h])) or vector(0)) + (sum(count_over_time(version_changelog_request_invocation{user_agent!~\"immich-server/.*\",user_agent!=\"\"}[24h])) or vector(0))",
+          "legendFormat": "Other",
+          "refId": "B",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Traffic Source (24h)",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-blues"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 37
+      },
+      "id": 14,
+      "maxDataPoints": 300,
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "10.4.3",
+      "targets": [
+        {
+          "expr": "topk(15, sum(count_over_time(version_handle_request_invocation{colo!=\"\"}[24h])) by (colo))",
+          "legendFormat": "{{colo}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "Top Cloudflare Edge Locations (24h)",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "IPv4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "IPv6"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 37
+      },
+      "id": 32,
+      "maxDataPoints": 300,
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{client_ip!~\".*:.*\",client_ip!=\"\"}[24h]) or count_over_time(version_changelog_request_invocation{client_ip!~\".*:.*\",client_ip!=\"\"}[24h])))",
+          "legendFormat": "IPv4",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        },
+        {
+          "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{client_ip=~\".*:.*\"}[24h]) or count_over_time(version_changelog_request_invocation{client_ip=~\".*:.*\"}[24h])))",
+          "legendFormat": "IPv6",
+          "refId": "B",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "title": "IPv4 vs IPv6 (24h)",
+      "type": "piechart"
+    },
+    {
+      "collapsed": true,
+      "id": 40,
+      "title": "Recording Rule Validation (temporary)",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 46
+          },
+          "id": 41,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[2h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[2h])))",
+              "legendFormat": "raw 2h",
+              "refId": "A",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_unique:2h",
+              "legendFormat": "rule 2h",
+              "refId": "B",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
+              "legendFormat": "raw 24h",
+              "refId": "C",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_unique:24h",
+              "legendFormat": "rule 24h",
+              "refId": "D",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d])))",
+              "legendFormat": "raw 30d",
+              "refId": "E",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_unique:30d",
+              "legendFormat": "rule 30d",
+              "refId": "F",
+              "interval": "30m",
+              "range": true
+            }
+          ],
+          "title": "Unique servers \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 54
+          },
+          "id": 42,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[5m]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[5m])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 5m) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 5m)))",
+              "legendFormat": "raw 5m",
+              "refId": "A",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_new:5m",
+              "legendFormat": "rule 5m",
+              "refId": "B",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[1h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+              "legendFormat": "raw 1h",
+              "refId": "C",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_new:1h",
+              "legendFormat": "rule 1h",
+              "refId": "D",
+              "interval": "5m",
+              "range": true
+            }
+          ],
+          "title": "New servers \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 54
+          },
+          "id": 43,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) last_over_time(version_latest_version_count[3h])) and count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+              "legendFormat": "raw upgrades",
+              "refId": "A",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_upgrades:1h",
+              "legendFormat": "rule upgrades",
+              "refId": "B",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) last_over_time(version_latest_version_count[3h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+              "legendFormat": "raw new installs",
+              "refId": "C",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_new_installs:1h",
+              "legendFormat": "rule new installs",
+              "refId": "D",
+              "interval": "5m",
+              "range": true
+            }
+          ],
+          "title": "Upgrades / new installs \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "percentunit",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 62
+          },
+          "id": 44,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) and on(user_agent) last_over_time(version_latest_version_count[3h])) / count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
+              "legendFormat": "raw",
+              "refId": "A",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_uptodate_ratio:24h",
+              "legendFormat": "rule",
+              "refId": "B",
+              "interval": "5m",
+              "range": true
+            }
+          ],
+          "title": "Up-to-date ratio \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 62
+          },
+          "id": 45,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "label_replace(count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h]))) by (user_agent), \"version\", \"$1\", \"user_agent\", \"immich-server/(.*)\")",
+              "legendFormat": "raw {{version}}",
+              "refId": "A",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "label_replace(version:servers_by_version:24h, \"version\", \"$1\", \"user_agent\", \"immich-server/(.*)\")",
+              "legendFormat": "rule {{version}}",
+              "refId": "B",
+              "interval": "30m",
+              "range": true
+            }
+          ],
+          "title": "Servers by version (24h) \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 70
+          },
+          "id": 46,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip, continent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h]))) by (continent)",
+              "legendFormat": "raw {{continent}}",
+              "refId": "A",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_by_continent:24h",
+              "legendFormat": "rule {{continent}}",
+              "refId": "B",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{client_ip!~\".*:.*\",client_ip!=\"\"}[24h]) or count_over_time(version_changelog_request_invocation{client_ip!~\".*:.*\",client_ip!=\"\"}[24h])))",
+              "legendFormat": "raw ipv4",
+              "refId": "C",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_ipv4:24h",
+              "legendFormat": "rule ipv4",
+              "refId": "D",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{client_ip=~\".*:.*\"}[24h]) or count_over_time(version_changelog_request_invocation{client_ip=~\".*:.*\"}[24h])))",
+              "legendFormat": "raw ipv6",
+              "refId": "E",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_ipv6:24h",
+              "legendFormat": "rule ipv6",
+              "refId": "F",
+              "interval": "30m",
+              "range": true
+            }
+          ],
+          "title": "Continent & IP family \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 70
+          },
+          "id": 47,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "(sum(count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) or vector(0)) + (sum(count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) or vector(0))",
+              "legendFormat": "raw immich",
+              "refId": "A",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "sum(sum_over_time(version:requests_immich:count5m[24h]))",
+              "legendFormat": "rule immich",
+              "refId": "B",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "(sum(count_over_time(version_version_request_invocation{user_agent!~\"immich-server/.*\",user_agent!=\"\"}[24h])) or vector(0)) + (sum(count_over_time(version_changelog_request_invocation{user_agent!~\"immich-server/.*\",user_agent!=\"\"}[24h])) or vector(0))",
+              "legendFormat": "raw other",
+              "refId": "C",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "sum(sum_over_time(version:requests_other:count5m[24h]))",
+              "legendFormat": "rule other",
+              "refId": "D",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "sum(count_over_time(version_handle_request_invocation[24h]))",
+              "legendFormat": "raw total",
+              "refId": "E",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "sum(sum_over_time(version:requests:count5m[24h]))",
+              "legendFormat": "rule total",
+              "refId": "F",
+              "interval": "30m",
+              "range": true
+            }
+          ],
+          "title": "Request sums \u2014 raw vs rule",
+          "type": "timeseries"
+        }
+      ]
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": [
+    "cloudflare-workers",
+    "version"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5m",
+      "15m",
+      "30m",
+      "1h"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Version Worker Server Analytics",
+  "uid": "version-worker-server-analytics",
+  "version": 1,
+  "weekStart": ""
+}
