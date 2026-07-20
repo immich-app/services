@@ -387,13 +387,13 @@
           "expr": "quantile(0.95, last_over_time(version_handle_request_duration[$__interval]))",
           "legendFormat": "handle_request p95",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "quantile(0.95, last_over_time(version_version_request_duration[$__interval]))",
           "legendFormat": "/version p95",
           "refId": "B",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "Request Duration (p95)",
@@ -562,31 +562,31 @@
           "expr": "sum(count_over_time(version_changelog_request_invocation{cache=\"cdn\"}[$__interval]))",
           "legendFormat": "CDN hit (/changelog)",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_changelog_request_invocation{cache=\"\"}[$__interval]))",
           "legendFormat": "CDN miss (/changelog)",
           "refId": "B",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_memory_cache_hit_count[$__interval]))",
           "legendFormat": "memory hit (/version)",
           "refId": "C",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_memory_cache_stale_count[$__interval]))",
           "legendFormat": "memory stale (/version)",
           "refId": "D",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_memory_cache_miss_count[$__interval]))",
           "legendFormat": "memory miss (/version)",
           "refId": "E",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "Cache Hit Rate",
@@ -678,7 +678,7 @@
           "expr": "sum(count_over_time(version_handle_request_invocation[$__interval])) by (continent)",
           "legendFormat": "{{continent}}",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "Requests by Region",
@@ -784,31 +784,31 @@
           "expr": "quantile(0.95, last_over_time(version_d1_get_latest_duration[$__interval]))",
           "legendFormat": "get_latest p95",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "quantile(0.95, last_over_time(version_d1_get_changelog_duration[$__interval]))",
           "legendFormat": "get_changelog p95",
           "refId": "B",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "quantile(0.95, last_over_time(version_d1_upsert_duration[$__interval]))",
           "legendFormat": "upsert p95",
           "refId": "C",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "quantile(0.95, last_over_time(version_d1_bulk_upsert_duration[$__interval]))",
           "legendFormat": "bulk_upsert p95",
           "refId": "D",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "quantile(0.95, last_over_time(version_webhook_upsert_duration[$__interval]))",
           "legendFormat": "webhook_upsert p95",
           "refId": "E",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "D1 Query Duration (p95)",
@@ -899,25 +899,25 @@
           "expr": "sum(count_over_time(version_d1_get_latest_invocation[$__interval]))",
           "legendFormat": "get_latest",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_d1_get_changelog_invocation[$__interval]))",
           "legendFormat": "get_changelog",
           "refId": "B",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_d1_upsert_invocation[$__interval]))",
           "legendFormat": "upsert",
           "refId": "C",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_d1_bulk_upsert_invocation[$__interval]))",
           "legendFormat": "bulk_upsert",
           "refId": "D",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "D1 Query Rate",
@@ -1007,25 +1007,25 @@
           "expr": "sum(count_over_time(version_d1_get_latest_errors[$__interval])) or vector(0)",
           "legendFormat": "get_latest errors",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_d1_get_changelog_errors[$__interval])) or vector(0)",
           "legendFormat": "get_changelog errors",
           "refId": "B",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_d1_upsert_errors[$__interval])) or vector(0)",
           "legendFormat": "upsert errors",
           "refId": "C",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_d1_bulk_upsert_errors[$__interval])) or vector(0)",
           "legendFormat": "bulk_upsert errors",
           "refId": "D",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "D1 Error Rate",
@@ -1117,7 +1117,7 @@
           "expr": "max(last_over_time(version_d1_release_count_count[$__interval]))",
           "legendFormat": "releases",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "Releases Stored Over Time",
@@ -1221,13 +1221,13 @@
           "expr": "sum(count_over_time(version_webhook_received_count[$__interval])) by (event)",
           "legendFormat": "received ({{event}})",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_webhook_release_upserted_count[$__interval]))",
           "legendFormat": "upserted",
           "refId": "B",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "Webhook Events",
@@ -1318,25 +1318,25 @@
           "expr": "sum(count_over_time(version_cron_sync_invocation[$__interval]))",
           "legendFormat": "cron runs",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(sum_over_time(version_cron_releases_synced_count[$__interval]))",
           "legendFormat": "releases synced",
           "refId": "B",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(count_over_time(version_cron_release_updated_count[$__interval]))",
           "legendFormat": "releases updated",
           "refId": "C",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "sum(sum_over_time(version_cron_full_sync_count[$__interval]))",
           "legendFormat": "nightly full sync",
           "refId": "D",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "Cron Sync",
@@ -1429,13 +1429,13 @@
           "expr": "quantile(0.95, last_over_time(version_github_fetch_latest_duration[$__interval]))",
           "legendFormat": "fetch latest p95",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         },
         {
           "expr": "quantile(0.95, last_over_time(version_github_fetch_all_duration[$__interval]))",
           "legendFormat": "fetch all p95",
           "refId": "B",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "GitHub API Duration",
@@ -1625,7 +1625,7 @@
           "expr": "sum(count_over_time(version_http_response_count{method!=\"POST\"}[$__interval])) by (path)",
           "legendFormat": "{{path}}",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "Requests by Path (non-POST)",
@@ -1762,7 +1762,7 @@
           "expr": "sum(count_over_time(version_http_response_count[$__interval])) by (status)",
           "legendFormat": "{{status}}",
           "refId": "A",
-          "interval": "1m"
+          "interval": "5m"
         }
       ],
       "title": "Response Status Codes",
@@ -1795,6 +1795,6 @@
   "timezone": "browser",
   "title": "Version Worker Overview",
   "uid": "version-worker-overview",
-  "version": 8,
+  "version": 9,
   "weekStart": ""
 }
