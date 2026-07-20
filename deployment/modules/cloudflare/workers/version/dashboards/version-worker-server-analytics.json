@@ -1012,6 +1012,665 @@
       ],
       "title": "IPv4 vs IPv6 (24h)",
       "type": "piechart"
+    },
+    {
+      "collapsed": true,
+      "id": 40,
+      "title": "Recording Rule Validation (temporary)",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 24,
+            "x": 0,
+            "y": 46
+          },
+          "id": 41,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[2h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[2h])))",
+              "legendFormat": "raw 2h",
+              "refId": "A",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_unique:2h",
+              "legendFormat": "rule 2h",
+              "refId": "B",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
+              "legendFormat": "raw 24h",
+              "refId": "C",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_unique:24h",
+              "legendFormat": "rule 24h",
+              "refId": "D",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d])))",
+              "legendFormat": "raw 30d",
+              "refId": "E",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_unique:30d",
+              "legendFormat": "rule 30d",
+              "refId": "F",
+              "interval": "30m",
+              "range": true
+            }
+          ],
+          "title": "Unique servers \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 54
+          },
+          "id": 42,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[5m]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[5m])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 5m) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 5m)))",
+              "legendFormat": "raw 5m",
+              "refId": "A",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_new:5m",
+              "legendFormat": "rule 5m",
+              "refId": "B",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[1h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+              "legendFormat": "raw 1h",
+              "refId": "C",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_new:1h",
+              "legendFormat": "rule 1h",
+              "refId": "D",
+              "interval": "5m",
+              "range": true
+            }
+          ],
+          "title": "New servers \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 54
+          },
+          "id": 43,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) last_over_time(version_latest_version_count[3h])) and count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+              "legendFormat": "raw upgrades",
+              "refId": "A",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_upgrades:1h",
+              "legendFormat": "rule upgrades",
+              "refId": "B",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[1h]) and on(user_agent) last_over_time(version_latest_version_count[3h])) unless count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[30d] offset 1h)))",
+              "legendFormat": "raw new installs",
+              "refId": "C",
+              "interval": "5m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_new_installs:1h",
+              "legendFormat": "rule new installs",
+              "refId": "D",
+              "interval": "5m",
+              "range": true
+            }
+          ],
+          "title": "Upgrades / new installs \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "percentunit",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 62
+          },
+          "id": 44,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) and on(user_agent) last_over_time(version_latest_version_count[3h])) / count(count by (client_ip) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])))",
+              "legendFormat": "raw",
+              "refId": "A",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_uptodate_ratio:24h",
+              "legendFormat": "rule",
+              "refId": "B",
+              "interval": "5m",
+              "range": true
+            }
+          ],
+          "title": "Up-to-date ratio \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 62
+          },
+          "id": 45,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "label_replace(count(count by (client_ip, user_agent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h]))) by (user_agent), \"version\", \"$1\", \"user_agent\", \"immich-server/(.*)\")",
+              "legendFormat": "raw {{version}}",
+              "refId": "A",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "label_replace(version:servers_by_version:24h, \"version\", \"$1\", \"user_agent\", \"immich-server/(.*)\")",
+              "legendFormat": "rule {{version}}",
+              "refId": "B",
+              "interval": "30m",
+              "range": true
+            }
+          ],
+          "title": "Servers by version (24h) \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 70
+          },
+          "id": 46,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip, continent) (count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h]) or count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h]))) by (continent)",
+              "legendFormat": "raw {{continent}}",
+              "refId": "A",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_by_continent:24h",
+              "legendFormat": "rule {{continent}}",
+              "refId": "B",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{client_ip!~\".*:.*\",client_ip!=\"\"}[24h]) or count_over_time(version_changelog_request_invocation{client_ip!~\".*:.*\",client_ip!=\"\"}[24h])))",
+              "legendFormat": "raw ipv4",
+              "refId": "C",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_ipv4:24h",
+              "legendFormat": "rule ipv4",
+              "refId": "D",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "count(count by (client_ip) (count_over_time(version_version_request_invocation{client_ip=~\".*:.*\"}[24h]) or count_over_time(version_changelog_request_invocation{client_ip=~\".*:.*\"}[24h])))",
+              "legendFormat": "raw ipv6",
+              "refId": "E",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "version:servers_ipv6:24h",
+              "legendFormat": "rule ipv6",
+              "refId": "F",
+              "interval": "30m",
+              "range": true
+            }
+          ],
+          "title": "Continent & IP family \u2014 raw vs rule",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "description": "Temporary: validates vmalert recording rules against the raw queries before panels are repointed. Remove after ~1 week of clean overlap.",
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": true
+              },
+              "unit": "short",
+              "mappings": []
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 70
+          },
+          "id": 47,
+          "maxDataPoints": 150,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "(sum(count_over_time(version_version_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) or vector(0)) + (sum(count_over_time(version_changelog_request_invocation{user_agent=~\"immich-server/.*\"}[24h])) or vector(0))",
+              "legendFormat": "raw immich",
+              "refId": "A",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "sum(sum_over_time(version:requests_immich:count5m[24h]))",
+              "legendFormat": "rule immich",
+              "refId": "B",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "(sum(count_over_time(version_version_request_invocation{user_agent!~\"immich-server/.*\",user_agent!=\"\"}[24h])) or vector(0)) + (sum(count_over_time(version_changelog_request_invocation{user_agent!~\"immich-server/.*\",user_agent!=\"\"}[24h])) or vector(0))",
+              "legendFormat": "raw other",
+              "refId": "C",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "sum(sum_over_time(version:requests_other:count5m[24h]))",
+              "legendFormat": "rule other",
+              "refId": "D",
+              "interval": "30m",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "sum(count_over_time(version_handle_request_invocation[24h]))",
+              "legendFormat": "raw total",
+              "refId": "E",
+              "interval": "1h",
+              "range": true
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+              },
+              "expr": "sum(sum_over_time(version:requests:count5m[24h]))",
+              "legendFormat": "rule total",
+              "refId": "F",
+              "interval": "30m",
+              "range": true
+            }
+          ],
+          "title": "Request sums \u2014 raw vs rule",
+          "type": "timeseries"
+        }
+      ]
     }
   ],
   "refresh": "",
