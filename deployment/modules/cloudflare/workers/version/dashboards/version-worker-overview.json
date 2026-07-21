@@ -73,7 +73,7 @@
       "pluginVersion": "10.4.3",
       "targets": [
         {
-          "expr": "sum(count_over_time(version_handle_request_invocation[24h]))",
+          "expr": "sum(sum_over_time(version:requests:count5m[24h]))",
           "refId": "A",
           "instant": true,
           "range": false
@@ -145,7 +145,7 @@
       "pluginVersion": "10.4.3",
       "targets": [
         {
-          "expr": "(sum(count_over_time(version_memory_cache_hit_count[24h])) + sum(count_over_time(version_memory_cache_stale_count[24h]))) / (sum(count_over_time(version_memory_cache_hit_count[24h])) + sum(count_over_time(version_memory_cache_stale_count[24h])) + sum(count_over_time(version_memory_cache_miss_count[24h])))",
+          "expr": "(sum(sum_over_time(version:memory_cache_hit:count5m[24h])) + sum(sum_over_time(version:memory_cache_stale:count5m[24h]))) / (sum(sum_over_time(version:memory_cache_hit:count5m[24h])) + sum(sum_over_time(version:memory_cache_stale:count5m[24h])) + sum(sum_over_time(version:memory_cache_miss:count5m[24h])))",
           "refId": "A",
           "instant": true,
           "range": false
@@ -1795,6 +1795,6 @@
   "timezone": "browser",
   "title": "Version Worker Overview",
   "uid": "version-worker-overview",
-  "version": 9,
+  "version": 10,
   "weekStart": ""
 }
