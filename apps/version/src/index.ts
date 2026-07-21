@@ -24,6 +24,30 @@ function errorResponse(error: string, status: number, extraHeaders?: Record<stri
   return jsonResponse({ error }, status, extraHeaders);
 }
 
+const UA_VERSION_REGEX = /^immich-server\/v?(\d+\.\d+\.\d+)/;
+
+// Buckets how far behind the latest release a server is, approximated by minor
+// version distance (patch-only lag counts as 1). Bounded value set.
+function versionLagBucket(userAgent: string, latestVersion: string): string {
+  const match = UA_VERSION_REGEX.exec(userAgent);
+  const current = match ? semver.parse(match[1]) : null;
+  const latest = semver.parse(latestVersion);
+  if (!current || !latest) {
+    return 'unknown';
+  }
+  if (semver.gte(current, latest)) {
+    return '0';
+  }
+  if (current.major !== latest.major) {
+    return '6+';
+  }
+  const behind = Math.max(latest.minor - current.minor, 1);
+  if (behind === 1) {
+    return '1';
+  }
+  return behind <= 5 ? '2-5' : '6+';
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const deferredRepository = new DeferredRepository(ctx);
@@ -61,19 +85,23 @@ export default {
           }
 
           case '/version': {
+            // we assume stable for backwards compatibility; the tag value must
+            // stay bounded, so anything unexpected is collapsed to "invalid"
+            const channelParam = url.searchParams.get('channel') ?? 'stable';
+            const channel = versionService.isValidChannel(channelParam) ? channelParam : 'invalid';
+            const userAgent = request.headers.get('User-Agent') ?? '';
+
             return await metrics.monitorAsyncFunction(
               {
                 name: 'version_request',
                 tags: {
                   client_ip: request.headers.get('CF-Connecting-IP') ?? '',
-                  user_agent: request.headers.get('User-Agent') ?? '',
+                  user_agent: userAgent,
+                  channel,
                 },
               },
               async (): Promise<Response> => {
-                // we assume stable for backwards compatibility
-                const channel = url.searchParams.get('channel') ?? 'stable';
-
-                if (!versionService.isValidChannel(channel)) {
+                if (channel === 'invalid') {
                   return errorResponse('Invalid release channel. Expected "stable" or "rc"', 400);
                 }
 
@@ -81,6 +109,15 @@ export default {
                 if (!latest) {
                   return errorResponse('No releases found', 404);
                 }
+
+                metrics.push(
+                  Metric.create('version_lag')
+                    .addTag('channel', channel)
+                    .addTag('versions_behind', versionLagBucket(userAgent, latest.version))
+                    .intField('count', 1),
+                  { defaults: false },
+                );
+
                 return jsonResponse(latest);
               },
             )();
@@ -105,6 +142,7 @@ export default {
 
             const requestTags = {
               version,
+              channel,
               client_ip: request.headers.get('CF-Connecting-IP') ?? '',
               user_agent: request.headers.get('User-Agent') ?? '',
             };
@@ -126,7 +164,7 @@ export default {
             }
 
             return await metrics.monitorAsyncFunction(
-              { name: 'changelog_request', tags: requestTags },
+              { name: 'changelog_request', tags: { ...requestTags, cache: 'origin' } },
               async (): Promise<Response> => {
                 const changelog = await versionService.getChangelog(version, channel);
                 const response = jsonResponse(changelog, 200, { 'Cache-Control': 'public, max-age=86400' });
@@ -259,6 +297,7 @@ export default {
         )();
         console.log(`[cron] Synced ${result.synced} releases (full=${result.full})`);
       }
+      metrics.push(Metric.create('cron_last_success').intField('timestamp', Math.floor(Date.now() / 1000)));
     } catch (error) {
       console.error('[cron] Sync failed:', error);
       metrics.push(
@@ -268,10 +307,21 @@ export default {
       );
     }
 
-    // Always emit release count and latest version, even if sync failed
+    if (githubRepository.rateLimitRemaining !== undefined) {
+      metrics.push(Metric.create('github_rate_limit').intField('remaining', githubRepository.rateLimitRemaining));
+    }
+
+    // Always emit release count, data freshness, and latest version, even if sync failed
     try {
       const releaseCount = await releaseRepository.getCount();
       metrics.push(Metric.create('d1_release_count').intField('count', releaseCount));
+      const latest = await releaseRepository.getLatest();
+      if (latest?.published_at) {
+        const ageSeconds = Math.floor((Date.now() - Date.parse(latest.published_at)) / 1000);
+        if (Number.isFinite(ageSeconds)) {
+          metrics.push(Metric.create('latest_release').intField('age_seconds', ageSeconds));
+        }
+      }
       await versionService.emitLatestVersion();
     } catch {
       // D1 might not be initialized yet

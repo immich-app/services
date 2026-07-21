@@ -67,7 +67,13 @@ export interface IMetricsRepository {
     call: T,
     options?: MonitorOptions,
   ): (...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>>;
-  push(metric: Metric): void;
+  push(metric: Metric, options?: PushOptions): void;
+}
+
+export interface PushOptions {
+  // Set to false for bounded-cardinality metrics that must not inherit the
+  // per-request colo/asOrg/continent tags.
+  defaults?: boolean;
 }
 
 export class HeaderMetricsProvider implements IMetricsProviderRepository {
@@ -185,9 +191,11 @@ export class CloudflareMetricsRepository implements IMetricsRepository {
     );
   }
 
-  push(metric: Metric) {
+  push(metric: Metric, { defaults = true }: PushOptions = {}) {
     metric.prefixName(this.operationPrefix);
-    metric.addTags(this.defaultTags);
+    if (defaults) {
+      metric.addTags(this.defaultTags);
+    }
     for (const provider of this.metricsProviders) {
       provider.pushMetric(metric);
     }

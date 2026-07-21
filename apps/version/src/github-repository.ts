@@ -13,16 +13,20 @@ export class GitHubRateLimitError extends Error {
 }
 
 export interface IGitHubRepository {
+  readonly rateLimitRemaining?: number;
   fetchLatestRelease(): Promise<GitHubRelease | null>;
   fetchReleases(): Promise<GitHubRelease[]>;
 }
 
 export class GitHubRepository implements IGitHubRepository {
+  rateLimitRemaining?: number;
+
   constructor(private githubToken?: string) {}
 
   async fetchLatestRelease(): Promise<GitHubRelease | null> {
     const headers = this.buildHeaders();
     const response = await fetch(`${GITHUB_RELEASES_URL}/latest`, { headers });
+    this.captureRateLimit(response);
 
     if (!response.ok) {
       handleErrorResponse(response);
@@ -39,6 +43,7 @@ export class GitHubRepository implements IGitHubRepository {
     for (let page = 1; page <= MAX_PAGES; page++) {
       const url = `${GITHUB_RELEASES_URL}?per_page=${PER_PAGE}&page=${page}`;
       const response = await fetch(url, { headers });
+      this.captureRateLimit(response);
 
       if (!response.ok) {
         handleErrorResponse(response);
@@ -67,6 +72,17 @@ export class GitHubRepository implements IGitHubRepository {
     });
 
     return allReleases;
+  }
+
+  private captureRateLimit(response: Response) {
+    const header = response.headers.get('X-RateLimit-Remaining');
+    if (header === null) {
+      return;
+    }
+    const remaining = Number(header);
+    if (Number.isFinite(remaining)) {
+      this.rateLimitRemaining = remaining;
+    }
   }
 
   private buildHeaders(): Record<string, string> {
