@@ -10,7 +10,8 @@ compatibility_flags = ["nodejs_compat"]
 # These will be set as secrets in production
 [vars]
 GITHUB_APP_ID = "" # Will be set when GitHub App is created
-ALLOWED_USERS_URL = "https://raw.githubusercontent.com/immich-app/devtools/main/tf/deployment/data/users.json"
+ALLOWED_USERS_REPO = "immich-app/core-infra-tf"
+ALLOWED_USERS_PATH = "deployment/data/users.json"
 
 # Secrets (set via wrangler secret put or Terraform)
 # GITHUB_APP_PRIVATE_KEY - RSA private key for the GitHub App

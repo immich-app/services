@@ -3,7 +3,7 @@
  * Checks if a pull request has been approved by authorized users
  */
 
-import { createOctokitForInstallation } from './auth.js';
+import { createOctokitForInstallation, getInstallationId } from './auth.js';
 import { CheckRunManager } from './check-runs.js';
 
 type Role = 'immich_admin' | 'team' | 'immich' | 'contributor' | 'support' | 'futo' | 'yucca';
@@ -48,14 +48,16 @@ export interface ValidationResult {
 }
 
 export class ApprovalValidator {
-  private allowedUsersUrl: string;
+  private allowedUsersRepo: string;
+  private allowedUsersPath: string;
   private allowedUsersCache: { users: User[]; fetchedAt: number } | null = null;
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private appId: string;
   private privateKey: string;
 
-  constructor(allowedUsersUrl: string, appId: string, privateKey: string) {
-    this.allowedUsersUrl = allowedUsersUrl;
+  constructor(allowedUsersRepo: string, allowedUsersPath: string, appId: string, privateKey: string) {
+    this.allowedUsersRepo = allowedUsersRepo;
+    this.allowedUsersPath = allowedUsersPath;
     this.appId = appId;
     this.privateKey = privateKey;
   }
@@ -153,7 +155,10 @@ export class ApprovalValidator {
   }
 
   /**
-   * Fetch the list of allowed users from the configured URL
+   * Fetch the list of allowed users from the configured repository.
+   *
+   * The file lives in a private repository, so this reads it through the
+   * GitHub App installation rather than over an unauthenticated URL.
    */
   private async getAllowedUsers(): Promise<User[]> {
     // Check cache first
@@ -161,10 +166,34 @@ export class ApprovalValidator {
       return this.allowedUsersCache.users;
     }
 
-    const response = await fetch(this.allowedUsersUrl);
+    const [owner, repo] = this.allowedUsersRepo.split('/', 2);
 
-    if (!response.ok) {
-      console.log(`[approval] Failed to fetch allowed users (status: ${response.status})`);
+    try {
+      if (!owner || !repo) {
+        throw new Error(`Invalid allowed users repo: ${this.allowedUsersRepo}`);
+      }
+
+      const installationId = await getInstallationId(this.appId, this.privateKey, owner, repo);
+      const octokit = createOctokitForInstallation(this.appId, this.privateKey, installationId);
+
+      const { data } = await octokit.rest.repos.getContent({
+        owner,
+        repo,
+        path: this.allowedUsersPath,
+        mediaType: { format: 'raw' },
+      });
+
+      const users = JSON.parse(data as unknown as string) as User[];
+
+      // Update cache
+      this.allowedUsersCache = {
+        users,
+        fetchedAt: Date.now(),
+      };
+
+      return users;
+    } catch (error) {
+      console.log(`[approval] Failed to fetch allowed users from ${this.allowedUsersRepo}:`, error);
 
       // If we have cached data, use it even if expired
       if (this.allowedUsersCache) {
@@ -172,19 +201,10 @@ export class ApprovalValidator {
         return this.allowedUsersCache.users;
       }
 
-      // Default to empty list if no cache and fetch failed
+      // Default to empty list if no cache and fetch failed, so an unreadable
+      // allowlist fails closed rather than approving.
       return [];
     }
-
-    const users = (await response.json()) as User[];
-
-    // Update cache
-    this.allowedUsersCache = {
-      users,
-      fetchedAt: Date.now(),
-    };
-
-    return users;
   }
 
   /**

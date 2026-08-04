@@ -101,8 +101,12 @@ wrangler deploy
 
 ### Allowed Users List
 
-The worker fetches the list of authorized approvers from a configurable URL. By default, it uses:
-`https://raw.githubusercontent.com/immich-app/devtools/main/tf/deployment/data/users.json`
+The worker reads the list of authorized approvers from a repository, via the GitHub App
+installation, so the file can live in a private repository. Configured with
+`ALLOWED_USERS_REPO` and `ALLOWED_USERS_PATH`, defaulting to
+`immich-app/core-infra-tf` and `deployment/data/users.json`.
+
+This requires the app to have `contents: read` on that repository.
 
 The JSON structure should be:
 

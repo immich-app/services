@@ -38,7 +38,13 @@ export default {
         }
 
         // Validate environment variables
-        if (!env.GITHUB_APP_ID || !env.GITHUB_APP_PRIVATE_KEY || !env.GITHUB_WEBHOOK_SECRET || !env.ALLOWED_USERS_URL) {
+        if (
+          !env.GITHUB_APP_ID ||
+          !env.GITHUB_APP_PRIVATE_KEY ||
+          !env.GITHUB_WEBHOOK_SECRET ||
+          !env.ALLOWED_USERS_REPO ||
+          !env.ALLOWED_USERS_PATH
+        ) {
           console.error('[webhook] Missing required environment variables');
           return new Response('Server configuration error', { status: 500 });
         }
@@ -73,7 +79,8 @@ export default {
         // Initialize services
         const checkRunManager = new CheckRunManager(env.GITHUB_APP_ID, env.GITHUB_APP_PRIVATE_KEY);
         const approvalValidator = new ApprovalValidator(
-          env.ALLOWED_USERS_URL,
+          env.ALLOWED_USERS_REPO,
+          env.ALLOWED_USERS_PATH,
           env.GITHUB_APP_ID,
           env.GITHUB_APP_PRIVATE_KEY,
         );

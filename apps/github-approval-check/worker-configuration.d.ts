@@ -10,7 +10,8 @@ declare namespace Cloudflare {
     GITHUB_APP_ID: string;
     GITHUB_APP_PRIVATE_KEY: string;
     GITHUB_WEBHOOK_SECRET: string;
-    ALLOWED_USERS_URL: 'https://raw.githubusercontent.com/immich-app/devtools/main/tf/deployment/data/users.json';
+    ALLOWED_USERS_REPO: 'immich-app/core-infra-tf';
+    ALLOWED_USERS_PATH: 'deployment/data/users.json';
     ENVIRONMENT?: string;
     STAGE?: string;
     DEV_PR_NUMBER?: string;
@@ -21,7 +22,9 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
   [Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-  interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, 'GITHUB_APP_ID' | 'ALLOWED_USERS_URL'>> {}
+  interface ProcessEnv extends StringifyValues<
+    Pick<Cloudflare.Env, 'GITHUB_APP_ID' | 'ALLOWED_USERS_REPO' | 'ALLOWED_USERS_PATH'>
+  > {}
 }
 
 // Begin runtime types
