@@ -21,8 +21,14 @@ variable "github_checks_webhook_secret" {
   sensitive   = true
 }
 
-variable "allowed_users_url" {
-  description = "URL to fetch the list of allowed users"
+variable "allowed_users_repo" {
+  description = "Repository (owner/name) holding the list of allowed users, read via the GitHub App"
   type        = string
-  default     = "https://raw.githubusercontent.com/immich-app/devtools/main/tf/deployment/data/users.json"
+  default     = "immich-app/core-infra-tf"
+}
+
+variable "allowed_users_path" {
+  description = "Path to the allowed users file within allowed_users_repo"
+  type        = string
+  default     = "deployment/data/users.json"
 }

@@ -13,9 +13,14 @@ resource "cloudflare_worker_version" "worker" {
   worker_id  = cloudflare_worker.worker.id
   bindings = [
     {
-      name = "ALLOWED_USERS_URL"
+      name = "ALLOWED_USERS_REPO"
       type = "plain_text"
-      text = var.allowed_users_url
+      text = var.allowed_users_repo
+    },
+    {
+      name = "ALLOWED_USERS_PATH"
+      type = "plain_text"
+      text = var.allowed_users_path
     },
     {
       name = "ENVIRONMENT"
