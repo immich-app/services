@@ -5,6 +5,7 @@
 
 import { createOctokitForInstallation, getInstallationId } from './auth.js';
 import { CheckRunManager } from './check-runs.js';
+import { REPO_BOT_APPROVERS } from './constants.js';
 
 type Role = 'immich_admin' | 'team' | 'immich' | 'contributor' | 'support' | 'futo' | 'yucca';
 
@@ -74,8 +75,13 @@ export class ApprovalValidator {
     // Fetch allowed users
     const allowedUsers = await this.getAllowedUsers();
 
-    // Get authorized approvers (admin and team roles)
-    const authorizedApprovers = allowedUsers.filter((user) => hasApproverRole(user)).map((user) => user.github);
+    // Get authorized approvers (admin and team roles), plus any bots
+    // allowlisted for this specific repository
+    const botApprovers = REPO_BOT_APPROVERS[`${owner}/${repo}`.toLowerCase()] ?? [];
+    const authorizedApprovers = [
+      ...allowedUsers.filter((user) => hasApproverRole(user)).map((user) => user.github),
+      ...botApprovers,
+    ];
 
     // Fetch PR reviews
     const reviews = await this.fetchPullRequestReviews(installationId, owner, repo, prNumber);

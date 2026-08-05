@@ -11,6 +11,16 @@ export function getCheckName(environment?: string): string {
   return CHECK_NAME;
 }
 
+/**
+ * Bot reviewers that are authorized to approve pull requests, scoped to
+ * specific repositories (keyed by `owner/repo`, lowercase). Bots are not part
+ * of the allowed-users list, so they must be allowlisted here explicitly.
+ */
+export const REPO_BOT_APPROVERS: Record<string, Array<{ username: string; id: number }>> = {
+  'immich-app/yucca': [{ username: 'greptile-apps[bot]', id: 165_735_046 }],
+  'immich-app/yucca-o11y': [{ username: 'greptile-apps[bot]', id: 165_735_046 }],
+};
+
 export const CHECK_STATUS = {
   QUEUED: 'queued',
   IN_PROGRESS: 'in_progress',
