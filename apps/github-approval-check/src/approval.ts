@@ -183,7 +183,29 @@ export class ApprovalValidator {
         mediaType: { format: 'raw' },
       });
 
-      const users = JSON.parse(data as unknown as string) as User[];
+      // getContent is typed as a union (file/dir/symlink/submodule); the raw
+      // media type gives back the file contents as a string.
+      const content: unknown = data;
+      if (typeof content !== 'string') {
+        throw new TypeError(`Expected file contents at ${this.allowedUsersPath}`);
+      }
+
+      const parsed: unknown = JSON.parse(content);
+      if (!Array.isArray(parsed)) {
+        throw new TypeError(`Expected an array of users at ${this.allowedUsersPath}`);
+      }
+
+      // Entries without a numeric GitHub id can never match a reviewer, and
+      // would throw when compared against one, so drop them here rather than
+      // guarding at every use site.
+      const users = parsed.filter(
+        (user): user is User =>
+          typeof user === 'object' && user !== null && typeof (user as User).github?.id === 'number',
+      );
+
+      if (users.length !== parsed.length) {
+        console.log(`[approval] Ignored ${parsed.length - users.length} user entries without a GitHub id`);
+      }
 
       // Update cache
       this.allowedUsersCache = {
