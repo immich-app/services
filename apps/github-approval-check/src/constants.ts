@@ -11,6 +11,11 @@ export function getCheckName(environment?: string): string {
   return CHECK_NAME;
 }
 
+export const REPO_BOT_APPROVERS: Record<string, Array<{ username: string; id: number }>> = {
+  'immich-app/yucca': [{ username: 'greptile-apps[bot]', id: 165_735_046 }],
+  'immich-app/yucca-o11y': [{ username: 'greptile-apps[bot]', id: 165_735_046 }],
+};
+
 export const CHECK_STATUS = {
   QUEUED: 'queued',
   IN_PROGRESS: 'in_progress',
