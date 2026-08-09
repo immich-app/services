@@ -1,5 +1,6 @@
 import semver from 'semver';
 import { DeferredRepository } from './deferred.js';
+import { DocsService } from './docs-service.js';
 import { createInstallationToken } from './github-auth.js';
 import { GitHubRepository } from './github-repository.js';
 import { CloudflareMetricsRepository, HeaderMetricsProvider, InfluxMetricsProvider, Metric } from './metrics.js';
@@ -39,6 +40,7 @@ export default {
 
     const releaseRepository = new ReleaseRepository(env.VERSION_DB);
     const versionService = new VersionService(releaseRepository, metrics);
+    const docsService = new DocsService(releaseRepository, metrics);
 
     try {
       const response = await metrics.monitorAsyncFunction({ name: 'handle_request' }, async () => {
@@ -82,6 +84,33 @@ export default {
                   return errorResponse('No releases found', 404);
                 }
                 return jsonResponse(latest);
+              },
+            )();
+          }
+
+          case '/v1/docs/versions': {
+            if (env.ENVIRONMENT) {
+              const cache = caches.default;
+              const cacheKey = new Request(url.href, request);
+              const cached = await cache.match(cacheKey);
+
+              if (cached) {
+                metrics.push(Metric.create('docs_versions_request').addTag('cache', 'cdn').intField('invocation', 1));
+                return new Response(cached.body, cached);
+              }
+            }
+
+            return await metrics.monitorAsyncFunction(
+              { name: 'docs_versions_request' },
+              async (): Promise<Response> => {
+                const versions = await docsService.getArchivedVersions();
+                const response = jsonResponse(versions, 200, { 'Cache-Control': 'public, max-age=3600' });
+                if (env.ENVIRONMENT) {
+                  const cache = caches.default;
+                  const cacheKey = new Request(url.href, request);
+                  ctx.waitUntil(cache.put(cacheKey, response.clone()));
+                }
+                return response;
               },
             )();
           }

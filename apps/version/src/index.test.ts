@@ -3,6 +3,7 @@ import semver from 'semver';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GitHubRepository } from './github-repository.js';
 import { MemoryCache } from './memory-cache.js';
+import type { DocsVersion } from './types.js';
 import { revalidationState, versionCache } from './version-service.js';
 import { verifyWebhookSignature } from './webhook.js';
 
@@ -81,6 +82,12 @@ async function seedReleases() {
   for (const release of mockReleases) {
     await insertRelease(release);
   }
+}
+
+async function fetchDocsVersions(): Promise<DocsVersion[]> {
+  const response = await exports.default.fetch('https://example.com/v1/docs/versions');
+  expect(response.status).toBe(200);
+  return await response.json();
 }
 
 async function createWebhookSignature(body: string, secret: string): Promise<string> {
@@ -669,6 +676,64 @@ describe('Version Worker', () => {
       const stable = await exports.default.fetch('https://example.com/changelog?version=v1.120.0&channel=stable');
       const stableBody = (await stable.json()) as any;
       expect(stableBody.releases.map((r: any) => r.tag_name)).not.toContain('v1.121.0-rc.1');
+    });
+  });
+
+  describe('GET /v1/docs/versions', () => {
+    it('returns the seeded releases newest first', async () => {
+      expect(await fetchDocsVersions()).toEqual([
+        { label: 'v1.120.0', url: 'https://v1.120.0.archive.immich.app', rootPath: '/docs' },
+        { label: 'v1.110.0', url: 'https://v1.110.0.archive.immich.app', rootPath: '/docs' },
+        { label: 'v1.100.0', url: 'https://v1.100.0.archive.immich.app', rootPath: '/docs' },
+      ]);
+    });
+
+    it('serves v1.143.1 and newer from the docs subdomain', async () => {
+      await env.VERSION_DB.exec('DELETE FROM releases');
+      await insertRelease({ id: 1, tag_name: 'v1.143.0' });
+      await insertRelease({ id: 2, tag_name: 'v1.143.1' });
+      await insertRelease({ id: 3, tag_name: 'v3.1.0' });
+
+      expect(await fetchDocsVersions()).toEqual([
+        { label: 'v3.1.0', url: 'https://docs.v3.1.0.archive.immich.app' },
+        { label: 'v1.143.1', url: 'https://docs.v1.143.1.archive.immich.app' },
+      ]);
+    });
+
+    it('keeps only the newest patch of each minor', async () => {
+      await env.VERSION_DB.exec('DELETE FROM releases');
+      await insertRelease({ id: 1, tag_name: 'v2.0.0' });
+      await insertRelease({ id: 2, tag_name: 'v2.0.3' });
+      await insertRelease({ id: 3, tag_name: 'v2.0.1' });
+      await insertRelease({ id: 4, tag_name: 'v2.1.0' });
+
+      const versions = await fetchDocsVersions();
+      expect(versions.map(({ label }) => label)).toEqual(['v2.1.0', 'v2.0.3']);
+    });
+
+    it('excludes pre-releases', async () => {
+      await insertRelease({ id: 99, tag_name: 'v1.121.0-rc.1' });
+
+      const versions = await fetchDocsVersions();
+      expect(versions.map(({ label }) => label)).not.toContain('v1.121.0-rc.1');
+    });
+
+    it('excludes releases older than v1.100.0, which were never archived', async () => {
+      await insertRelease({ id: 98, tag_name: 'v1.99.0' });
+
+      const versions = await fetchDocsVersions();
+      expect(versions.map(({ label }) => label)).not.toContain('v1.99.0');
+    });
+
+    it('returns an empty list when D1 has no data', async () => {
+      await env.VERSION_DB.exec('DELETE FROM releases');
+
+      expect(await fetchDocsVersions()).toEqual([]);
+    });
+
+    it('includes Cache-Control header for CDN caching', async () => {
+      const response = await exports.default.fetch('https://example.com/v1/docs/versions');
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=3600');
     });
   });
 
