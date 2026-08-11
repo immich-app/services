@@ -40,7 +40,9 @@ describe('CloudflareMetricsRepository', () => {
       this.pushed.push(metric);
     }
     flush() {
-      /* noop */
+      /*
+      noop
+      */
     }
   }
 

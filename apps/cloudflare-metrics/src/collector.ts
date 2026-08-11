@@ -7,7 +7,9 @@ import { ResourceCacheService } from './resource-cache.js';
 import type { CollectionResult, DatasetQuery, DatasetRow } from './types.js';
 
 export interface CollectorOptions {
-  /** Cloudflare analytics data lags by a few minutes; this offsets the window end. */
+  /**
+  Cloudflare analytics data lags by a few minutes; this offsets the window end.
+  */
   lagMs?: number;
   windowMs?: number;
   now?: () => Date;
@@ -398,7 +400,9 @@ function errorTag(error: unknown): string {
   return 'unknown';
 }
 
-/** Truncate a string for use as a metric tag value. */
+/**
+Truncate a string for use as a metric tag value.
+*/
 function truncateTag(value: string, maxLength: number): string {
   if (value.length <= maxLength) {
     return value;

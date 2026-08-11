@@ -27,7 +27,9 @@ class RecordingProvider implements IMetricsProviderRepository {
     this.metrics.push(metric);
   }
   flush() {
-    /* noop */
+    /*
+    noop
+    */
   }
 }
 

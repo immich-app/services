@@ -49,6 +49,7 @@ export default typescriptEslint.config([
       'unicorn/prefer-structured-clone': 'off',
       'unicorn/no-for-loop': 'off',
       'unicorn/consistent-class-member-order': 'off',
+      'unicorn/consistent-boolean-name': 'off',
       'unicorn/no-computed-property-existence-check': 'off',
       'unicorn/max-nested-calls': ['error', { max: 4 }],
       'unicorn/no-break-in-nested-loop': 'off',
