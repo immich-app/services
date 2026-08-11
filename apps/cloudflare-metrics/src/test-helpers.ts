@@ -98,7 +98,9 @@ export class FakeGraphQLClient {
   }
 }
 
-/** `FakeGraphQLClient` duck-typed as a `CloudflareGraphQLClient` for DI. */
+/**
+`FakeGraphQLClient` duck-typed as a `CloudflareGraphQLClient` for DI.
+*/
 export function asGraphQLClient(fake: FakeGraphQLClient): CloudflareGraphQLClient {
   return fake as unknown as CloudflareGraphQLClient;
 }

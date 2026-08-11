@@ -18,7 +18,9 @@ interface User {
     username: string;
     id: number;
   };
-  /** @deprecated Use `roles` instead */
+  /**
+  @deprecated Use `roles` instead
+  */
   role?: Role;
   roles?: Role[];
   dev?: boolean;
