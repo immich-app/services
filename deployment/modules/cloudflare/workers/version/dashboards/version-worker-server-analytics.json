@@ -532,7 +532,8 @@
         {
           "expr": "version:servers_new:5m",
           "legendFormat": "new servers",
-          "refId": "A"
+          "refId": "A",
+          "interval": "5m"
         }
       ],
       "title": "New Servers (not seen in last 30d)",
@@ -606,12 +607,14 @@
         {
           "expr": "version:servers_upgrades:1h",
           "legendFormat": "upgrades (seen before)",
-          "refId": "A"
+          "refId": "A",
+          "interval": "5m"
         },
         {
           "expr": "version:servers_new_installs:1h",
           "legendFormat": "new installs",
-          "refId": "B"
+          "refId": "B",
+          "interval": "5m"
         }
       ],
       "title": "Latest Version: Upgrades vs New Installs",
@@ -654,13 +657,15 @@
         {
           "expr": "version:servers_new:1h",
           "legendFormat": "new servers / 1h",
-          "refId": "A"
+          "refId": "A",
+          "interval": "5m"
         },
         {
           "expr": "last_over_time(version:servers_new:1d[1h])",
           "legendFormat": "new servers / day",
           "refId": "B",
-          "hide": true
+          "hide": true,
+          "interval": "5m"
         }
       ],
       "title": "New Server Rate",
@@ -1003,6 +1008,83 @@
       ],
       "title": "IPv4 vs IPv6 (24h)",
       "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+      },
+      "id": 35,
+      "title": "Servers on Latest Major (24h)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 45
+      },
+      "maxDataPoints": 300,
+      "description": "Share of unique servers whose major version matches the latest release's major. Servers seen on two versions within the same major in the window count twice in the numerator (small upgrade-day inflation); for up to 3h after a release both the old and new latest are in the join window.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 1,
+          "mappings": [],
+          "max": 1,
+          "min": 0,
+          "noValue": "-",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 0.9
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "36979063-5384-4eb9-8679-565a727cbc13"
+          },
+          "expr": "sum(label_replace(version:servers_by_version:24h, \"major\", \"$1\", \"user_agent\", \"immich-server/v?(\\d+)\\..*\") and on(major) label_replace(last_over_time(version_latest_version_count[3h]), \"major\", \"$1\", \"user_agent\", \"immich-server/v?(\\d+)\\..*\")) / version:servers_unique:24h",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ]
     }
   ],
   "refresh": "",
@@ -1029,6 +1111,6 @@
   "timezone": "browser",
   "title": "Version Worker Server Analytics",
   "uid": "version-worker-server-analytics",
-  "version": 3,
+  "version": 4,
   "weekStart": ""
 }
