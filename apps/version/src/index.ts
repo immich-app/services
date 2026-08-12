@@ -1,5 +1,6 @@
 import semver from 'semver';
 import { DeferredRepository } from './deferred.js';
+import { DocsService } from './docs-service.js';
 import { createInstallationToken } from './github-auth.js';
 import { GitHubRepository } from './github-repository.js';
 import { CloudflareMetricsRepository, HeaderMetricsProvider, InfluxMetricsProvider, Metric } from './metrics.js';
@@ -39,11 +40,41 @@ export default {
 
     const releaseRepository = new ReleaseRepository(env.VERSION_DB);
     const versionService = new VersionService(releaseRepository, metrics);
+    const docsService = new DocsService(releaseRepository, metrics);
+
+    const url = new URL(request.url);
+
+    const handleCacheableRequest = async (
+      { name, tags, maxAge }: { name: string; tags?: Record<string, string>; maxAge: number },
+      getData: () => Promise<unknown>,
+    ): Promise<Response> => {
+      const cache = caches.default;
+      const cacheKey = new Request(url.href, request);
+
+      if (env.ENVIRONMENT) {
+        const cached = await cache.match(cacheKey);
+        if (cached) {
+          metrics.push(
+            Metric.create(name)
+              .addTags(tags ?? {})
+              .addTag('cache', 'cdn')
+              .intField('invocation', 1),
+          );
+          return new Response(cached.body, cached);
+        }
+      }
+
+      return await metrics.monitorAsyncFunction({ name, tags }, async (): Promise<Response> => {
+        const response = jsonResponse(await getData(), 200, { 'Cache-Control': `public, max-age=${maxAge}` });
+        if (env.ENVIRONMENT) {
+          ctx.waitUntil(cache.put(cacheKey, response.clone()));
+        }
+        return response;
+      })();
+    };
 
     try {
       const response = await metrics.monitorAsyncFunction({ name: 'handle_request' }, async () => {
-        const url = new URL(request.url);
-
         if (request.method === 'OPTIONS') {
           return new Response(null, {
             headers: {
@@ -86,6 +117,12 @@ export default {
             )();
           }
 
+          case '/v1/docs/versions': {
+            return await handleCacheableRequest({ name: 'docs_versions_request', maxAge: 3600 }, () =>
+              docsService.getArchivedVersions(),
+            );
+          }
+
           case '/changelog': {
             const version = url.searchParams.get('version');
             if (!version) {
@@ -109,35 +146,9 @@ export default {
               user_agent: request.headers.get('User-Agent') ?? '',
             };
 
-            if (env.ENVIRONMENT) {
-              const cache = caches.default;
-              const cacheKey = new Request(url.href, request);
-              const cached = await cache.match(cacheKey);
-
-              if (cached) {
-                metrics.push(
-                  Metric.create('changelog_request')
-                    .addTags(requestTags)
-                    .addTag('cache', 'cdn')
-                    .intField('invocation', 1),
-                );
-                return new Response(cached.body, cached);
-              }
-            }
-
-            return await metrics.monitorAsyncFunction(
-              { name: 'changelog_request', tags: requestTags },
-              async (): Promise<Response> => {
-                const changelog = await versionService.getChangelog(version, channel);
-                const response = jsonResponse(changelog, 200, { 'Cache-Control': 'public, max-age=86400' });
-                if (env.ENVIRONMENT) {
-                  const cache = caches.default;
-                  const cacheKey = new Request(url.href, request);
-                  ctx.waitUntil(cache.put(cacheKey, response.clone()));
-                }
-                return response;
-              },
-            )();
+            return await handleCacheableRequest({ name: 'changelog_request', tags: requestTags, maxAge: 86_400 }, () =>
+              versionService.getChangelog(version, channel),
+            );
           }
 
           case '/webhook': {
@@ -202,7 +213,6 @@ export default {
         }
       })();
 
-      const url = new URL(request.url);
       metrics.push(
         Metric.create('http_response')
           .addTag('method', request.method)
@@ -219,7 +229,7 @@ export default {
       metrics.push(
         Metric.create('http_response')
           .addTag('method', request.method)
-          .addTag('path', new URL(request.url).pathname)
+          .addTag('path', url.pathname)
           .addTag('status', '500')
           .intField('count', 1),
       );

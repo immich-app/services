@@ -1,4 +1,4 @@
-import { parse, type SemVer } from 'semver';
+import { parse, SemVer } from 'semver';
 import type { GitHubRelease } from './types.js';
 
 interface ReleaseRow {
@@ -17,6 +17,7 @@ export type ReleaseChannel = (typeof releaseChannels)[number];
 export interface IReleaseRepository {
   getLatest(channel?: ReleaseChannel): Promise<GitHubRelease | null>;
   getNewerThan(version: SemVer, channel?: ReleaseChannel): Promise<GitHubRelease[]>;
+  getLatestPatchPerMinor(min: SemVer): Promise<SemVer[]>;
   getCount(): Promise<number>;
   upsert(release: GitHubRelease): Promise<void>;
   bulkUpsert(releases: GitHubRelease[]): Promise<void>;
@@ -67,6 +68,25 @@ export class ReleaseRepository implements IReleaseRepository {
       .all<ReleaseRow>();
 
     return results.map((row) => toGitHubRelease(row));
+  }
+
+  async getLatestPatchPerMinor(min: SemVer): Promise<SemVer[]> {
+    const { results } = await this.db
+      .prepare(
+        `SELECT major, minor, MAX(patch) AS patch FROM releases
+         WHERE prerelease IS NULL
+           AND (
+             major > ?1
+             OR (major = ?1 AND minor > ?2)
+             OR (major = ?1 AND minor = ?2 AND patch >= ?3)
+           )
+         GROUP BY major, minor
+         ORDER BY major DESC, minor DESC`,
+      )
+      .bind(min.major, min.minor, min.patch)
+      .all<{ major: number; minor: number; patch: number }>();
+
+    return results.map(({ major, minor, patch }) => new SemVer(`${major}.${minor}.${patch}`));
   }
 
   async upsert(release: GitHubRelease): Promise<void> {
