@@ -11,9 +11,14 @@ export function getCheckName(environment?: string): string {
   return CHECK_NAME;
 }
 
+const GREPTILE = { username: 'greptile-apps[bot]', id: 165_735_046 };
+
 export const REPO_BOT_APPROVERS: Record<string, Array<{ username: string; id: number }>> = {
-  'immich-app/yucca': [{ username: 'greptile-apps[bot]', id: 165_735_046 }],
-  'immich-app/yucca-o11y': [{ username: 'greptile-apps[bot]', id: 165_735_046 }],
+  'immich-app/yucca': [GREPTILE],
+  'immich-app/yucca-o11y': [GREPTILE],
+  'immich-app/survey': [GREPTILE],
+  'immich-app/discord-bot': [GREPTILE],
+  'immich-app/devtools': [GREPTILE],
 };
 
 export const CHECK_STATUS = {
