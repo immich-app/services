@@ -9,7 +9,7 @@ terraform {
     }
     random = {
       source  = "hashicorp/random"
-      version = "~> 3"
+      version = ">= 3"
     }
     grafana = {
       source  = "grafana/grafana"
