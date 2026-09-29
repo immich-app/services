@@ -5,10 +5,7 @@
 export const CHECK_NAME = 'Approval Check';
 
 export function getCheckName(environment?: string): string {
-  if (environment && environment !== 'prod') {
-    return `${CHECK_NAME} (${environment})`;
-  }
-  return CHECK_NAME;
+  return environment && environment !== 'prod' ? `${CHECK_NAME} (${environment})` : CHECK_NAME;
 }
 
 const GREPTILE = { username: 'greptile-apps[bot]', id: 165_735_046 };

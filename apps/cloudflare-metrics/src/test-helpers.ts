@@ -137,10 +137,7 @@ export class FakeRestClient implements ICloudflareRestClient {
   // eslint-disable-next-line @typescript-eslint/require-await
   async getZone(zoneId: string) {
     this.zoneCalls.push(zoneId);
-    if (zoneId in this.individualZones) {
-      return this.individualZones[zoneId];
-    }
-    return null;
+    return zoneId in this.individualZones ? this.individualZones[zoneId] : null;
   }
 }
 

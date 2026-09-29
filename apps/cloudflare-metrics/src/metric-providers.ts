@@ -39,37 +39,31 @@ export class HeaderMetricsProvider implements IMetricsProviderRepository {
 // Measurement: escape `,` and ` `.
 // Tag key / tag value / field key: escape `,`, `=`, ` `.
 function escapeMeasurement(s: string): string {
-  if (!s.includes(',') && !s.includes(' ')) {
-    return s;
-  }
-  return s.replaceAll(',', String.raw`\,`).replaceAll(' ', String.raw`\ `);
+  return !s.includes(',') && !s.includes(' ') ? s : s.replaceAll(',', String.raw`\,`).replaceAll(' ', String.raw`\ `);
 }
 
 function escapeTagKey(s: string): string {
-  if (!s.includes(',') && !s.includes('=') && !s.includes(' ')) {
-    return s;
-  }
-  return s
-    .replaceAll(',', String.raw`\,`)
-    .replaceAll('=', String.raw`\=`)
-    .replaceAll(' ', String.raw`\ `);
+  return !s.includes(',') && !s.includes('=') && !s.includes(' ')
+    ? s
+    : s
+        .replaceAll(',', String.raw`\,`)
+        .replaceAll('=', String.raw`\=`)
+        .replaceAll(' ', String.raw`\ `);
 }
 
 function escapeTagValue(s: string): string {
-  if (!s.includes(',') && !s.includes('=') && !s.includes(' ')) {
-    return s;
-  }
-  return s
-    .replaceAll(',', String.raw`\,`)
-    .replaceAll('=', String.raw`\=`)
-    .replaceAll(' ', String.raw`\ `);
+  return !s.includes(',') && !s.includes('=') && !s.includes(' ')
+    ? s
+    : s
+        .replaceAll(',', String.raw`\,`)
+        .replaceAll('=', String.raw`\=`)
+        .replaceAll(' ', String.raw`\ `);
 }
 
 function getMetricsWriteUrl(environment: string): string {
-  if (environment === 'prod') {
-    return 'https://cf-workers.monitoring.immich.cloud/write';
-  }
-  return `https://cf-workers.monitoring.${environment || 'dev'}.immich.cloud/write`;
+  return environment === 'prod'
+    ? 'https://cf-workers.monitoring.immich.cloud/write'
+    : `https://cf-workers.monitoring.${environment || 'dev'}.immich.cloud/write`;
 }
 
 export class InfluxMetricsProvider implements IMetricsProviderRepository {

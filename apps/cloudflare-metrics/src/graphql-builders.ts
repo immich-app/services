@@ -98,10 +98,12 @@ export function groupErrorsByAlias(
   }
   for (const error of errors) {
     const alias = findAliasInPath(error.path);
-    if (alias) {
-      const existing = result[alias];
-      result[alias] = existing ? `${existing}; ${error.message}` : error.message;
+    if (!alias) {
+      continue;
     }
+
+    const existing = result[alias];
+    result[alias] = existing ? `${existing}; ${error.message}` : error.message;
   }
   return result;
 }
@@ -117,10 +119,7 @@ function findAliasInPath(path: readonly (string | number)[] | undefined): string
   // the `dimensions` / `sum` / etc. internals.
   for (let i = 0; i < path.length; i++) {
     const segment = path[i];
-    if (typeof segment !== 'string') {
-      continue;
-    }
-    if (['viewer', 'accounts', 'zones'].includes(segment)) {
+    if (typeof segment !== 'string' || ['viewer', 'accounts', 'zones'].includes(segment)) {
       continue;
     }
     return segment;
@@ -132,8 +131,5 @@ function orderByClause(dataset: DatasetQuery): string {
   const timestampDim = dataset.timestampDimension ?? 'datetimeMinute';
   // Grouping implicitly takes place on the dimensions, so orderBy helps
   // make sure we get the most recent buckets within the limit.
-  if (dataset.dimensions.includes(timestampDim)) {
-    return `, orderBy: [${timestampDim}_ASC]`;
-  }
-  return '';
+  return dataset.dimensions.includes(timestampDim) ? `, orderBy: [${timestampDim}_ASC]` : '';
 }

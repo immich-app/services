@@ -24,9 +24,7 @@ export class DocsService {
 function toDocsVersion(version: SemVer): DocsVersion {
   const label = `v${version.version}`;
 
-  if (gte(version, FIRST_DOCS_SUBDOMAIN)) {
-    return { label, url: `https://docs.${label}.archive.immich.app` };
-  }
-
-  return { label, url: `https://${label}.archive.immich.app`, rootPath: '/docs' };
+  return gte(version, FIRST_DOCS_SUBDOMAIN)
+    ? { label, url: `https://docs.${label}.archive.immich.app` }
+    : { label, url: `https://${label}.archive.immich.app`, rootPath: '/docs' };
 }

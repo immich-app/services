@@ -94,10 +94,9 @@ export class HeaderMetricsProvider implements IMetricsProviderRepository {
 }
 
 function getMetricsWriteUrl(environment: string): string {
-  if (environment === 'prod') {
-    return 'https://cf-workers.monitoring.immich.cloud/write';
-  }
-  return `https://cf-workers.monitoring.${environment || 'dev'}.immich.cloud/write`;
+  return environment === 'prod'
+    ? 'https://cf-workers.monitoring.immich.cloud/write'
+    : `https://cf-workers.monitoring.${environment || 'dev'}.immich.cloud/write`;
 }
 
 export class InfluxMetricsProvider implements IMetricsProviderRepository {

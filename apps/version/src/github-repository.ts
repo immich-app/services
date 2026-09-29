@@ -60,10 +60,7 @@ export class GitHubRepository implements IGitHubRepository {
     allReleases.sort((a, b) => {
       const semverA = semver.parse(a.tag_name);
       const semverB = semver.parse(b.tag_name);
-      if (!semverA || !semverB) {
-        return 0;
-      }
-      return semver.compare(semverB, semverA);
+      return !semverA || !semverB ? 0 : semver.compare(semverB, semverA);
     });
 
     return allReleases;

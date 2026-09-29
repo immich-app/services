@@ -146,15 +146,17 @@ export class VersionService {
 
   async emitLatestVersion(): Promise<void> {
     const latest = await this.releaseRepository.getLatest();
-    if (latest) {
-      const version = latest.tag_name.replace(/^v/, '');
-      this.metrics.push(
-        Metric.create('latest_version')
-          .addTag('version', version)
-          .addTag('user_agent', `immich-server/${version}`)
-          .intField('count', 1),
-      );
+    if (!latest) {
+      return;
     }
+
+    const version = latest.tag_name.replace(/^v/, '');
+    this.metrics.push(
+      Metric.create('latest_version')
+        .addTag('version', version)
+        .addTag('user_agent', `immich-server/${version}`)
+        .intField('count', 1),
+    );
   }
 
   isValidChannel(channel: string): channel is ReleaseChannel {
