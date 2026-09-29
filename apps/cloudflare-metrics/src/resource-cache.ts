@@ -214,15 +214,9 @@ export class ResourceCacheService {
 }
 
 function errorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
+  return error instanceof Error ? error.message : String(error);
 }
 
 function errorTag(error: unknown): string {
-  if (error instanceof Error) {
-    return error.name;
-  }
-  return 'unknown';
+  return error instanceof Error ? error.name : 'unknown';
 }

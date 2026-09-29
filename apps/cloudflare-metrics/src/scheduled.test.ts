@@ -14,15 +14,9 @@ const MAX_BACKFILL_MS = 30 * 60 * 1000;
 function computeWindowMs(isColdStart: boolean, lastSuccessfulEndMs: number | null, scheduledMs: number): number {
   if (lastSuccessfulEndMs !== null) {
     const gapMs = scheduledMs - DEFAULT_LAG_MS - lastSuccessfulEndMs;
-    if (gapMs > DEFAULT_WINDOW_MS) {
-      return Math.min(gapMs, MAX_BACKFILL_MS);
-    }
-    return DEFAULT_WINDOW_MS;
+    return gapMs > DEFAULT_WINDOW_MS ? Math.min(gapMs, MAX_BACKFILL_MS) : DEFAULT_WINDOW_MS;
   }
-  if (isColdStart) {
-    return 15 * 60 * 1000;
-  }
-  return DEFAULT_WINDOW_MS;
+  return isColdStart ? 15 * 60 * 1000 : DEFAULT_WINDOW_MS;
 }
 
 describe('computeWindowMs', () => {

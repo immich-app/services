@@ -758,6 +758,7 @@ describe('Cron sync', () => {
       const request = new Request(input, init);
       const url = new URL(request.url);
 
+      // eslint-disable-next-line unicorn/prefer-ternary
       if (
         request.method === 'GET' &&
         url.origin === 'https://api.github.com' &&
@@ -836,10 +837,9 @@ describe('GitHubRepository', () => {
 
     vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
       const url = new URL(new Request(input, init).url);
-      if (url.origin === 'https://api.github.com' && url.pathname === '/repos/immich-app/immich/releases') {
-        return Promise.resolve(Response.json(githubReleases));
-      }
-      return Promise.reject(new Error(`unexpected fetch: ${url.href}`));
+      return url.origin === 'https://api.github.com' && url.pathname === '/repos/immich-app/immich/releases'
+        ? Promise.resolve(Response.json(githubReleases))
+        : Promise.reject(new Error(`unexpected fetch: ${url.href}`));
     });
 
     const releases = await new GitHubRepository().fetchReleases();

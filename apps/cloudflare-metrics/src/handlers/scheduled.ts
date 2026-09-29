@@ -131,17 +131,11 @@ function computeWindowMs(isColdStart: boolean, lastSuccessfulEndMs: number | nul
     // (scheduled - lag) - lastEnd. Using scheduled time (not wall clock)
     // so catch-up invocations compute the gap correctly.
     const gapMs = scheduledMs - DEFAULT_LAG_MS - lastSuccessfulEndMs;
-    if (gapMs > DEFAULT_WINDOW_MS) {
-      return Math.min(gapMs, MAX_BACKFILL_MS);
-    }
-    return DEFAULT_WINDOW_MS;
+    return gapMs > DEFAULT_WINDOW_MS ? Math.min(gapMs, MAX_BACKFILL_MS) : DEFAULT_WINDOW_MS;
   }
   // Fresh isolate with no prior state — use a shorter backfill window
   // since cold-start ticks already do extra work resolving resource caches.
-  if (isColdStart) {
-    return 15 * 60 * 1000;
-  }
-  return DEFAULT_WINDOW_MS;
+  return isColdStart ? 15 * 60 * 1000 : DEFAULT_WINDOW_MS;
 }
 
 async function runCollection(

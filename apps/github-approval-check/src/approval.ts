@@ -118,12 +118,14 @@ export class ApprovalValidator {
       };
       allReviews.push(reviewInfo);
 
-      if (review.state === 'APPROVED') {
-        const isAuthorized = authorizedApprovers.some((approver) => approver.id === userId);
+      if (review.state !== 'APPROVED') {
+        continue;
+      }
 
-        if (isAuthorized) {
-          validApprovals.push(review.user.login);
-        }
+      const isAuthorized = authorizedApprovers.some((approver) => approver.id === userId);
+
+      if (isAuthorized) {
+        validApprovals.push(review.user.login);
       }
     }
 

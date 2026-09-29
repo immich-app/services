@@ -109,10 +109,7 @@ export default {
                 }
 
                 const latest = await versionService.getLatestVersion(deferredRepository, channel);
-                if (!latest) {
-                  return errorResponse('No releases found', 404);
-                }
-                return jsonResponse(latest);
+                return latest ? jsonResponse(latest) : errorResponse('No releases found', 404);
               },
             )();
           }

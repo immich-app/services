@@ -237,10 +237,13 @@ export class CloudflareMetricsCollector {
     const zoneNames: string[] = [];
     for (const tag of cache.bulkZoneTags) {
       const name = cache.zones.get(tag);
-      if (name !== undefined) {
-        zoneTags.push(tag);
-        zoneNames.push(name);
+
+      if (name === undefined) {
+        continue;
       }
+
+      zoneTags.push(tag);
+      zoneNames.push(name);
     }
     if (zoneTags.length === 0) {
       this.metrics.push(
@@ -287,12 +290,14 @@ export class CloudflareMetricsCollector {
           row.dimensions = { zoneTag };
         }
         const metric = buildMetric(dataset, row, this.accountTag, cache);
-        if (metric) {
-          metric.addTag('zone_tag', zoneTag);
-          metric.addTag('zone_name', zoneName);
-          this.metrics.pushRaw(metric);
-          totalPoints++;
+        if (!metric) {
+          continue;
         }
+
+        metric.addTag('zone_tag', zoneTag);
+        metric.addTag('zone_name', zoneName);
+        this.metrics.pushRaw(metric);
+        totalPoints++;
       }
     }
 
@@ -322,10 +327,12 @@ export class CloudflareMetricsCollector {
     let emitted = 0;
     for (const row of rows) {
       const metric = buildMetric(dataset, row, this.accountTag, cache);
-      if (metric) {
-        this.metrics.pushRaw(metric);
-        emitted++;
+      if (!metric) {
+        continue;
       }
+
+      this.metrics.pushRaw(metric);
+      emitted++;
     }
     return emitted;
   }
@@ -367,10 +374,7 @@ function errorMessage(error: unknown): string {
     const body = error.responseBody?.slice(0, 200) ?? '';
     return body ? `${error.message}: ${body}` : error.message;
   }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
+  return error instanceof Error ? error.message : String(error);
 }
 
 function errorTag(error: unknown): string {
@@ -404,8 +408,5 @@ function errorTag(error: unknown): string {
 Truncate a string for use as a metric tag value.
 */
 function truncateTag(value: string, maxLength: number): string {
-  if (value.length <= maxLength) {
-    return value;
-  }
-  return value.slice(0, maxLength - 3) + '...';
+  return value.length <= maxLength ? value : value.slice(0, maxLength - 3) + '...';
 }

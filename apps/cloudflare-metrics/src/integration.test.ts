@@ -96,10 +96,12 @@ describe.skipIf(!hasCredentials)('Cloudflare GraphQL integration', () => {
               continue;
             }
             const blockData = (row as unknown as Record<string, Record<string, unknown> | undefined>)[block];
-            if (blockData && key in blockData) {
-              const value = blockData[key];
-              expect(value === null || typeof value === 'number', `${dataset.key}.${block}.${key}`).toBe(true);
+            if (!blockData || !(key in blockData)) {
+              continue;
             }
+
+            const value = blockData[key];
+            expect(value === null || typeof value === 'number', `${dataset.key}.${block}.${key}`).toBe(true);
           }
         }
       }

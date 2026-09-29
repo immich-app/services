@@ -37,11 +37,13 @@ function getTagEnricher(dataset: DatasetQuery): TagEnricher {
     case 'd1QueriesAdaptiveGroups': {
       cached = (metric, row, cache) => {
         const id = row.dimensions?.databaseId;
-        if (typeof id === 'string' && id !== '') {
-          const name = cache.d1Databases.get(id);
-          if (name) {
-            metric.addTag('database_name', name);
-          }
+        if (typeof id !== 'string' || id === '') {
+          return;
+        }
+
+        const name = cache.d1Databases.get(id);
+        if (name) {
+          metric.addTag('database_name', name);
         }
       };
       break;
@@ -50,11 +52,13 @@ function getTagEnricher(dataset: DatasetQuery): TagEnricher {
     case 'queueBacklogAdaptiveGroups': {
       cached = (metric, row, cache) => {
         const id = row.dimensions?.queueId;
-        if (typeof id === 'string' && id !== '') {
-          const name = cache.queues.get(id);
-          if (name) {
-            metric.addTag('queue_name', name);
-          }
+        if (typeof id !== 'string' || id === '') {
+          return;
+        }
+
+        const name = cache.queues.get(id);
+        if (name) {
+          metric.addTag('queue_name', name);
         }
       };
       break;
@@ -125,11 +129,7 @@ export function buildMetric(
     hasField = true;
   }
 
-  if (!hasField) {
-    return null;
-  }
-
-  return metric;
+  return hasField ? metric : null;
 }
 
 export function resolveTimestamp(dataset: DatasetQuery, row: DatasetRow): Date | null {
@@ -144,10 +144,7 @@ export function resolveTimestamp(dataset: DatasetQuery, row: DatasetRow): Date |
     return new Date(`${str}T00:00:00Z`);
   }
   const date = new Date(str);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-  return date;
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 export function normalizeTagValue(raw?: unknown): string | undefined {
@@ -157,8 +154,5 @@ export function normalizeTagValue(raw?: unknown): string | undefined {
   if (typeof raw === 'string') {
     return raw === '' ? undefined : raw;
   }
-  if (typeof raw === 'number' || typeof raw === 'boolean') {
-    return String(raw);
-  }
-  return undefined;
+  return typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : undefined;
 }
