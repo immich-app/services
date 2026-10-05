@@ -16,6 +16,7 @@ export const REPO_BOT_APPROVERS: Record<string, Array<{ username: string; id: nu
   'immich-app/survey': [GREPTILE],
   'immich-app/discord-bot': [GREPTILE],
   'immich-app/devtools': [GREPTILE],
+  'immich-app/version': [GREPTILE],
 };
 
 export const CHECK_STATUS = {
