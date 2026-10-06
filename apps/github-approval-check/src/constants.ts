@@ -9,14 +9,15 @@ export function getCheckName(environment?: string): string {
 }
 
 const GREPTILE = { username: 'greptile-apps[bot]', id: 165_735_046 };
+const KRITIKA = { username: 'futo-kritika[bot]', id: 338_622_031 };
 
 export const REPO_BOT_APPROVERS: Record<string, Array<{ username: string; id: number }>> = {
-  'immich-app/yucca': [GREPTILE],
-  'immich-app/yucca-o11y': [GREPTILE],
-  'immich-app/survey': [GREPTILE],
-  'immich-app/discord-bot': [GREPTILE],
-  'immich-app/devtools': [GREPTILE],
-  'immich-app/version': [GREPTILE],
+  'immich-app/yucca': [GREPTILE, KRITIKA],
+  'immich-app/yucca-o11y': [GREPTILE, KRITIKA],
+  'immich-app/survey': [GREPTILE, KRITIKA],
+  'immich-app/discord-bot': [GREPTILE, KRITIKA],
+  'immich-app/devtools': [GREPTILE, KRITIKA],
+  'immich-app/version': [GREPTILE, KRITIKA],
 };
 
 export const CHECK_STATUS = {
