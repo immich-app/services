@@ -18,6 +18,7 @@ export const REPO_BOT_APPROVERS: Record<string, Array<{ username: string; id: nu
   'immich-app/discord-bot': [GREPTILE, KRITIKA],
   'immich-app/devtools': [GREPTILE, KRITIKA],
   'immich-app/version': [GREPTILE, KRITIKA],
+  'immich-app/pokedex': [KRITIKA],
 };
 
 export const CHECK_STATUS = {
