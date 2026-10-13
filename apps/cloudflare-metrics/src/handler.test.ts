@@ -36,7 +36,7 @@ describe('scheduled handler', () => {
       const target = typeof url === 'string' ? url : url.toString();
       if (target.includes('/write')) {
         flushBodies.push(init?.body as string);
-        return Promise.resolve(new Response('', { status: 204 }));
+        return Promise.resolve(new Response(undefined, { status: 204 }));
       }
       return Promise.resolve(new Response('', { status: 200 }));
     });
@@ -67,7 +67,7 @@ describe('scheduled handler', () => {
       const target = typeof url === 'string' ? url : url.toString();
       if (target.includes('/write')) {
         flushBodies.push(init?.body as string);
-        return Promise.resolve(new Response('', { status: 204 }));
+        return Promise.resolve(new Response(undefined, { status: 204 }));
       }
       return Promise.resolve(new Response('', { status: 200 }));
     });

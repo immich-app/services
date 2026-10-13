@@ -1,14 +1,14 @@
 /**
- * GitHub App authentication module using Octokit
- * Handles authentication and provides configured Octokit instances
- */
+GitHub App authentication module using Octokit
+Handles authentication and provides configured Octokit instances
+*/
 
 import { createAppAuth } from '@octokit/auth-app';
 import { Octokit } from '@octokit/rest';
 
 /**
- * Get the installation ID for a repository
- */
+Get the installation ID for a repository
+*/
 export async function getInstallationId(
   appId: string,
   privateKey: string,
@@ -43,8 +43,8 @@ export async function getInstallationId(
 }
 
 /**
- * Format private key to ensure proper line breaks
- */
+Format private key to ensure proper line breaks
+*/
 function formatPrivateKey(privateKey: string): string {
   let formattedPrivateKey = privateKey.trim();
 
@@ -62,8 +62,8 @@ function formatPrivateKey(privateKey: string): string {
 }
 
 /**
- * Create an authenticated Octokit instance for a GitHub App installation
- */
+Create an authenticated Octokit instance for a GitHub App installation
+*/
 export function createOctokitForInstallation(appId: string, privateKey: string, installationId: number): Octokit {
   // Validate inputs
   if (!appId || typeof appId !== 'string') {

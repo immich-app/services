@@ -1,6 +1,6 @@
 /**
- * GitHub webhook event type definitions
- */
+GitHub webhook event type definitions
+*/
 
 export interface Repository {
   id: number;

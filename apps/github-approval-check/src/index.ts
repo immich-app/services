@@ -131,8 +131,8 @@ export default {
 };
 
 /**
- * Handles pull_request events (opened, reopened, synchronize)
- */
+Handles pull_request events (opened, reopened, synchronize)
+*/
 async function handlePullRequestEvent(
   event: PullRequestEvent,
   env: Env,
@@ -171,8 +171,8 @@ async function handlePullRequestEvent(
 }
 
 /**
- * Handles pull_request_review events (submitted, dismissed)
- */
+Handles pull_request_review events (submitted, dismissed)
+*/
 async function handlePullRequestReviewEvent(
   event: PullRequestReviewEvent,
   env: Env,
@@ -211,8 +211,8 @@ async function handlePullRequestReviewEvent(
 }
 
 /**
- * Handles check_suite events (requested, rerequested)
- */
+Handles check_suite events (requested, rerequested)
+*/
 async function handleCheckSuiteEvent(
   event: CheckSuiteEvent,
   env: Env,
@@ -264,8 +264,8 @@ async function handleCheckSuiteEvent(
 }
 
 /**
- * Handles check_run rerun requests
- */
+Handles check_run rerun requests
+*/
 async function handleCheckRunRerequest(
   event: CheckRunEvent,
   env: Env,

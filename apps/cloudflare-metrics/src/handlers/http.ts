@@ -76,10 +76,10 @@ const DEFAULT_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
 };
 
-function jsonResponse(data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
+function jsonResponse(data: unknown, status = 200) {
   return Response.json(data, {
     status,
-    headers: { ...DEFAULT_HEADERS, ...extraHeaders },
+    headers: { ...DEFAULT_HEADERS },
   });
 }
 

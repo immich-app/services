@@ -1,11 +1,11 @@
 /**
- * Webhook signature verification
- * Ensures that webhooks are coming from GitHub
- */
+Webhook signature verification
+Ensures that webhooks are coming from GitHub
+*/
 
 /**
- * Verify the webhook signature using HMAC-SHA256
- */
+Verify the webhook signature using HMAC-SHA256
+*/
 export async function verifyWebhookSignature(body: string, signature: string, secret: string): Promise<boolean> {
   // The signature format is "sha256=<hex digest>"
   if (!signature.startsWith('sha256=')) {
@@ -34,8 +34,8 @@ export async function verifyWebhookSignature(body: string, signature: string, se
 }
 
 /**
- * Constant-time string comparison to prevent timing attacks
- */
+Constant-time string comparison to prevent timing attacks
+*/
 function isSafeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) {
     return false;

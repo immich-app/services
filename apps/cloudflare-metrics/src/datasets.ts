@@ -1,15 +1,15 @@
 import type { DatasetQuery } from './types.js';
 
 /**
- * One-minute bucket granularity via the `datetimeMinute` dimension — the
- * finest grouping the Cloudflare Analytics API exposes. The exporter runs
- * on a 5-minute cron and the collector uses a wider window so each run
- * overlaps with the previous one (VictoriaMetrics dedupes by series +
- * timestamp so overlap is free).
- *
- * Dimension → tag mapping and field names use snake_case to match the
- * existing VictoriaMetrics conventions in other workers.
- */
+One-minute bucket granularity via the `datetimeMinute` dimension — the
+finest grouping the Cloudflare Analytics API exposes. The exporter runs
+on a 5-minute cron and the collector uses a wider window so each run
+overlaps with the previous one (VictoriaMetrics dedupes by series +
+timestamp so overlap is free).
+
+Dimension → tag mapping and field names use snake_case to match the
+existing VictoriaMetrics conventions in other workers.
+*/
 
 export const WORKERS_INVOCATIONS: DatasetQuery = {
   key: 'workers_invocations',

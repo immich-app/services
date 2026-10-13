@@ -6,10 +6,10 @@ import { CloudflareMetricsRepository } from './metrics.js';
 import type { DatasetQuery, DatasetRow } from './types.js';
 
 /**
- * Test-only metrics provider that records every pushed metric so tests can
- * assert on the emitted measurement name, tags, and fields without having to
- * parse the final line protocol.
- */
+Test-only metrics provider that records every pushed metric so tests can
+assert on the emitted measurement name, tags, and fields without having to
+parse the final line protocol.
+*/
 export class RecordingProvider implements IMetricsProviderRepository {
   readonly metrics: Metric[] = [];
   flushCount = 0;
@@ -22,19 +22,19 @@ export class RecordingProvider implements IMetricsProviderRepository {
 }
 
 /**
- * Builds a metrics repository wrapping the given provider with the same
- * prefix (`cloudflare_metrics`) used in the production entrypoint. Tests
- * that care about the prefix get the same behaviour as real requests.
- */
+Builds a metrics repository wrapping the given provider with the same
+prefix (`cloudflare_metrics`) used in the production entrypoint. Tests
+that care about the prefix get the same behaviour as real requests.
+*/
 export function buildMetricsRepo(provider: IMetricsProviderRepository) {
   return new CloudflareMetricsRepository('cloudflare_metrics', new Request('https://localhost/test'), [provider], '');
 }
 
 /**
- * Fake GraphQL client that returns pre-seeded rows for account and zone
- * datasets. Tests configure it with a map of datasetKey → rows and
- * optionally zone-scoped rows keyed by zoneTag.
- */
+Fake GraphQL client that returns pre-seeded rows for account and zone
+datasets. Tests configure it with a map of datasetKey → rows and
+optionally zone-scoped rows keyed by zoneTag.
+*/
 export class FakeGraphQLClient {
   public calls: Array<{ dataset: string; range: { start: Date; end: Date } }> = [];
   public zoneCalls: Array<{ zoneTags: string[]; dataset: string }> = [];
@@ -106,10 +106,10 @@ export function asGraphQLClient(fake: FakeGraphQLClient): CloudflareGraphQLClien
 }
 
 /**
- * Fake REST client returning pre-seeded D1/queue/zone lookups. The
- * individualZones map is consulted by `getZone` so tests can pretend a
- * pages-only zone exists outside the bulk list.
- */
+Fake REST client returning pre-seeded D1/queue/zone lookups. The
+individualZones map is consulted by `getZone` so tests can pretend a
+pages-only zone exists outside the bulk list.
+*/
 export class FakeRestClient implements ICloudflareRestClient {
   public zoneCalls: string[] = [];
   constructor(
@@ -142,10 +142,10 @@ export class FakeRestClient implements ICloudflareRestClient {
 }
 
 /**
- * Rest client that always throws, used to test error paths on resource
- * lookups (e.g. the collector should still emit a self-metric rather than
- * crashing the whole cron tick).
- */
+Rest client that always throws, used to test error paths on resource
+lookups (e.g. the collector should still emit a self-metric rather than
+crashing the whole cron tick).
+*/
 export class ThrowingRestClient implements ICloudflareRestClient {
   // eslint-disable-next-line @typescript-eslint/require-await
   async listD1Databases(): Promise<never> {

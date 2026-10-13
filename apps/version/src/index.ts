@@ -21,8 +21,8 @@ function jsonResponse(data: unknown, status = 200, extraHeaders: Record<string, 
   });
 }
 
-function errorResponse(error: string, status: number, extraHeaders?: Record<string, string>) {
-  return jsonResponse({ error }, status, extraHeaders);
+function errorResponse(error: string, status: number) {
+  return jsonResponse({ error }, status, undefined);
 }
 
 export default {

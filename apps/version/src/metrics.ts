@@ -154,11 +154,11 @@ export class CloudflareMetricsRepository implements IMetricsRepository {
     private operationPrefix: string,
     request: Request,
     private metricsProviders: IMetricsProviderRepository[],
-    environment?: string,
+    environment: string = '',
   ) {
     const cf = request.cf as IncomingRequestCfProperties | undefined;
     this.defaultTags = {
-      environment: environment ?? '',
+      environment,
       continent: cf?.continent ?? '',
       colo: cf?.colo ?? '',
       asOrg: cf?.asOrganization ?? '',
