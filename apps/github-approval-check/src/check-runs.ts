@@ -1,7 +1,7 @@
 /**
- * Check Runs API integration
- * Manages GitHub check runs for pull request approval status
- */
+Check Runs API integration
+Manages GitHub check runs for pull request approval status
+*/
 
 import { createOctokitForInstallation } from './auth.js';
 
@@ -24,8 +24,8 @@ export class CheckRunManager {
   }
 
   /**
-   * Create a new check run
-   */
+  Create a new check run
+  */
   async createCheckRun(
     installationId: number,
     owner: string,
@@ -57,8 +57,8 @@ export class CheckRunManager {
   }
 
   /**
-   * Update an existing check run
-   */
+  Update an existing check run
+  */
   async updateCheckRun(
     installationId: number,
     owner: string,
@@ -94,8 +94,8 @@ export class CheckRunManager {
   }
 
   /**
-   * List check runs for a specific commit
-   */
+  List check runs for a specific commit
+  */
   async listCheckRuns(installationId: number, owner: string, repo: string, ref: string): Promise<CheckRun[]> {
     const octokit = createOctokitForInstallation(this.appId, this.privateKey, installationId);
 
@@ -109,8 +109,8 @@ export class CheckRunManager {
   }
 
   /**
-   * Create a detailed output message for the check run
-   */
+  Create a detailed output message for the check run
+  */
   static createCheckOutput(
     isApproved: boolean,
     approvers: string[],

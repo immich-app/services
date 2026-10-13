@@ -272,6 +272,7 @@ export class CloudflareGraphQLClient implements ICloudflareGraphQLClient {
   }
 }
 
+// eslint-disable-next-line unicorn/no-unnecessary-parameters
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

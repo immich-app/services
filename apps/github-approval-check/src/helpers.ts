@@ -1,6 +1,6 @@
 /**
- * Helper functions for GitHub Approval Check
- */
+Helper functions for GitHub Approval Check
+*/
 
 import { ApprovalValidator } from './approval.js';
 import { getInstallationId } from './auth.js';
@@ -21,9 +21,9 @@ interface PullRequestInfo {
 }
 
 /**
- * Validates that required fields are present in the webhook payload
- * For org webhooks, fetches the installation ID if not present
- */
+Validates that required fields are present in the webhook payload
+For org webhooks, fetches the installation ID if not present
+*/
 export async function validateWebhookPayload(
   event: BaseEventPayload,
   eventType: string,
@@ -63,8 +63,8 @@ export async function validateWebhookPayload(
 }
 
 /**
- * Validates pull request information
- */
+Validates pull request information
+*/
 export function validatePullRequest(pullRequest: any, eventType: string): PullRequestInfo {
   if (!pullRequest?.head?.sha || !pullRequest?.number) {
     console.log(`[${eventType}] Missing pull request information`);
@@ -78,13 +78,13 @@ export function validatePullRequest(pullRequest: any, eventType: string): PullRe
 }
 
 /**
- * Handles approval check logic for all event types
- *
- * Behavior:
- * - If approved: Creates/updates check with success status
- * - If not approved + check exists: Updates to action_required
- * - If not approved + no check: Does nothing (keeps PR clean)
- */
+Handles approval check logic for all event types
+
+Behavior:
+- If approved: Creates/updates check with success status
+- If not approved + check exists: Updates to action_required
+- If not approved + no check: Does nothing (keeps PR clean)
+*/
 export async function handleApprovalCheck(
   params: {
     installationId: number;

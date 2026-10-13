@@ -1,6 +1,6 @@
 /**
- * Constants for the GitHub Approval Check application
- */
+Constants for the GitHub Approval Check application
+*/
 
 export const CHECK_NAME = 'Approval Check';
 

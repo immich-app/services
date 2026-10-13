@@ -9,15 +9,15 @@ import { CloudflareMetricsRepository } from './metrics.js';
 import type { DatasetRow } from './types.js';
 
 /**
- * Integration tests: these hit the real Cloudflare GraphQL Analytics API.
- *
- * They are gated on `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` being
- * set (see `vitest.integration.config.ts` — the pool passes the variables
- * through as miniflare bindings). Run with:
- *
- *     CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... \
- *       pnpm --filter @immich-services/cloudflare-metrics run test:integration
- */
+Integration tests: these hit the real Cloudflare GraphQL Analytics API.
+
+They are gated on `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` being
+set (see `vitest.integration.config.ts` — the pool passes the variables
+through as miniflare bindings). Run with:
+
+    CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... \
+      pnpm --filter @immich-services/cloudflare-metrics run test:integration
+*/
 
 const hasCredentials = Boolean(env.CLOUDFLARE_API_TOKEN && env.CLOUDFLARE_ACCOUNT_ID);
 

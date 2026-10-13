@@ -1,7 +1,7 @@
 /**
- * Approval validation logic
- * Checks if a pull request has been approved by authorized users
- */
+Approval validation logic
+Checks if a pull request has been approved by authorized users
+*/
 
 import { createOctokitForInstallation, getInstallationId } from './auth.js';
 import { CheckRunManager } from './check-runs.js';
@@ -66,8 +66,8 @@ export class ApprovalValidator {
   }
 
   /**
-   * Validate if a pull request has required approvals
-   */
+  Validate if a pull request has required approvals
+  */
   async validatePullRequest(
     installationId: number,
     owner: string,
@@ -165,11 +165,11 @@ export class ApprovalValidator {
   }
 
   /**
-   * Fetch the list of allowed users from the configured repository.
-   *
-   * The file lives in a private repository, so this reads it through the
-   * GitHub App installation rather than over an unauthenticated URL.
-   */
+  Fetch the list of allowed users from the configured repository.
+  
+  The file lives in a private repository, so this reads it through the
+  GitHub App installation rather than over an unauthenticated URL.
+  */
   private async getAllowedUsers(): Promise<User[]> {
     // Check cache first
     if (this.allowedUsersCache && Date.now() - this.allowedUsersCache.fetchedAt < this.CACHE_TTL) {
@@ -240,8 +240,8 @@ export class ApprovalValidator {
   }
 
   /**
-   * Fetch all reviews for a pull request
-   */
+  Fetch all reviews for a pull request
+  */
   private async fetchPullRequestReviews(
     installationId: number,
     owner: string,
@@ -268,8 +268,8 @@ export class ApprovalValidator {
   }
 
   /**
-   * Check if a specific user is authorized to approve
-   */
+  Check if a specific user is authorized to approve
+  */
   isUserAuthorized(userId: number, users: User[]): boolean {
     return users.some((user) => user.github.id === userId && hasApproverRole(user));
   }

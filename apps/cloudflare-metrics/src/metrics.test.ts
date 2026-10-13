@@ -76,7 +76,7 @@ describe('InfluxMetricsProvider flush self-telemetry', () => {
   });
 
   it('records stats with status=ok after a successful flush', async () => {
-    vi.stubGlobal('fetch', () => Promise.resolve(new Response('', { status: 204 })));
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response(undefined, { status: 204 })));
     try {
       const provider = new InfluxMetricsProvider('token', 'prod');
       provider.pushMetric(Metric.create('foo').intField('v', 1));
@@ -109,7 +109,7 @@ describe('InfluxMetricsProvider flush self-telemetry', () => {
   });
 
   it('clears lastFlushStats after a single take', async () => {
-    vi.stubGlobal('fetch', () => Promise.resolve(new Response('', { status: 204 })));
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response(undefined, { status: 204 })));
     try {
       const provider = new InfluxMetricsProvider('token', 'prod');
       provider.pushMetric(Metric.create('foo').intField('v', 1));
@@ -192,7 +192,7 @@ describe('InfluxMetricsProvider line protocol', () => {
         // First flush: backend is down.
         return Promise.resolve(new Response('bad gateway', { status: 502 }));
       }
-      return Promise.resolve(new Response('', { status: 204 }));
+      return Promise.resolve(new Response(undefined, { status: 204 }));
     });
 
     try {

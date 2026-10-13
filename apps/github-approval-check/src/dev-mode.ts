@@ -1,6 +1,6 @@
 /**
- * Dev mode configuration and filtering
- */
+Dev mode configuration and filtering
+*/
 
 // In dev mode, only process webhooks for the services repository
 const DEV_MODE_REPO = 'services';
@@ -12,8 +12,8 @@ export interface DevModeConfig {
 }
 
 /**
- * Parse dev mode configuration from environment
- */
+Parse dev mode configuration from environment
+*/
 export function getDevModeConfig(env: Env): DevModeConfig {
   // Check if we're in dev mode based on environment or stage
   const isDevEnvironment = env.ENVIRONMENT === 'dev';
@@ -44,8 +44,8 @@ export function getDevModeConfig(env: Env): DevModeConfig {
 }
 
 /**
- * Check if we should process this webhook event in dev mode
- */
+Check if we should process this webhook event in dev mode
+*/
 export function shouldProcessInDevMode(
   config: DevModeConfig,
   repoName: string | undefined,
