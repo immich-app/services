@@ -758,7 +758,6 @@ describe('Cron sync', () => {
       const request = new Request(input, init);
       const url = new URL(request.url);
 
-      // eslint-disable-next-line unicorn/prefer-ternary
       if (
         request.method === 'GET' &&
         url.origin === 'https://api.github.com' &&
