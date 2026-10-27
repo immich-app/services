@@ -53,6 +53,7 @@ export default typescriptEslint.config([
       'unicorn/no-computed-property-existence-check': 'off',
       'unicorn/max-nested-calls': ['error', { max: 4 }],
       'unicorn/no-break-in-nested-loop': 'off',
+      'unicorn/prefer-ternary': 'off',
       '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
       'require-await': 'off',

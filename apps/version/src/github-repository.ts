@@ -60,7 +60,7 @@ export class GitHubRepository implements IGitHubRepository {
     allReleases.sort((a, b) => {
       const semverA = semver.parse(a.tag_name);
       const semverB = semver.parse(b.tag_name);
-      return !semverA || !semverB ? 0 : semver.compare(semverB, semverA);
+      return semverA && semverB ? semver.compare(semverB, semverA) : 0;
     });
 
     return allReleases;
@@ -102,11 +102,8 @@ function isValidRelease(data: unknown): data is Record<string, unknown> & { id: 
 }
 
 function parseRelease(item: unknown): GitHubRelease | null {
-  if (!isValidRelease(item)) {
-    return null;
-  }
   // Drafts are skipped, but pre-releases (rc builds) are kept to back the `rc` channel.
-  if (item.draft === true) {
+  if (!isValidRelease(item) || item.draft === true) {
     return null;
   }
 

@@ -39,25 +39,25 @@ export class HeaderMetricsProvider implements IMetricsProviderRepository {
 // Measurement: escape `,` and ` `.
 // Tag key / tag value / field key: escape `,`, `=`, ` `.
 function escapeMeasurement(s: string): string {
-  return !s.includes(',') && !s.includes(' ') ? s : s.replaceAll(',', String.raw`\,`).replaceAll(' ', String.raw`\ `);
+  return s.includes(',') || s.includes(' ') ? s.replaceAll(',', String.raw`\,`).replaceAll(' ', String.raw`\ `) : s;
 }
 
 function escapeTagKey(s: string): string {
-  return !s.includes(',') && !s.includes('=') && !s.includes(' ')
+  return s.includes(',') || s.includes('=') || s.includes(' ')
     ? s
-    : s
         .replaceAll(',', String.raw`\,`)
         .replaceAll('=', String.raw`\=`)
-        .replaceAll(' ', String.raw`\ `);
+        .replaceAll(' ', String.raw`\ `)
+    : s;
 }
 
 function escapeTagValue(s: string): string {
-  return !s.includes(',') && !s.includes('=') && !s.includes(' ')
+  return s.includes(',') || s.includes('=') || s.includes(' ')
     ? s
-    : s
         .replaceAll(',', String.raw`\,`)
         .replaceAll('=', String.raw`\=`)
-        .replaceAll(' ', String.raw`\ `);
+        .replaceAll(' ', String.raw`\ `)
+    : s;
 }
 
 function getMetricsWriteUrl(environment: string): string {
