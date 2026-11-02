@@ -13,7 +13,7 @@ const KRITIKA = { username: 'futo-kritika[bot]', id: 338_622_031 };
 
 export const REPO_BOT_APPROVERS: Record<string, Array<{ username: string; id: number }>> = {
   'immich-app/yucca': [GREPTILE, KRITIKA],
-  'immich-app/yucca-o11y': [GREPTILE, KRITIKA],
+  'immich-app/futo-o11y-platform': [GREPTILE, KRITIKA],
   'immich-app/survey': [GREPTILE, KRITIKA],
   'immich-app/discord-bot': [GREPTILE, KRITIKA],
   'immich-app/devtools': [GREPTILE, KRITIKA],
