@@ -20,6 +20,7 @@ export const REPO_BOT_APPROVERS: Record<string, Array<{ username: string; id: nu
   'immich-app/version': [GREPTILE, KRITIKA],
   'immich-app/pokedex': [KRITIKA],
   'immich-app/geoshenanigans': [KRITIKA],
+  'immich-app/futo-applications-platform': [KRITIKA],
 };
 
 export const CHECK_STATUS = {
