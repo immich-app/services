@@ -24,7 +24,7 @@ export class CheckRunManager {
   }
 
   /**
-  Create a new check run
+  Create a completed check run
   */
   async createCheckRun(
     installationId: number,
@@ -32,28 +32,28 @@ export class CheckRunManager {
     repo: string,
     headSha: string,
     name: string,
-    status: 'queued' | 'in_progress' | 'completed',
-  ): Promise<CheckRun> {
+    conclusion: 'success' | 'failure' | 'neutral' | 'cancelled' | 'skipped' | 'timed_out' | 'action_required',
+    summary: string,
+    text: string,
+  ): Promise<void> {
     const octokit = createOctokitForInstallation(this.appId, this.privateKey, installationId);
+    const now = new Date().toISOString();
 
-    const response = await octokit.rest.checks.create({
+    await octokit.rest.checks.create({
       owner,
       repo,
       name,
       head_sha: headSha,
-      status,
-      started_at: new Date().toISOString(),
+      status: 'completed',
+      conclusion,
+      started_at: now,
+      completed_at: now,
       output: {
         title: 'Approval Check',
-        summary: 'Validating pull request approvals...',
+        summary,
+        text,
       },
     });
-
-    if (!response.data?.id) {
-      throw new Error('Failed to create check run: invalid response structure');
-    }
-
-    return response.data as CheckRun;
   }
 
   /**
