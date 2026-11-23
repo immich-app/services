@@ -17,7 +17,10 @@ const newCheckRun = (overrides: { id: number; name: string }) => ({
 const newOctokit = (checkRuns: Array<ReturnType<typeof newCheckRun>>) => ({
   rest: {
     checks: {
-      listForRef: vi.fn().mockResolvedValue({ data: { check_runs: checkRuns } }),
+      listForRef: vi.fn(({ check_name, per_page = 30 }: { check_name?: string; per_page?: number }) => {
+        const matching = checkRuns.filter((checkRun) => !check_name || checkRun.name === check_name);
+        return Promise.resolve({ data: { total_count: matching.length, check_runs: matching.slice(0, per_page) } });
+      }),
       create: vi.fn().mockResolvedValue({ data: { id: 1 } }),
       update: vi.fn().mockResolvedValue({ data: {} }),
     },
@@ -82,6 +85,18 @@ describe(handleApprovalCheck.name, () => {
 
     expect(octokit.rest.checks.update).toHaveBeenCalledWith(
       expect.objectContaining({ check_run_id: 42, status: 'completed', conclusion: 'success' }),
+    );
+    expect(octokit.rest.checks.create).not.toHaveBeenCalled();
+  });
+
+  it('revokes an approved check on a commit with many checks', async () => {
+    const otherChecks = Array.from({ length: 40 }, (_, index) => newCheckRun({ id: 100 + index, name: `ci ${index}` }));
+    setup([...otherChecks, newCheckRun({ id: 42, name: 'Approval Check' })]);
+
+    await handleApprovalCheck(params, new CheckRunManager('app', 'key'), newValidator(false));
+
+    expect(octokit.rest.checks.update).toHaveBeenCalledWith(
+      expect.objectContaining({ check_run_id: 42, status: 'completed', conclusion: 'action_required' }),
     );
     expect(octokit.rest.checks.create).not.toHaveBeenCalled();
   });

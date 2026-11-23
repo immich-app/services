@@ -94,18 +94,26 @@ export class CheckRunManager {
   }
 
   /**
-  List check runs for a specific commit
+  Get the latest check run with the given name for a specific commit
   */
-  async listCheckRuns(installationId: number, owner: string, repo: string, ref: string): Promise<CheckRun[]> {
+  async getCheckRun(
+    installationId: number,
+    owner: string,
+    repo: string,
+    ref: string,
+    name: string,
+  ): Promise<CheckRun | undefined> {
     const octokit = createOctokitForInstallation(this.appId, this.privateKey, installationId);
 
     const response = await octokit.rest.checks.listForRef({
       owner,
       repo,
       ref,
+      check_name: name,
+      filter: 'latest',
     });
 
-    return response.data.check_runs as CheckRun[];
+    return response.data.check_runs[0] as CheckRun | undefined;
   }
 
   /**

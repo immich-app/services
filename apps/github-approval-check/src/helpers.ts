@@ -109,10 +109,9 @@ export async function handleApprovalCheck(
     `[${eventType}] PR #${prNumber} approval status: ${validationResult.isApproved ? 'approved' : 'not approved'}`,
   );
 
-  // Get existing check runs
+  // Get existing check run
   const checkName = getCheckName(environment);
-  const checkRuns = await checkRunManager.listCheckRuns(installationId, owner, repo, headSha);
-  const existingCheck = checkRuns.find((cr: any) => cr.name === checkName);
+  const existingCheck = await checkRunManager.getCheckRun(installationId, owner, repo, headSha, checkName);
 
   if (validationResult.isApproved) {
     // PR is approved - ensure check exists and shows success
