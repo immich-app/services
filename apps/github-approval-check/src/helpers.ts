@@ -5,7 +5,7 @@ Helper functions for GitHub Approval Check
 import { ApprovalValidator } from './approval.js';
 import { getInstallationId } from './auth.js';
 import { CheckRunManager } from './check-runs.js';
-import { CHECK_CONCLUSION, CHECK_STATUS, MESSAGES, getCheckName } from './constants.js';
+import { CHECK_CONCLUSION, MESSAGES, getCheckName } from './constants.js';
 
 interface BaseEventPayload {
   installation?: { id: number };
@@ -129,20 +129,12 @@ export async function handleApprovalCheck(
       );
     } else {
       console.log(`[${eventType}] Creating new success check for PR #${prNumber}`);
-      const checkRun = await checkRunManager.createCheckRun(
+      await checkRunManager.createCheckRun(
         installationId,
         owner,
         repo,
         headSha,
         checkName,
-        CHECK_STATUS.IN_PROGRESS,
-      );
-
-      await checkRunManager.updateCheckRun(
-        installationId,
-        owner,
-        repo,
-        checkRun.id,
         CHECK_CONCLUSION.SUCCESS,
         validationResult.summary,
         validationResult.details,

@@ -23,12 +23,6 @@ export const REPO_BOT_APPROVERS: Record<string, Array<{ username: string; id: nu
   'immich-app/futo-applications-platform': [KRITIKA],
 };
 
-export const CHECK_STATUS = {
-  QUEUED: 'queued',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed',
-} as const;
-
 export const CHECK_CONCLUSION = {
   SUCCESS: 'success',
   FAILURE: 'failure',
