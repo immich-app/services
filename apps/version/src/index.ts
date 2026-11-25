@@ -14,6 +14,7 @@ const DEFAULT_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
 };
 
+// eslint-disable-next-line unicorn/prefer-options-parameter
 function jsonResponse(data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return Response.json(data, {
     status,
